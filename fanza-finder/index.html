@@ -1,0 +1,466 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>好み検索</title>
+<style>
+:root{--bg:#121216;--panel:#1c1c22;--line:#2e2e38;--fg:#ececf1;--sub:#9a9aa8;--acc:#ff4f7b;--acc2:#ffb347}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif;font-size:15px}
+header{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line);padding:10px 16px}
+h1{font-size:17px;margin:0 0 8px}
+nav{display:flex;gap:6px;overflow-x:auto}
+nav button{flex:none}
+button{background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font:inherit;cursor:pointer}
+button.on,button.pri{background:var(--acc);border-color:var(--acc);color:#fff}
+button:disabled{opacity:.5}
+main{padding:14px 16px;max-width:1200px;margin:0 auto}
+.row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;align-items:center}
+input,select{background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font:inherit;min-width:0}
+input[type=text],input[type=search]{flex:1 1 180px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden;display:flex;flex-direction:column}
+.card img{width:100%;display:block;background:#000;aspect-ratio:auto;cursor:pointer}
+.card .b{padding:8px;display:flex;flex-direction:column;gap:4px;flex:1}
+.t{font-size:13px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.m{font-size:12px;color:var(--sub)}
+.tags{display:flex;flex-wrap:wrap;gap:4px}
+.tag{font-size:11px;padding:2px 6px;border-radius:99px;border:1px solid var(--line);color:var(--sub);cursor:pointer;background:none}
+.tag.a{color:var(--acc2);border-color:#5a4520}
+.acts{display:flex;gap:4px;margin-top:auto;padding-top:6px}
+.acts button{padding:5px 8px;font-size:12px;flex:1}
+.fav{color:var(--acc)}
+.msg{color:var(--sub);padding:20px 0;text-align:center}
+.err{color:#ff8080}
+.pager{display:flex;justify-content:center;gap:10px;margin:16px 0}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px}
+label{display:block;font-size:13px;color:var(--sub);margin:8px 0 4px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+dialog{background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:12px;max-width:min(900px,96vw);width:100%;padding:0}
+dialog::backdrop{background:#000a}
+.dlg{padding:14px}
+.dlg video{width:100%;max-height:60vh;background:#000}
+.samples{display:flex;gap:6px;overflow-x:auto;margin-top:8px}
+.samples img{height:90px;border-radius:4px}
+.hidden{display:none!important}
+#gate{position:fixed;inset:0;background:var(--bg);z-index:50;display:flex;align-items:center;justify-content:center;padding:16px;text-align:center}
+</style>
+</head>
+<body>
+<div id="gate"><div><p>このページは成人向けコンテンツを扱います。<br>18歳以上ですか？</p><button class="pri" id="gateYes">はい（18歳以上）</button> <button onclick="location.href='about:blank'">いいえ</button></div></div>
+
+<header>
+  <h1>好み検索 <span class="m">FANZA API</span></h1>
+  <nav id="tabs">
+    <button data-tab="video" class="on">動画検索</button>
+    <button data-tab="actress">女優検索</button>
+    <button data-tab="favs">お気に入り女優</button>
+    <button data-tab="rec">おすすめ</button>
+    <button data-tab="liked">保存した動画</button>
+    <button data-tab="settings">設定</button>
+  </nav>
+</header>
+
+<main>
+  <!-- 動画検索 -->
+  <section id="tab-video">
+    <div class="row">
+      <input type="search" id="vKw" placeholder="キーワード（タイトル・内容）">
+      <button class="pri" id="vGo">検索</button>
+    </div>
+    <div class="row">
+      <select id="vFloor">
+        <option value="videoa">ビデオ（単体・企画）</option>
+        <option value="videoc">素人</option>
+      </select>
+      <select id="vSort">
+        <option value="rank">人気順</option>
+        <option value="date">新着順</option>
+        <option value="review">評価順</option>
+        <option value="price">安い順</option>
+        <option value="-price">高い順</option>
+        <option value="match">関連度</option>
+      </select>
+      <select id="vGenre"><option value="">ジャンル指定なし</option></select>
+    </div>
+    <div class="row" id="vActRow"></div>
+    <div id="vOut"></div>
+  </section>
+
+  <!-- 女優検索 -->
+  <section id="tab-actress" class="hidden">
+    <div class="row">
+      <input type="search" id="aKw" placeholder="女優名（ひらがな・漢字）">
+      <button class="pri" id="aGo">検索</button>
+    </div>
+    <div class="row">
+      <select id="aSort">
+        <option value="-id">新しく登録された順</option>
+        <option value="name">名前順</option>
+        <option value="-bust">バスト大きい順</option>
+        <option value="height">身長低い順</option>
+        <option value="-height">身長高い順</option>
+      </select>
+      <input type="text" id="aBust" placeholder="バスト〇cm以上" style="flex:0 1 130px" inputmode="numeric">
+      <input type="text" id="aAge" placeholder="年齢〇歳以下" style="flex:0 1 120px" inputmode="numeric">
+    </div>
+    <div id="aOut"></div>
+  </section>
+
+  <!-- お気に入り女優 -->
+  <section id="tab-favs" class="hidden">
+    <div class="row"><button class="pri" id="newGo">お気に入り女優の新作をまとめて見る</button></div>
+    <div id="favOut"></div>
+    <div id="newOut"></div>
+  </section>
+
+  <!-- おすすめ -->
+  <section id="tab-rec" class="hidden">
+    <div class="panel">
+      <div class="m">「♡保存」した動画のジャンル・女優の傾向から、まだ保存していない作品を探します。</div>
+      <div id="prefOut" style="margin-top:8px"></div>
+      <div class="row" style="margin-top:10px"><button class="pri" id="recGo">おすすめを探す</button></div>
+    </div>
+    <div id="recOut"></div>
+  </section>
+
+  <!-- 保存動画 -->
+  <section id="tab-liked" class="hidden"><div id="likedOut"></div></section>
+
+  <!-- 設定 -->
+  <section id="tab-settings" class="hidden">
+    <div class="panel">
+      <div class="m">DMM（FANZA）アフィリエイトに無料登録すると取得できます：affiliate.dmm.com → API情報</div>
+      <label>API ID</label><input type="text" id="sApi" style="width:100%">
+      <label>アフィリエイトID（末尾が -990〜-999 のもの）</label><input type="text" id="sAff" style="width:100%" placeholder="xxxx-990">
+      <div class="row" style="margin-top:12px"><button class="pri" id="sSave">保存</button><span id="sMsg" class="m"></span></div>
+    </div>
+    <div class="panel">
+      <div class="m">お気に入り・保存データはこのブラウザ内だけに保存されます。</div>
+      <div class="row" style="margin-top:8px">
+        <button id="exp">データを書き出し</button>
+        <label style="margin:0"><input type="file" id="imp" accept=".json" class="hidden"><span class="tag" style="padding:8px 12px;font-size:14px">データを読み込み</span></label>
+        <button id="wipe">全データ削除</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<dialog id="dlg"><div class="dlg" id="dlgBody"></div></dialog>
+
+<script>
+"use strict";
+const API = "https://api.dmm.com/affiliate/v3/";
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+/* ---------- 保存 ---------- */
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem("ff_"+k); return v ? JSON.parse(v) : d; }catch{ return d; } },
+  set(k, v){ try{ localStorage.setItem("ff_"+k, JSON.stringify(v)); }catch{} }
+};
+let cfg = store.get("cfg", {api:"", aff:""});
+let favActs = store.get("favActs", {});   // id -> {id,name,img}
+let liked = store.get("liked", {});       // content_id -> item(簡略)
+let seen = store.get("seen", {});         // content_id -> 1
+const saveAll = () => { store.set("favActs", favActs); store.set("liked", liked); store.set("seen", seen); };
+
+/* ---------- API ---------- */
+let jsonpN = 0;
+function jsonp(url){
+  return new Promise((res, rej) => {
+    const cb = "__ffcb" + (++jsonpN), s = document.createElement("script");
+    const t = setTimeout(() => { clean(); rej(new Error("タイムアウト")); }, 15000);
+    function clean(){ clearTimeout(t); delete window[cb]; s.remove(); }
+    window[cb] = d => { clean(); res(d); };
+    s.onerror = () => { clean(); rej(new Error("通信エラー")); };
+    s.src = url + "&callback=" + cb;
+    document.head.appendChild(s);
+  });
+}
+async function call(ep, params){
+  if(!cfg.api || !cfg.aff) throw new Error("設定タブで API ID とアフィリエイトID を入力してください");
+  const q = new URLSearchParams({api_id: cfg.api, affiliate_id: cfg.aff, output: "json", ...params});
+  const url = API + ep + "?" + q;
+  let d;
+  try{ const r = await fetch(url); d = await r.json(); }
+  catch{ d = await jsonp(url); }
+  const st = d?.result?.status;
+  if(st && String(st) !== "200") throw new Error("APIエラー: " + (d.result.message || st) + " " + JSON.stringify(d.result.errors||""));
+  return d.result;
+}
+function itemParams(o){
+  const p = {site:"FANZA", service:"digital", floor:o.floor||"videoa", hits:o.hits||24, offset:o.offset||1, sort:o.sort||"rank"};
+  if(o.keyword) p.keyword = o.keyword;
+  let i = 0;
+  if(o.actress){ p[`article[${i}]`]="actress"; p[`article_id[${i}]`]=o.actress; i++; }
+  if(o.genre){ p[`article[${i}]`]="genre"; p[`article_id[${i}]`]=o.genre; i++; }
+  return p;
+}
+const slim = it => ({
+  content_id: it.content_id, title: it.title, url: it.affiliateURL || it.URL,
+  img: it.imageURL?.large || it.imageURL?.list, imgS: it.imageURL?.list,
+  date: it.date, review: it.review, price: it.prices?.price,
+  genre: (it.iteminfo?.genre||[]).map(g => ({id:g.id, name:g.name})),
+  actress: (it.iteminfo?.actress||[]).map(a => ({id:a.id, name:a.name})),
+  maker: it.iteminfo?.maker?.[0]?.name,
+  movie: it.sampleMovieURL ? (it.sampleMovieURL.size_720_480 || it.sampleMovieURL.size_644_414 || it.sampleMovieURL.size_560_360 || it.sampleMovieURL.size_476_306) : null,
+  samples: it.sampleImageURL?.sample_l?.image || it.sampleImageURL?.sample_s?.image || []
+});
+
+/* ---------- 描画 ---------- */
+const itemCache = {};
+function videoCard(v){
+  itemCache[v.content_id] = v;
+  const isLiked = !!liked[v.content_id];
+  return `<div class="card" data-cid="${esc(v.content_id)}">
+    <img loading="lazy" src="${esc(v.imgS||v.img)}" alt="" data-act="open">
+    <div class="b">
+      <div class="t">${seen[v.content_id] ? "<span class='m'>[見た] </span>":""}${esc(v.title)}</div>
+      <div class="m">${esc((v.date||"").slice(0,10))}${v.review ? ` ・ ★${esc(v.review.average)}(${esc(v.review.count)})` : ""}${v.price ? " ・ "+esc(v.price)+"円" : ""}</div>
+      <div class="tags">${v.actress.slice(0,4).map(a => `<button class="tag a" data-act="actress" data-id="${esc(a.id)}" data-name="${esc(a.name)}">${esc(a.name)}</button>`).join("")}</div>
+      <div class="tags">${v.genre.slice(0,5).map(g => `<button class="tag" data-act="genre" data-id="${esc(g.id)}">${esc(g.name)}</button>`).join("")}</div>
+      <div class="acts">
+        <button data-act="like" class="${isLiked?"fav":""}">${isLiked?"♥保存済":"♡保存"}</button>
+        <button data-act="seen">${seen[v.content_id]?"見た✓":"見た"}</button>
+      </div>
+    </div></div>`;
+}
+function actressCard(a){
+  const f = !!favActs[a.id], img = a.imageURL?.large || a.imageURL?.small || a.img || "";
+  const spec = [a.height && `T${a.height}`, a.bust && `B${a.bust}${a.cup?`(${a.cup})`:""}`, a.waist && `W${a.waist}`, a.hip && `H${a.hip}`].filter(Boolean).join(" ");
+  return `<div class="card" data-aid="${esc(a.id)}" data-name="${esc(a.name)}" data-img="${esc(img)}">
+    ${img ? `<img loading="lazy" src="${esc(img)}" alt="" data-act="actvideos">` : ""}
+    <div class="b">
+      <div class="t"><b>${esc(a.name)}</b> <span class="m">${esc(a.ruby||"")}</span></div>
+      ${spec ? `<div class="m">${esc(spec)}</div>` : ""}
+      ${a.birthday ? `<div class="m">${esc(a.birthday)}（${age(a.birthday)}歳）</div>` : ""}
+      <div class="acts">
+        <button data-act="actvideos">出演作</button>
+        <button data-act="favact" class="${f?"fav":""}">${f?"★登録済":"☆お気に入り"}</button>
+      </div>
+    </div></div>`;
+}
+function age(b){ const d = new Date(b); if(isNaN(d)) return "?"; const n = new Date(); let y = n.getFullYear()-d.getFullYear(); if(n < new Date(n.getFullYear(), d.getMonth(), d.getDate())) y--; return y; }
+const loading = el => el.innerHTML = `<div class="msg">読み込み中…</div>`;
+const showErr = (el, e) => el.innerHTML = `<div class="msg err">${esc(e.message||e)}</div>`;
+
+/* ---------- 動画検索 ---------- */
+let vState = {offset:1, actress:null, actressName:""};
+async function searchVideos(reset){
+  if(reset) vState.offset = 1;
+  const out = $("#vOut"); loading(out);
+  renderActFilter();
+  try{
+    const r = await call("ItemList", itemParams({keyword:$("#vKw").value.trim(), floor:$("#vFloor").value, sort:$("#vSort").value, genre:$("#vGenre").value, actress:vState.actress, offset:vState.offset}));
+    const items = (r.items||[]).map(slim);
+    if(!items.length){ out.innerHTML = `<div class="msg">見つかりませんでした</div>`; return; }
+    const total = +r.total_count;
+    out.innerHTML = `<div class="m" style="margin-bottom:8px">${total.toLocaleString()}件中 ${vState.offset}〜${vState.offset+items.length-1}</div>
+      <div class="grid">${items.map(videoCard).join("")}</div>
+      <div class="pager"><button id="vPrev" ${vState.offset<=1?"disabled":""}>← 前へ</button><button id="vNext" ${vState.offset+items.length>total?"disabled":""}>次へ →</button></div>`;
+    $("#vPrev").onclick = () => { vState.offset = Math.max(1, vState.offset-24); searchVideos(); scrollTo(0,0); };
+    $("#vNext").onclick = () => { vState.offset += 24; searchVideos(); scrollTo(0,0); };
+  }catch(e){ showErr(out, e); }
+}
+function renderActFilter(){
+  $("#vActRow").innerHTML = vState.actress ? `<span class="m">女優：</span><span class="tag a">${esc(vState.actressName)}</span><button class="tag" id="vActClear">× 解除</button>` : "";
+  if(vState.actress) $("#vActClear").onclick = () => { vState.actress = null; searchVideos(true); };
+}
+async function loadGenres(){
+  const floor = $("#vFloor").value, key = "genres_"+floor, cached = store.get(key, null);
+  const sel = $("#vGenre"), cur = sel.value;
+  const fill = list => { sel.innerHTML = `<option value="">ジャンル指定なし</option>` + list.map(g => `<option value="${esc(g.id)}">${esc(g.name)}</option>`).join(""); sel.value = cur; };
+  if(cached && cached.t > Date.now()-7*864e5){ fill(cached.list); return; }
+  try{
+    const floorId = floor === "videoc" ? 44 : 43; let list = [], off = 1;
+    for(let i=0;i<5;i++){
+      const r = await call("GenreSearch", {floor_id: floorId, hits: 500, offset: off});
+      list = list.concat((r.genre||[]).map(g => ({id:g.genre_id, name:g.name})));
+      if(list.length >= +r.total_count) break; off += 500;
+    }
+    list.sort((a,b) => a.name.localeCompare(b.name, "ja"));
+    store.set(key, {t:Date.now(), list}); fill(list);
+  }catch{}
+}
+
+/* ---------- 女優検索 ---------- */
+let aOffset = 1;
+async function searchActress(reset){
+  if(reset) aOffset = 1;
+  const out = $("#aOut"); loading(out);
+  const p = {hits: 30, offset: aOffset, sort: $("#aSort").value};
+  const kw = $("#aKw").value.trim(); if(kw) p.keyword = kw;
+  const bust = parseInt($("#aBust").value); if(bust) p.gte_bust = bust;
+  const ag = parseInt($("#aAge").value);
+  if(ag){ const d = new Date(); d.setFullYear(d.getFullYear()-ag-1); d.setDate(d.getDate()+1); p.gte_birthday = d.toISOString().slice(0,10); }
+  try{
+    const r = await call("ActressSearch", p);
+    const list = r.actress || [];
+    if(!list.length){ out.innerHTML = `<div class="msg">見つかりませんでした</div>`; return; }
+    const total = +r.total_count;
+    out.innerHTML = `<div class="m" style="margin-bottom:8px">${total.toLocaleString()}人</div><div class="grid">${list.map(actressCard).join("")}</div>
+      <div class="pager"><button id="aPrev" ${aOffset<=1?"disabled":""}>← 前へ</button><button id="aNext" ${aOffset+list.length>total?"disabled":""}>次へ →</button></div>`;
+    $("#aPrev").onclick = () => { aOffset = Math.max(1, aOffset-30); searchActress(); scrollTo(0,0); };
+    $("#aNext").onclick = () => { aOffset += 30; searchActress(); scrollTo(0,0); };
+  }catch(e){ showErr(out, e); }
+}
+
+/* ---------- お気に入り女優 ---------- */
+function renderFavs(){
+  const list = Object.values(favActs);
+  $("#favOut").innerHTML = list.length ? `<div class="grid" style="margin-bottom:16px">${list.map(actressCard).join("")}</div>` : `<div class="msg">女優検索で ☆お気に入り を押すとここに並びます</div>`;
+}
+async function newReleases(){
+  const out = $("#newOut"), ids = Object.keys(favActs);
+  if(!ids.length) return;
+  loading(out);
+  try{
+    const res = await Promise.all(ids.map(id => call("ItemList", itemParams({actress:id, sort:"date", hits:8})).catch(() => ({items:[]}))));
+    const map = {};
+    res.forEach(r => (r.items||[]).forEach(it => { map[it.content_id] = slim(it); }));
+    const items = Object.values(map).sort((a,b) => (b.date||"").localeCompare(a.date||""));
+    out.innerHTML = `<h3>新作（新しい順）</h3><div class="grid">${items.map(videoCard).join("")}</div>`;
+  }catch(e){ showErr(out, e); }
+}
+
+/* ---------- 好み学習・おすすめ ---------- */
+function prefs(){
+  const g = {}, a = {};
+  Object.values(liked).forEach(v => {
+    v.genre.forEach(x => { g[x.id] = g[x.id] || {id:x.id, name:x.name, n:0}; g[x.id].n++; });
+    v.actress.forEach(x => { a[x.id] = a[x.id] || {id:x.id, name:x.name, n:0}; a[x.id].n++; });
+  });
+  Object.values(favActs).forEach(x => { a[x.id] = a[x.id] || {id:x.id, name:x.name, n:0}; a[x.id].n += 2; });
+  const sort = o => Object.values(o).sort((p,q) => q.n-p.n);
+  return {genres: sort(g), actresses: sort(a)};
+}
+function renderPrefs(){
+  const p = prefs();
+  $("#prefOut").innerHTML = !p.genres.length && !p.actresses.length ? `<div class="m">まだデータがありません。動画を ♡保存 してください。</div>` :
+    `<div class="m">よく保存するジャンル</div><div class="chips">${p.genres.slice(0,12).map(g => `<span class="tag">${esc(g.name)} ×${g.n}</span>`).join("")}</div>
+     <div class="m" style="margin-top:6px">好きな女優</div><div class="chips">${p.actresses.slice(0,12).map(a => `<span class="tag a">${esc(a.name)}</span>`).join("")}</div>`;
+}
+async function recommend(){
+  const out = $("#recOut"), p = prefs();
+  if(!p.genres.length && !p.actresses.length){ out.innerHTML = `<div class="msg">先に動画を ♡保存 してください</div>`; return; }
+  loading(out);
+  const gW = Object.fromEntries(p.genres.map(g => [g.id, g.n]));
+  const aW = Object.fromEntries(p.actresses.map(a => [a.id, a.n]));
+  const qs = [];
+  p.genres.slice(0,4).forEach(g => { qs.push({genre:g.id, sort:"rank", hits:30}); qs.push({genre:g.id, sort:"date", hits:20}); });
+  p.actresses.slice(0,4).forEach(a => qs.push({actress:a.id, sort:"rank", hits:20}));
+  if(p.genres.length >= 2) qs.push({genre:p.genres[0].id, sort:"review", hits:30});
+  try{
+    const res = await Promise.all(qs.map(q => call("ItemList", itemParams(q)).catch(() => ({items:[]}))));
+    const map = {};
+    res.forEach(r => (r.items||[]).forEach(it => { if(!liked[it.content_id] && !seen[it.content_id]) map[it.content_id] = slim(it); }));
+    const scored = Object.values(map).map(v => {
+      let s = 0;
+      v.genre.forEach(g => s += gW[g.id] || 0);
+      v.actress.forEach(a => s += (aW[a.id] || 0) * 3);
+      if(v.review) s += (+v.review.average || 0) * 0.5;
+      return {v, s};
+    }).sort((a,b) => b.s-a.s).slice(0,48);
+    out.innerHTML = scored.length ? `<div class="grid">${scored.map(x => videoCard(x.v)).join("")}</div>` : `<div class="msg">候補が見つかりませんでした</div>`;
+  }catch(e){ showErr(out, e); }
+}
+function renderLiked(){
+  const list = Object.values(liked).reverse();
+  $("#likedOut").innerHTML = list.length ? `<div class="grid">${list.map(videoCard).join("")}</div>` : `<div class="msg">♡保存 した動画がここに並びます</div>`;
+}
+
+/* ---------- 詳細ダイアログ ---------- */
+function openDetail(v){
+  seen[v.content_id] = 1; saveAll();
+  $("#dlgBody").innerHTML = `
+    ${v.movie ? `<iframe src="${esc(v.movie)}" style="width:100%;aspect-ratio:720/480;border:0;background:#000" allow="autoplay; fullscreen" allowfullscreen></iframe>` : `<img src="${esc(v.img)}" style="width:100%">`}
+    <div class="samples">${v.samples.map(s => `<img loading="lazy" src="${esc(s)}" alt="">`).join("")}</div>
+    <p class="t" style="-webkit-line-clamp:unset">${esc(v.title)}</p>
+    <div class="m">${esc(v.maker||"")} ・ ${esc((v.date||"").slice(0,10))}${v.review ? ` ・ ★${esc(v.review.average)}(${esc(v.review.count)}件)` : ""}</div>
+    <div class="row" style="margin-top:10px">
+      <a href="${esc(v.url)}" target="_blank" rel="noopener"><button class="pri">FANZAで見る</button></a>
+      <button onclick="document.getElementById('dlg').close()">閉じる</button>
+    </div>`;
+  $("#dlg").showModal();
+}
+$("#dlg").addEventListener("click", e => { if(e.target.id === "dlg") e.target.close(); });
+$("#dlg").addEventListener("close", () => { $("#dlgBody").innerHTML = ""; });
+
+/* ---------- クリック処理 ---------- */
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-act]"); if(!b) return;
+  const act = b.dataset.act, card = b.closest(".card");
+  if(card?.dataset.cid){
+    const v = itemCache[card.dataset.cid];
+    if(act === "open") openDetail(v);
+    if(act === "like"){
+      if(liked[v.content_id]) delete liked[v.content_id]; else liked[v.content_id] = v;
+      saveAll(); const on = !!liked[v.content_id]; b.textContent = on ? "♥保存済" : "♡保存"; b.classList.toggle("fav", on);
+    }
+    if(act === "seen"){
+      if(seen[v.content_id]) delete seen[v.content_id]; else seen[v.content_id] = 1;
+      saveAll(); b.textContent = seen[v.content_id] ? "見た✓" : "見た";
+    }
+  }
+  if(act === "actress"){ vState.actress = b.dataset.id; vState.actressName = b.dataset.name; switchTab("video"); searchVideos(true); }
+  if(act === "genre"){ $("#vGenre").value = b.dataset.id; switchTab("video"); searchVideos(true); }
+  if(card?.dataset.aid){
+    const id = card.dataset.aid, name = card.dataset.name;
+    if(act === "actvideos"){ vState.actress = id; vState.actressName = name; $("#vKw").value = ""; switchTab("video"); searchVideos(true); }
+    if(act === "favact"){
+      if(favActs[id]) delete favActs[id]; else favActs[id] = {id, name, img: card.dataset.img};
+      saveAll(); const on = !!favActs[id]; b.textContent = on ? "★登録済" : "☆お気に入り"; b.classList.toggle("fav", on);
+    }
+  }
+});
+
+/* ---------- タブ ---------- */
+function switchTab(t){
+  document.querySelectorAll("#tabs button").forEach(x => x.classList.toggle("on", x.dataset.tab === t));
+  document.querySelectorAll("main > section").forEach(s => s.classList.toggle("hidden", s.id !== "tab-"+t));
+  if(t === "favs") renderFavs();
+  if(t === "rec") renderPrefs();
+  if(t === "liked") renderLiked();
+  store.set("tab", t);
+}
+$("#tabs").onclick = e => { const t = e.target.closest("button")?.dataset.tab; if(t) switchTab(t); };
+
+/* ---------- イベント ---------- */
+$("#vGo").onclick = () => searchVideos(true);
+$("#vKw").onkeydown = e => { if(e.key === "Enter") searchVideos(true); };
+["#vSort","#vGenre"].forEach(s => $(s).onchange = () => searchVideos(true));
+$("#vFloor").onchange = () => { $("#vGenre").value = ""; loadGenres(); searchVideos(true); };
+$("#aGo").onclick = () => searchActress(true);
+["#aKw","#aBust","#aAge"].forEach(s => $(s).onkeydown = e => { if(e.key === "Enter") searchActress(true); });
+$("#aSort").onchange = () => searchActress(true);
+$("#newGo").onclick = newReleases;
+$("#recGo").onclick = recommend;
+
+$("#sApi").value = cfg.api; $("#sAff").value = cfg.aff;
+$("#sSave").onclick = () => {
+  cfg = {api: $("#sApi").value.trim(), aff: $("#sAff").value.trim()};
+  store.set("cfg", cfg);
+  $("#sMsg").textContent = /-99\d$/.test(cfg.aff) ? "保存しました" : "保存しました（アフィリエイトIDは末尾 -990〜-999 が必要です）";
+  loadGenres();
+};
+$("#exp").onclick = () => {
+  const blob = new Blob([JSON.stringify({favActs, liked, seen})], {type:"application/json"});
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "fanza-finder-data.json"; a.click();
+};
+$("#imp").onchange = async e => {
+  try{ const d = JSON.parse(await e.target.files[0].text()); favActs = d.favActs||{}; liked = d.liked||{}; seen = d.seen||{}; saveAll(); alert("読み込みました"); }
+  catch{ alert("読み込みに失敗しました"); }
+};
+$("#wipe").onclick = () => { if(confirm("お気に入り・保存・見た記録をすべて削除しますか？")){ favActs = {}; liked = {}; seen = {}; saveAll(); alert("削除しました"); } };
+
+/* ---------- 起動 ---------- */
+if(store.get("adult", false)) $("#gate").remove();
+$("#gateYes").onclick = () => { store.set("adult", true); $("#gate").remove(); };
+if(!cfg.api) switchTab("settings");
+else { switchTab(store.get("tab", "video")); loadGenres(); searchVideos(true); }
+</script>
+</body>
+</html>
