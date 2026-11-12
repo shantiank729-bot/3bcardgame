@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>好み診断</title>
+<style>
+:root{--bg:#121216;--panel:#1c1c22;--line:#2e2e38;--fg:#ececf1;--sub:#9a9aa8;--acc:#ff4f7b;--acc2:#ffb347;--ok:#4fd18b}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif;font-size:15px}
+header{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 16px;border-bottom:1px solid var(--line)}
+h1{font-size:17px;margin:0}
+a{color:var(--acc2)}
+main{max-width:560px;margin:0 auto;padding:14px 16px 40px}
+button{background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:10px;padding:10px 14px;font:inherit;cursor:pointer}
+button.pri{background:var(--acc);border-color:var(--acc);color:#fff}
+button:disabled{opacity:.5}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:14px}
+.m{color:var(--sub);font-size:13px}
+.bar{height:6px;background:var(--line);border-radius:9px;overflow:hidden;margin:8px 0 14px}
+.bar i{display:block;height:100%;background:var(--acc);transition:width .3s}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.card img{width:100%;display:block;max-height:58vh;object-fit:contain;background:#000}
+.card .b{padding:12px}
+.name{font-size:18px;font-weight:700}
+.spec{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.spec span{font-size:12px;border:1px solid var(--line);border-radius:99px;padding:2px 8px;color:var(--sub)}
+.pred{margin-top:10px;padding:8px 10px;border-radius:8px;background:#26262f;font-size:14px}
+.btns{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:12px}
+.btns button{padding:14px 0;font-size:16px}
+.like{background:var(--acc);border-color:var(--acc);color:#fff}
+.flash{font-weight:700}
+.flash.ok{color:var(--ok)} .flash.ng{color:#ff8080}
+.type{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font-size:15px}
+.type dt{color:var(--sub)}
+.type dd{margin:0;font-weight:600}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+.mini{background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden;font-size:13px}
+.mini img{width:100%;display:block;aspect-ratio:3/4;object-fit:cover;background:#000}
+.mini .b{padding:6px 8px}
+.pct{color:var(--acc);font-weight:700}
+.msg{color:var(--sub);text-align:center;padding:20px 0}
+.err{color:#ff8080}
+.hidden{display:none!important}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+#gate{position:fixed;inset:0;background:var(--bg);z-index:50;display:flex;align-items:center;justify-content:center;padding:16px;text-align:center}
+</style>
+</head>
+<body>
+<div id="gate"><div><p>このページは成人向けコンテンツを扱います。<br>18歳以上ですか？</p><button class="pri" id="gateYes">はい（18歳以上）</button> <button onclick="location.href='about:blank'">いいえ</button></div></div>
+<header><h1>好み診断</h1><a href="index.html">← 検索へ</a></header>
+<main>
+  <div id="noCfg" class="panel hidden">
+    API ID が未設定です。<a href="index.html">検索ページ</a>の「設定」タブで入力してください（同じブラウザなら共有されます）。
+  </div>
+
+  <div id="play">
+    <div class="m" id="progTxt"></div>
+    <div class="bar"><i id="prog" style="width:0"></i></div>
+    <div id="stage"><div class="msg">女優を読み込み中…</div></div>
+  </div>
+
+  <div id="result" class="hidden">
+    <div class="panel">
+      <div class="m">あなたのタイプ</div>
+      <dl class="type" id="typeOut"></dl>
+      <div class="m" id="accOut" style="margin-top:10px"></div>
+    </div>
+    <h3>好きそうな女優（予測）</h3>
+    <div id="recOut"><div class="msg">探しています…</div></div>
+  </div>
+
+  <div class="row" style="margin-top:16px">
+    <button id="toResult">今の結果を見る</button>
+    <button id="toPlay" class="hidden">続けて判定する</button>
+    <button id="reset">リセット</button>
+  </div>
+</main>
+
+<script>
+"use strict";
+const API = "https://api.dmm.com/affiliate/v3/";
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem("ff_"+k); return v ? JSON.parse(v) : d; }catch{ return d; } },
+  set(k, v){ try{ localStorage.setItem("ff_"+k, JSON.stringify(v)); }catch{} }
+};
+const cfg = store.get("cfg", {api:"", aff:""});
+let ratings = store.get("ratings", {});   // id -> {r: 1 | 0 | -1, f, name, img}
+let preds = store.get("preds", []);       // [{p, r}] 予測の当たり記録
+const ROUND = 20;
+
+/* ---------- API ---------- */
+let jn = 0;
+function jsonp(url){
+  return new Promise((res, rej) => {
+    const cb = "__tcb" + (++jn), s = document.createElement("script");
+    const t = setTimeout(() => { clean(); rej(new Error("タイムアウト")); }, 15000);
+    function clean(){ clearTimeout(t); delete window[cb]; s.remove(); }
+    window[cb] = d => { clean(); res(d); };
+    s.onerror = () => { clean(); rej(new Error("通信エラー")); };
+    s.src = url + "&callback=" + cb; document.head.appendChild(s);
+  });
+}
+async function call(ep, params){
+  const url = API + ep + "?" + new URLSearchParams({api_id: cfg.api, affiliate_id: cfg.aff, output: "json", ...params});
+  let d; try{ d = await (await fetch(url)).json(); }catch{ d = await jsonp(url); }
+  const st = d?.result?.status;
+  if(st && String(st) !== "200") throw new Error("APIエラー: " + (d.result.message || st));
+  return d.result;
+}
+
+/* ---------- 特徴量 ---------- */
+const CUP = "ABCDEFGHIJKLMNOPQ";
+function age(b){ const d = new Date(b); if(!b || isNaN(d)) return null; const n = new Date(); let y = n.getFullYear()-d.getFullYear(); if(n < new Date(n.getFullYear(), d.getMonth(), d.getDate())) y--; return y; }
+const num = v => { const n = parseFloat(v); return isFinite(n) && n > 0 ? n : null; };
+function feats(a){
+  const h = num(a.height), b = num(a.bust), w = num(a.waist), hp = num(a.hip);
+  const c = a.cup ? CUP.indexOf(String(a.cup).toUpperCase()) + 1 || null : null;
+  return { height: h, bust: b, cup: c, waist: w, hip: hp, age: age(a.birthday),
+           curve: b && w ? +(b - w).toFixed(1) : null };   // バストとウエストの差＝メリハリ
+}
+const FEATS = [
+  ["height", "身長", v => `${Math.round(v)}cm前後`],
+  ["cup", "カップ", v => `${CUP[Math.max(0, Math.round(v)-1)] || "?"}カップ前後`],
+  ["bust", "バスト", v => `${Math.round(v)}cm前後`],
+  ["waist", "ウエスト", v => `${Math.round(v)}cm前後`],
+  ["hip", "ヒップ", v => `${Math.round(v)}cm前後`],
+  ["age", "年齢", v => `${Math.round(v)}歳前後`],
+  ["curve", "メリハリ", v => v >= 33 ? "かなりグラマー" : v >= 27 ? "メリハリ体型" : v >= 22 ? "標準" : "スレンダー"],
+];
+const usable = a => { const f = feats(a); return (a.imageURL?.large || a.imageURL?.small) && f.height && f.bust && (f.cup || f.waist); };
+
+/* ---------- 学習（特徴ごとの重み付き距離） ---------- */
+function stats(list){
+  const out = {};
+  FEATS.forEach(([k]) => {
+    const xs = list.map(x => x.f[k]).filter(v => v != null);
+    if(!xs.length){ out[k] = null; return; }
+    const m = xs.reduce((a,b) => a+b, 0) / xs.length;
+    const sd = Math.sqrt(xs.reduce((a,b) => a+(b-m)**2, 0) / xs.length);
+    out[k] = {m, sd, n: xs.length};
+  });
+  return out;
+}
+function model(){
+  const all = Object.values(ratings), L = all.filter(x => x.r === 1), D = all.filter(x => x.r === -1);
+  if(L.length < 2) return null;
+  const sa = stats(all), sl = stats(L), sd = stats(D), w = {};
+  FEATS.forEach(([k]) => {
+    if(!sa[k] || !sl[k] || !sa[k].sd) { w[k] = 0; return; }
+    // 好きな人たちのばらつきが全体より小さい特徴ほど「こだわり」とみなす
+    const tight = Math.max(0, 1 - sl[k].sd / sa[k].sd);
+    const sep = sd[k] ? Math.abs(sl[k].m - sd[k].m) / sa[k].sd : 0;
+    w[k] = 0.3 + tight + sep;
+  });
+  return {sa, sl, sd, w, nL: L.length, nD: D.length};
+}
+function predict(M, f){
+  let dL = 0, dD = 0, ws = 0;
+  FEATS.forEach(([k]) => {
+    if(f[k] == null || !M.w[k] || !M.sa[k]?.sd) return;
+    const s = M.sa[k].sd;
+    dL += M.w[k] * ((f[k] - M.sl[k].m) / s) ** 2;
+    dD += M.w[k] * (M.sd[k] ? ((f[k] - M.sd[k].m) / s) ** 2 : 1);
+    ws += M.w[k];
+  });
+  if(!ws) return 0.5;
+  const z = (dD - dL) / ws * 1.5;
+  return 1 / (1 + Math.exp(-z));
+}
+
+/* ---------- 女優の候補を集める ---------- */
+let pool = [], total = 0;
+async function fill(n = 40){
+  if(!total){ const r = await call("ActressSearch", {hits: 1, sort: "-id"}); total = +r.total_count; }
+  const span = Math.min(total, 6000);   // 新しめに登録された女優から
+  for(let tries = 0; pool.length < n && tries < 4; tries++){
+    const off = 1 + Math.floor(Math.random() * Math.max(1, span - 100));
+    const r = await call("ActressSearch", {hits: 100, offset: off, sort: "-id"});
+    (r.actress || []).filter(usable).forEach(a => { if(!ratings[a.id] && !pool.some(p => p.id === a.id)) pool.push(a); });
+  }
+  pool.sort(() => Math.random() - .5);
+}
+
+/* ---------- 判定画面 ---------- */
+let cur = null, curP = null, sessionN = 0;
+function progress(){
+  $("#progTxt").textContent = `判定 ${sessionN} / ${ROUND}（累計 ${Object.keys(ratings).length}人）`;
+  $("#prog").style.width = Math.min(100, sessionN / ROUND * 100) + "%";
+}
+async function next(flash){
+  progress();
+  if(sessionN >= ROUND){ showResult(); return; }
+  if(pool.length < 3){
+    try{ await fill(); }catch(e){ $("#stage").innerHTML = `<div class="msg err">${esc(e.message)}</div>`; return; }
+  }
+  cur = pool.shift();
+  if(!cur){ $("#stage").innerHTML = `<div class="msg">候補が見つかりませんでした</div>`; return; }
+  const f = feats(cur), M = model();
+  curP = M ? predict(M, f) : null;
+  const spec = [f.height && `T${f.height}`, cur.bust && `B${cur.bust}${cur.cup?`(${cur.cup})`:""}`, f.waist && `W${f.waist}`, f.hip && `H${f.hip}`, f.age != null && `${f.age}歳`].filter(Boolean);
+  $("#stage").innerHTML = `
+    ${flash || ""}
+    <div class="card">
+      <img src="${esc(cur.imageURL.large || cur.imageURL.small)}" alt="">
+      <div class="b">
+        <div class="name">${esc(cur.name)} <span class="m">${esc(cur.ruby || "")}</span></div>
+        <div class="spec">${spec.map(s => `<span>${esc(s)}</span>`).join("")}</div>
+        <div class="pred">${curP == null ? "まだ学習中…（好きを2人以上選ぶと予測が出ます）" : `予測：あなたは <b>${curP >= .5 ? "好き" : "タイプじゃない"}</b>（好き度 ${Math.round(curP*100)}%）`}</div>
+        <div class="btns">
+          <button data-r="-1">✕ 違う</button>
+          <button data-r="0">− 普通</button>
+          <button data-r="1" class="like">♥ 好き</button>
+        </div>
+      </div>
+    </div>`;
+}
+$("#stage").addEventListener("click", e => {
+  const b = e.target.closest("[data-r]"); if(!b || !cur) return;
+  const r = +b.dataset.r;
+  let flash = "";
+  if(curP != null && r !== 0){
+    const hit = (curP >= .5) === (r === 1);
+    preds.push({p: curP, r}); store.set("preds", preds);
+    flash = `<div class="flash ${hit ? "ok" : "ng"}" style="margin-bottom:8px">${hit ? "予測的中！" : "ハズレ…学習しました"}</div>`;
+  }
+  ratings[cur.id] = {r, f: feats(cur), name: cur.name, img: cur.imageURL.large || cur.imageURL.small};
+  store.set("ratings", ratings);
+  sessionN++; cur = null; next(flash);
+});
+
+/* ---------- 結果 ---------- */
+async function showResult(){
+  $("#play").classList.add("hidden"); $("#result").classList.remove("hidden");
+  $("#toResult").classList.add("hidden"); $("#toPlay").classList.remove("hidden");
+  const M = model();
+  if(!M){ $("#typeOut").innerHTML = `<dd style="grid-column:1/-1">「好き」を2人以上選ぶと診断できます</dd>`; $("#recOut").innerHTML = ""; $("#accOut").textContent = ""; return; }
+  const keys = FEATS.filter(([k]) => M.sl[k]).sort((a,b) => M.w[b[0]] - M.w[a[0]]);
+  $("#typeOut").innerHTML = keys.map(([k, label, fmt]) => {
+    const s = M.sl[k], strong = M.w[k] >= 1;
+    return `<dt>${label}${strong ? " ★" : ""}</dt><dd>${fmt(s.m)}</dd>`;
+  }).join("") + `<dt></dt><dd class="m" style="font-weight:400">★ ＝ 特にこだわりが強い項目</dd>`;
+  const recent = preds.slice(-30), hit = recent.filter(x => (x.p >= .5) === (x.r === 1)).length;
+  $("#accOut").textContent = `好き ${M.nL}人 / 違う ${M.nD}人 から学習` + (recent.length ? `・直近${recent.length}回の的中率 ${Math.round(hit/recent.length*100)}%` : "");
+
+  $("#recOut").innerHTML = `<div class="msg">探しています…</div>`;
+  try{
+    const cands = [];
+    for(let i = 0; i < 4; i++){
+      const off = 1 + Math.floor(Math.random() * Math.max(1, Math.min(total || 6000, 6000) - 100));
+      const r = await call("ActressSearch", {hits: 100, offset: off, sort: "-id"});
+      (r.actress || []).filter(usable).forEach(a => { if(!ratings[a.id] && !cands.some(c => c.id === a.id)) cands.push(a); });
+    }
+    const top = cands.map(a => ({a, p: predict(M, feats(a))})).sort((x,y) => y.p - x.p).slice(0, 12);
+    $("#recOut").innerHTML = top.length ? `<div class="grid">${top.map(({a, p}) => `
+      <div class="mini">
+        <img loading="lazy" src="${esc(a.imageURL.large || a.imageURL.small)}" alt="">
+        <div class="b"><b>${esc(a.name)}</b> <span class="pct">${Math.round(p*100)}%</span><br>
+        <a href="index.html?actress=${encodeURIComponent(a.id)}&name=${encodeURIComponent(a.name)}">出演作を見る</a></div>
+      </div>`).join("")}</div>` : `<div class="msg">候補が見つかりませんでした</div>`;
+  }catch(e){ $("#recOut").innerHTML = `<div class="msg err">${esc(e.message)}</div>`; }
+}
+$("#toResult").onclick = showResult;
+$("#toPlay").onclick = () => {
+  sessionN = 0;
+  $("#play").classList.remove("hidden"); $("#result").classList.add("hidden");
+  $("#toResult").classList.remove("hidden"); $("#toPlay").classList.add("hidden");
+  next();
+};
+$("#reset").onclick = () => { if(confirm("判定データをすべて消しますか？")){ ratings = {}; preds = []; store.set("ratings", ratings); store.set("preds", preds); location.reload(); } };
+
+/* ---------- 起動 ---------- */
+$("#gateYes").onclick = () => { store.set("adult", true); $("#gate").remove(); };
+if(store.get("adult", false)) $("#gate").remove();
+if(!cfg.api || !cfg.aff){ $("#noCfg").classList.remove("hidden"); $("#play").classList.add("hidden"); }
+else next();
+</script>
+</body>
+</html>

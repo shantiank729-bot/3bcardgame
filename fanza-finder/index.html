@@ -60,6 +60,7 @@ dialog::backdrop{background:#000a}
     <button data-tab="rec">おすすめ</button>
     <button data-tab="liked">保存した動画</button>
     <button data-tab="settings">設定</button>
+    <button onclick="location.href='type.html'">好み診断 →</button>
   </nav>
 </header>
 
@@ -457,10 +458,15 @@ $("#imp").onchange = async e => {
 $("#wipe").onclick = () => { if(confirm("お気に入り・保存・見た記録をすべて削除しますか？")){ favActs = {}; liked = {}; seen = {}; saveAll(); alert("削除しました"); } };
 
 /* ---------- 起動 ---------- */
-if(store.get("adult", false)) $("#gate").remove();
 $("#gateYes").onclick = () => { store.set("adult", true); $("#gate").remove(); };
+if(store.get("adult", false)) $("#gate").remove();
 if(!cfg.api) switchTab("settings");
-else { switchTab(store.get("tab", "video")); loadGenres(); searchVideos(true); }
+else {
+  const qp = new URLSearchParams(location.search);
+  if(qp.get("actress")){ vState.actress = qp.get("actress"); vState.actressName = qp.get("name") || ""; switchTab("video"); }
+  else switchTab(store.get("tab", "video"));
+  loadGenres(); searchVideos(true);
+}
 </script>
 </body>
 </html>
