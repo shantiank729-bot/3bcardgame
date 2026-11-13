@@ -23,7 +23,7 @@ const path = require('path');
       await page.waitForFunction(() => !UI.moving);
     } else if (screen === 'tourney') {
       if (await page.$('[data-act=closeT]')) await page.click('[data-act=closeT]');
-      else if (manualMatches < 3) { manualMatches++; await page.click('[data-act=startMatch]'); }
+      else if (manualMatches < 2) { manualMatches++; await page.click('[data-act=startMatch]'); }
       else await page.click('[data-act=quickMatch]');
     } else if (screen === 'match') {
       if (await page.$('[data-act=finishMatch]')) { await page.click('[data-act=finishMatch]'); continue; }
@@ -40,6 +40,8 @@ const path = require('path');
         if (c !== 'autoAll' && c !== 'autoHalf') choices.push(b);
       }
       await choices[Math.floor(Math.random() * choices.length)].click();
+      // 大半はタップでスキップ、一部は最後まで再生
+      if (Math.random() < 0.8) { await page.waitForTimeout(100); if (await page.evaluate(() => Anim.busy())) await page.click('#fieldCanvas'); }
       await page.waitForFunction(() => !Anim.busy(), null, { timeout: 15000 });
     } else { console.log('unknown screen', screen); break; }
     if (errors.length) break;

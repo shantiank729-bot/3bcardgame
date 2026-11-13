@@ -15,6 +15,22 @@ const path = require('path');
   const report = await page.evaluate(() => {
     const kinds = {};
     const problems = [];
+    let outfieldChecked = 0;
+    // 盗塁(成功・失敗)を直接作って確認
+    for (let i = 0; i < 300; i++) {
+      const A = makeOpponent(45), B = makeOpponent(45);
+      const a = makeSide('A', A.players, pickStarter(A.players), false);
+      const b = makeSide('B', B.players, pickStarter(B.players), false);
+      const m = new Match(a, b, {}); m.me = a; m.opp = b;
+      m.bases[i % 2] = a.order[3].p;
+      m.steal();
+      const lp = m.lastPlay;
+      const tl = Anim._build(m, lp);
+      const end = tl.at(tl.total);
+      const vis = end.runners.filter((r) => r.alpha > 0.5).length;
+      if (vis !== lp.after.filter(Boolean).length) problems.push('盗塁 走者数 ' + lp.text);
+      kinds.STEAL = (kinds.STEAL || 0) + 1;
+    }
     for (let g = 0; g < 60; g++) {
       const A = makeOpponent(45), B = makeOpponent(45);
       const a = makeSide('A', A.players, pickStarter(A.players), false);
@@ -31,7 +47,7 @@ const path = require('path');
         const k = Anim._classify(text, lp.kind);
         kinds[k] = (kinds[k] || 0) + 1;
         const tl = Anim._build(m, lp);
-        if (!(tl.total > 0 && tl.total < 8000)) problems.push(`長さ異常 ${k} ${tl.total}`);
+        if (!(tl.total > 0 && tl.total < 14000)) problems.push(`長さ異常 ${k} ${tl.total}`);
         for (let t = 0; t <= tl.total; t += 50) {
           const st = tl.at(t);
           const nums = [];
@@ -46,9 +62,24 @@ const path = require('path');
         const visible = end.runners.filter((r) => r.alpha > 0.5).length + (end.batter && end.batter.alpha > 0.5 && lp.after.includes(lp.batter) ? 1 : 0);
         const expect = lp.after.filter(Boolean).length;
         if (visible !== expect) problems.push(`走者数 ${k} 表示${visible} 期待${expect} ${lp.text}`);
+        // 外野へのヒットは外野手が処理していること(打球が止まった位置に一番近い野手が外野手)
+        if (['1B', '2B', '3B'].includes(k)) {
+          let first = null;
+          for (let t = 0; t <= tl.total && !first; t += 25) {
+            const st = tl.at(t);
+            if (!st.ball || Math.hypot(st.ball.x, st.ball.y) < 150 || st.ball.z > 8) continue;
+            for (const [fk, pos] of Object.entries(st.fielders)) {
+              if (Math.hypot(pos[0] - st.ball.x, pos[1] - st.ball.y) < 6) { first = fk; break; }
+            }
+          }
+          if (!first || !['LF', 'CF', 'RF'].includes(first)) problems.push(`外野ヒットを外野手が処理していない ${k} ${first} ${lp.text}`);
+          outfieldChecked++;
+        }
+        // 結果表示より前にアウト/ヒットが分かる表示が出ていないこと
+        if (tl.tLabel <= 0) problems.push(`ラベル時刻異常 ${k}`);
       }
     }
-    return { kinds, problems: problems.slice(0, 20), nProblems: problems.length };
+    return { kinds, outfieldChecked, problems: problems.slice(0, 20), nProblems: problems.length };
   });
   console.log(JSON.stringify(report, null, 1));
 
@@ -57,7 +88,7 @@ const path = require('path');
     // 実際の試合画面で数プレー分のコマを保存
     await page.evaluate(() => { startTourney('summerPref'); render(); });
     await page.click('[data-act=startMatch]');
-    const want = ['HR', '2B', '1B', 'GO', 'FO', 'DP', 'K', 'BB'];
+    const want = ['HR', '2B', '1B', 'GO', 'FO', 'DP', 'IH', 'LO'];
     const got = new Set();
     for (let i = 0; i < 400 && got.size < want.length; i++) {
       const info = await page.evaluate(() => {
@@ -74,10 +105,10 @@ const path = require('path');
       if (info.over) break;
       if (want.includes(info.k) && !got.has(info.k)) {
         got.add(info.k);
-        for (const f of [0.25, 0.45, 0.7]) {
+        for (const f of [-700, -250, 150]) {
           await page.evaluate((fr) => { render(); Anim._drawAt(UI.match, UI.match.lastPlay, fr); }, f);
           const el = await page.$('.stage');
-          await el.screenshot({ path: path.join(dir, `anim-${info.k}-${Math.round(f * 100)}.png`) });
+          await el.screenshot({ path: path.join(dir, `anim-${info.k}-${f + 1000}.png`) });
         }
       } else {
         await page.evaluate(() => render());

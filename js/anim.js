@@ -135,6 +135,16 @@ const Anim = (() => {
     c.globalAlpha = o.alpha == null ? 1 : o.alpha;
     c.fillStyle = 'rgba(0,0,0,0.28)';
     c.beginPath(); c.ellipse(p.x, p.y, 5.5 * s, 1.9 * s, 0, 0, Math.PI * 2); c.fill();
+    const ps = o.pose;
+    if (ps && ps.type === 'jump') {
+      c.translate(0, -Math.sin(Math.PI * clamp(ps.f, 0, 1)) * 9 * s);
+    } else if (ps && (ps.type === 'dive' || ps.type === 'slide')) {
+      // 飛び込み・スライディング: 足元を軸に体を倒す
+      const lie = ps.type === 'slide' ? 1 : clamp(ps.f * 4, 0, 1) * (ps.f > 0.75 ? clamp((1 - ps.f) * 4, 0, 1) : 1);
+      c.translate(p.x, p.y);
+      c.rotate((ps.dir || 1) * 1.3 * lie);
+      c.translate(-p.x, -p.y + lie * 1.5 * s);
+    }
     const crouch = o.crouch ? 4 * s : 0;
     const legH = 7 * s - crouch;
     c.fillStyle = uni.pants;
@@ -171,6 +181,29 @@ const Anim = (() => {
     c.strokeStyle = 'rgba(0,0,0,0.35)'; c.lineWidth = 0.6;
     c.beginPath(); c.arc(p.x, p.y, r, 0, Math.PI * 2); c.fill(); c.stroke();
   }
+  function dust(c, pf) {
+    const p = proj(pf.x, pf.y);
+    const s = Math.max(0.5, p.k / 2.95);
+    c.save();
+    c.globalAlpha = 0.55 * (1 - pf.f);
+    c.fillStyle = '#d8b48a';
+    for (let i = 0; i < 5; i++) {
+      const a = i * 1.26;
+      const r = (2 + pf.f * 7) * s;
+      c.beginPath(); c.arc(p.x + Math.cos(a) * r, p.y - 2 * s + Math.sin(a) * r * 0.4, (2.5 + pf.f * 3) * s, 0, Math.PI * 2); c.fill();
+    }
+    c.restore();
+  }
+  function pitchTag(c, txt) {
+    c.save();
+    c.font = "bold 13px 'Zen Kaku Gothic New', sans-serif";
+    const w = c.measureText(txt).width + 16;
+    c.fillStyle = txt === 'ストライク' || txt === '空振り' ? 'rgba(200,60,40,0.85)' : txt === 'ボール' ? 'rgba(40,110,60,0.85)' : 'rgba(30,40,60,0.8)';
+    c.beginPath(); c.roundRect(W - w - 8, 34, w, 22, 11); c.fill();
+    c.fillStyle = '#fff'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillText(txt, W - w / 2 - 8, 45.5);
+    c.restore();
+  }
   const LABEL_COL = { hr: '#ff6150', hit: '#ffd23f', score: '#ffd23f', run: '#ffd23f', walk: '#a8dcff', out: '#ffffff', info: '#ffffff' };
   function label(c, l) {
     if (!l || l.alpha <= 0) return;
@@ -202,12 +235,15 @@ const Anim = (() => {
     c.setTransform(dpr, 0, 0, dpr, 0, 0);
     // 遠い順に描く
     const ents = [];
-    for (const [k, pos] of Object.entries(st.fielders)) ents.push({ y: pos[1], f: () => figure(c, pos[0], pos[1], st.def, { crouch: k === 'C', facing: 'home' }) });
-    for (const r of st.runners) if (r.alpha > 0) ents.push({ y: r.y, f: () => figure(c, r.x, r.y, st.off, { alpha: r.alpha, facing: 'away' }) });
+    const poses = st.poses || {};
+    for (const [k, pos] of Object.entries(st.fielders)) ents.push({ y: pos[1], f: () => figure(c, pos[0], pos[1], st.def, { crouch: k === 'C' && !poses[k], facing: 'home', pose: poses[k] }) });
+    for (const r of st.runners) if (r.alpha > 0) ents.push({ y: r.y, f: () => figure(c, r.x, r.y, st.off, { alpha: r.alpha, facing: 'away', pose: r.pose }) });
+    for (const pf of st.puffs || []) ents.push({ y: pf.y - 0.2, f: () => dust(c, pf) });
     if (st.batter && st.batter.alpha > 0) ents.push({ y: st.batter.y + 0.5, f: () => figure(c, st.batter.x, st.batter.y, st.off, { alpha: st.batter.alpha, bat: st.batter.bat, facing: 'away' }) });
     if (st.ball) ents.push({ y: st.ball.y - 0.1, f: () => ball(c, st.ball) });
     ents.sort((a, b) => b.y - a.y);
     for (const e of ents) e.f();
+    if (st.tag && !st.label) pitchTag(c, st.tag);
     label(c, st.label);
   }
 
@@ -272,6 +308,18 @@ const Anim = (() => {
   }
 
   /** プレーの時間軸を組み立てる。返り値の at(t) がその時刻の状態を返す */
+  const IF_KEYS = ['P', '1B', '2B', 'SS', '3B'];
+  const OF_KEYS = ['LF', 'CF', 'RF'];
+  const FIRST = [60, 63], SECOND = [3, 125], THIRD = [-60, 63], PLATE = [0, 1];
+  const BASE_COVER = [FIRST, SECOND, THIRD, PLATE];
+  function nearestOf(pt, keys) {
+    let best = keys[0], bd = 1e9;
+    for (const k of keys) { const d = dist(FPOS[k], pt); if (d < bd) { bd = d; best = k; } }
+    return best;
+  }
+  const pickV = (arr) => arr[Math.floor(Math.random() * arr.length)];
+  const R = (a, b) => a + Math.random() * (b - a);
+
   function build(m, lp) {
     const text = lp.text.split('：').slice(1).join('：') || lp.text;
     const kind = classify(text, lp.kind);
@@ -279,208 +327,631 @@ const Anim = (() => {
     const off = offSide === m.me ? UNI.me : UNI.opp;
     const def = offSide === m.me ? UNI.opp : UNI.me;
     const RUN = 0.14; // ft/ms
-    const PITCH = 430;
-    const ballSegs = [];   // {t0,t1,a:[x,y,z],b:[x,y,z],arc,bounce}
-    const moves = [];      // 野手の移動 {k,t0,t1,to}
-    let tLabel = PITCH + 80;
-    let swingAt = null;
-    const addBall = (t0, t1, a, b, arc = 0, bounce = false) => ballSegs.push({ t0, t1, a, b, arc, bounce });
-    const throwTo = (t0, a, b) => { const t1 = t0 + Math.max(220, dist(a, b) * 2.6); addBall(t0, t1, [a[0], a[1], 5], [b[0], b[1], 4], Math.min(14, dist(a, b) * 0.06)); return t1; };
 
-    // 投球
-    const pitchEnd = kind === 'IBB' ? [7, 0, 4] : [0, 0, 3.2];
-    addBall(0, PITCH, [0.6, 56, 6], pitchEnd, 0.5);
+    const balls = [], moves = [], poses = [], puffs = [], tags = [], swings = [];
+    const addBall = (t0, t1, a, b, o = {}) => { balls.push({ t0, t1, a, b, arc: o.arc || 0, bounce: o.bounce || 0, hide: !!o.hide }); return t1; };
+    const move = (k, t0, t1, to) => moves.push({ k, t0, t1: Math.max(t0 + 1, t1), to: to.slice() });
+    const pose = (k, t0, t1, type, dir = 1) => poses.push({ k, t0, t1, type, dir });
+    const puff = (t, pt) => puffs.push({ t, x: pt[0], y: pt[1] });
+    const tag = (t, txt) => tags.push({ t, txt });
+    const throwBall = (t0, a, b, o = {}) => {
+      const d = dist(a, b);
+      const t1 = t0 + Math.max(200, d * (o.slow ? 3.3 : 2.4));
+      addBall(t0, t1, [a[0], a[1], 5], [b[0], b[1], o.endZ || 4], { arc: Math.min(22, d * 0.05) + (o.high ? 10 : 0) });
+      return t1;
+    };
+    const toward = (from, to, ft) => { const d = dist(from, to) || 1; const f = Math.min(1, ft / d); return [lerp(from[0], to[0], f), lerp(from[1], to[1], f)]; };
+    const side = (pt) => (pt[0] < 0 ? -1 : 1);
 
-    let runStart = PITCH;
-    let runSpeed = RUN;
-    let batterOutAt = null, batterOutProg = 0.9;
-    let runnerOutAt = PITCH + 900;
-
-    if (kind === 'K') {
-      if (/空振り/.test(text)) swingAt = PITCH - 60;
-      tLabel = PITCH + 60;
-      batterOutAt = -1;
-    } else if (kind === 'BB' || kind === 'IBB') {
-      runSpeed = 0.075; runStart = PITCH + 150; tLabel = PITCH + 60;
-    } else if (kind === 'STEAL') {
-      runStart = 0;
-      const tgt = lp.before[0] && !lp.before[1] ? BASE[1] : BASE[2];
-      const tArr = throwTo(PITCH + 60, [0, -3], [tgt[0] * 0.95, tgt[1] * 0.95]);
-      moves.push({ k: tgt === BASE[1] ? 'SS' : '3B', t0: PITCH - 200, t1: tArr, to: [tgt[0] * 0.95, tgt[1] * 0.95] });
-      tLabel = tArr; runnerOutAt = tArr;
-      runSpeed = (90 / (tArr - 0)) * 1.02;
-    } else if (kind === 'SQX') {
-      swingAt = PITCH - 80;
-      runStart = PITCH - 250;
-      tLabel = PITCH + 400; runnerOutAt = PITCH + 380; batterOutAt = -1;
-    } else {
-      swingAt = PITCH - 60;
-      const th = direction(text);
-      let L, T, arc = 0, bounce = false, catchK = null, landK = null, outThrow = null, extra = null;
-      switch (kind) {
-        case 'HR': L = polar(th, fenceR(th) + 60); T = 1500; arc = 110; break;
-        case '3B': L = polar(th, fenceR(th) - 6); T = 950; arc = 20; landK = true; break;
-        case '2B': L = polar(th, fenceR(th) - 40); T = 900; arc = 26; landK = true; extra = polar(th, fenceR(th) - 12); break;
-        case '1B': L = polar(th, 170); T = 650; arc = 9; landK = true; extra = polar(th, 215); break;
-        case 'IH': L = polar(th, 78); T = 520; bounce = true; landK = true; outThrow = 'late'; break;
-        case 'BUNT': case 'BUNTHIT': L = polar(Math.random() * 50 - 25, 28); T = 650; bounce = true; landK = true; outThrow = kind === 'BUNT' ? '1B' : 'late'; break;
-        case 'POP': L = polar(Math.random() * 30 - 15, 22); T = 800; arc = 26; catchK = true; break;
-        case 'FOUL': L = [Math.random() < 0.5 ? -14 : 14, -16]; T = 950; arc = 55; catchK = 'C'; break;
-        case 'FO': case 'SF': {
-          const infield = /ショート|セカンド|サード|ファースト|ピッチャー/.test(text) && !/犠牲/.test(text);
-          L = polar(th, infield ? 135 : kind === 'SF' ? 290 : 255 + Math.random() * 30);
-          T = infield ? 1000 : 1250; arc = infield ? 70 : 85; catchK = true;
-          if (kind === 'SF') outThrow = 'home';
-          break;
-        }
-        case 'LO': L = polar(th, Math.abs(th) < 6 ? 56 : Math.abs(th) < 22 ? 118 : 95); T = 300; arc = 5; catchK = true; break;
-        case 'E': case 'GO': case 'DP': default: {
-          const r = Math.abs(th) < 6 ? 54 : Math.abs(th) < 22 ? 118 : 92;
-          L = polar(th, r); T = 560; bounce = true; landK = true;
-          outThrow = kind === 'E' ? 'error' : kind === 'DP' ? 'dp' : '1B';
-        }
-      }
-      const tLand = PITCH + T;
-      addBall(PITCH, tLand, [0, 2, 3], [L[0], L[1], kind === 'HR' ? 25 : 0.6], arc, bounce);
-      const fk = catchK === 'C' ? 'C' : nearestFielder(L, dist(L, [0, 0]) < 70);
-      if (catchK) {
-        moves.push({ k: fk, t0: PITCH, t1: tLand, to: L });
-        tLabel = tLand;
-        batterOutAt = tLand; batterOutProg = 0.45;
-        runnerOutAt = tLand + 300;
-        if (outThrow === 'home') {
-          throwTo(tLand + 120, L, [0, 1]);
-          tLabel = tLand + 120;
-        }
-      } else if (kind === 'HR') {
-        tLabel = PITCH + T * 0.75;
-        moves.push({ k: nearestFielder(L, false), t0: PITCH, t1: tLand, to: polar(th, fenceR(th) - 8) });
-      } else {
-        // ゴロ・ヒット: 打球の処理
-        let fieldPt = extra || L;
-        let tField = tLand;
-        if (extra) {
-          tField = tLand + 380;
-          addBall(tLand, tField, [L[0], L[1], 0], [extra[0], extra[1], 0], 0, true);
-        }
-        if (outThrow === 'error') {
-          const past = polar(Math.atan2(L[0], L[1]) / DEG, dist(L, [0, 0]) + 45);
-          tField = tLand + 350;
-          addBall(tLand, tField, [L[0], L[1], 0], [past[0], past[1], 0], 0, true);
-          moves.push({ k: fk, t0: PITCH, t1: tLand, to: L });
-          tLabel = tLand;
-        } else {
-          moves.push({ k: fk, t0: PITCH, t1: tField + (landK && !outThrow ? 150 : 0), to: fieldPt });
-          tLabel = tField;
-        }
-        if (outThrow === '1B' || outThrow === 'late') {
-          const t1 = throwTo(tField + 120, fieldPt, [60, 63]);
-          moves.push({ k: '1B', t0: tField - 300, t1: tField, to: [60, 63] });
-          if (outThrow === '1B') { batterOutAt = t1; batterOutProg = 0.93; }
-          tLabel = t1;
-        } else if (outThrow === 'dp') {
-          const t1 = throwTo(tField + 100, fieldPt, [3, 125]);
-          moves.push({ k: L[0] < 0 ? '2B' : 'SS', t0: tField - 300, t1: tField, to: [3, 125] });
-          const t2 = throwTo(t1 + 80, [3, 125], [60, 63]);
-          moves.push({ k: '1B', t0: tField - 300, t1: tField, to: [60, 63] });
-          runnerOutAt = t1; batterOutAt = t2; batterOutProg = 0.93;
-          tLabel = t2;
-        } else if (!outThrow && kind !== 'HR') {
-          // ヒットは内野へ返球
-          throwTo(tField + 150, fieldPt, [-10, 120]);
-        }
-      }
-    }
-
-    // 走者の動き
-    const runners = [];
+    // ---- 走者の結末を先に決める(誰がアウトで誰が生還か) ----
     const scorers = lp.scored - (kind === 'HR' ? 1 : 0);
     let left = Math.max(0, scorers);
+    const runners = [];
     for (let i = 2; i >= 0; i--) {
       const r = lp.before[i];
       if (!r) continue;
       const j = lp.after.indexOf(r);
-      if (j >= 0) runners.push({ path: pathFor(i, j), out: false });
-      else if (left > 0) { left--; runners.push({ path: pathFor(i, 3), out: false }); }
-      else runners.push({ path: pathFor(i, i + 1), out: true });
+      if (j >= 0) runners.push({ from: i, to: j, out: false });
+      else if (left > 0) { left--; runners.push({ from: i, to: 3, out: false }); }
+      else runners.push({ from: i, to: i + 1, out: true });
     }
-    let bat = null;
+    const outRunner = runners.find((r) => r.out);
+    const batterSafe = lp.batter && lp.after.includes(lp.batter);
+
+    // 結果を決める情報(各プレーが書き込む)
+    const res = { tLabel: 0, batterOutAt: null, batterOutProg: 0.9, batterSafeAt: null, runnerOutAt: null, runStart: null, runnerSafeAt: null, batterStay: false, slow: false, close: false };
+
+    // ---- 一球ずつの投球 ----
+    let t = 0;
+    const mound = [0.6, 56, 6];
+    const pitch = (t0, end) => addBall(t0, t0 + 430, mound, end, { arc: 0.5 });
+    const returnBall = (t0) => addBall(t0, t0 + 420, [0, -4, 4], mound, { arc: 7 });
+    const runnerOn1 = lp.before[0] && !lp.before[1];
+
+    let extraTypes = [];
+    if (kind === 'IBB') extraTypes = ['wide', 'wide', 'wide'];
+    else {
+      const n = pickV([0, 1, 1, 1, 2, 2, 3]);
+      const pool = ['ball', 'ball', 'strike', 'swing', 'foulBack', 'foulSide', 'foulSide'];
+      if (runnerOn1 && kind !== 'STEAL') pool.push('pickoff');
+      for (let i = 0; i < n; i++) extraTypes.push(pickV(pool));
+      if (kind === 'BB' && extraTypes.length < 2) extraTypes.push('ball');
+      if (kind === 'K' && !extraTypes.some((x) => x !== 'ball' && x !== 'pickoff')) extraTypes.push(pickV(['strike', 'swing', 'foulBack']));
+      if (kind === 'STEAL' && Math.random() < 0.4) extraTypes = [runnerOn1 ? 'pickoff' : 'ball'];
+    }
+    for (const e of extraTypes) {
+      if (e === 'pickoff') {
+        throwBall(t + 250, [0, 58], [58, 64]);
+        move('1B', t, t + 300, [58, 66]);
+        puff(t + 500, [60, 62]);
+        tag(t + 520, 'けん制');
+        throwBall(t + 800, [58, 64], [0, 58]);
+        move('1B', t + 900, t + 1300, FPOS['1B']);
+        t += 1500;
+        continue;
+      }
+      if (e === 'wide') { pitch(t, [7, 0, 4]); move('C', t, t + 250, [6, -6]); move('C', t + 600, t + 800, FPOS.C); tag(t + 450, 'ボール'); returnBall(t + 650); t += 1150; continue; }
+      if (e === 'ball') { pitch(t, [R(-9, 9), 0, R(1, 8)]); tag(t + 450, 'ボール'); returnBall(t + 700); t += 1200; continue; }
+      if (e === 'strike') { pitch(t, [R(-1.5, 1.5), 0, R(2.5, 4.5)]); tag(t + 450, 'ストライク'); returnBall(t + 700); t += 1200; continue; }
+      if (e === 'swing') { pitch(t, [R(-1.5, 1.5), 0, R(1.5, 4)]); swings.push(t + 370); tag(t + 450, '空振り'); returnBall(t + 700); t += 1200; continue; }
+      if (e === 'foulBack') {
+        pitch(t, [0, 0.5, 3]); swings.push(t + 370);
+        addBall(t + 430, t + 950, [0, 1, 3], [R(-30, 30), -75, 25], { arc: 18, hide: true });
+        tag(t + 500, 'ファウル'); t += 1400; continue;
+      }
+      if (e === 'foulSide') {
+        pitch(t, [0, 0.5, 3]); swings.push(t + 370);
+        const s = Math.random() < 0.5 ? -1 : 1;
+        const pt = polar(s * R(50, 62), R(110, 220));
+        const fly = Math.random() < 0.5;
+        addBall(t + 430, t + (fly ? 1400 : 1000), [0, 1, 3], [pt[0], pt[1], 0.5], fly ? { arc: R(40, 70) } : { bounce: 1 });
+        const fk = nearestOf(pt, ['1B', '3B', 'LF', 'RF']);
+        move(fk, t + 500, t + 1300, toward(FPOS[fk], pt, 25));
+        move(fk, t + 1500, t + 1900, FPOS[fk]);
+        tag(t + 520, 'ファウル'); t += 2000; continue;
+      }
+    }
+
+    // ---- 勝負の一球 ----
+    const P0 = t;
+    const C = P0 + 430; // 投球が本塁に届く(インパクト)時刻
+    res.runStart = C;
+
+    const doK = () => {
+      pitch(P0, [R(-1.5, 1.5), 0, R(2, 4.5)]);
+      if (/空振り/.test(text)) swings.push(C - 60);
+      res.tLabel = C + 60; res.batterStay = true;
+    };
+    const doWalk = () => {
+      if (/死球/.test(text)) { pitch(P0, [-3.5, 0.2, 4]); puff(C, [-3.5, 0]); }
+      else if (kind === 'IBB') { pitch(P0, [7, 0, 4]); move('C', P0, P0 + 250, [6, -6]); }
+      else pitch(P0, [R(-10, 10), 0, Math.random() < 0.5 ? R(0.5, 1.5) : R(6, 8)]);
+      res.tLabel = C + 80; res.runStart = C + 200; res.slow = true;
+    };
+    const doSteal = () => {
+      const from = lp.before[0] && !lp.before[1] ? 0 : 1;
+      const tgt = BASE_COVER[from + 1];
+      const coverK = from === 0 ? pickV(['SS', '2B']) : '3B';
+      pitch(P0, [R(-1, 1), 0, R(2, 4)]);
+      res.runStart = P0 - 150;
+      const success = !outRunner;
+      const v = success ? pickV(['late', 'late', 'nothrow', 'high']) : pickV(['ontime', 'ontime']);
+      move(coverK, P0 + 200, C + 300, tgt);
+      if (v === 'nothrow') {
+        res.runnerSafeAt = C + 380;
+        res.tLabel = C + 420;
+        returnBall(C + 500);
+      } else {
+        const arr = throwBall(C + 120, [0, -3], [tgt[0], tgt[1]], { endZ: v === 'high' ? 9 : 2 });
+        if (v === 'high') pose(coverK, arr - 120, arr + 200, 'jump');
+        if (success) res.runnerSafeAt = arr - R(40, 160);
+        else res.runnerOutAt = arr + 40;
+        res.close = true;
+        res.tLabel = arr + 60;
+        puff(arr, tgt);
+      }
+    };
+    const doSqueezeMiss = () => {
+      pitch(P0, [2, 0, 3]); swings.push(C - 80);
+      res.runStart = P0 - 200;
+      res.runnerOutAt = C + 380;
+      move('C', C, C + 300, [-1, 6]);
+      puff(C + 380, [-2, 8]);
+      res.tLabel = C + 420; res.batterStay = true;
+    };
+
+    // ---- 外野へのヒット ----
+    function cutoffThrow(t0, from) {
+      const cut = from[0] < 0 ? [-30, 150] : [30, 150];
+      const ck = from[0] < 0 ? 'SS' : '2B';
+      move(ck, t0 - 400, t0, cut);
+      throwBall(t0, from, cut);
+    }
+    function doSingle(th) {
+      const v = pickV(['through', 'liner', 'bloop', 'middle', 'onehop']);
+      if (v === 'through' || v === 'middle') {
+        const t2 = v === 'middle' ? th * 0.25 : th;
+        const gp = polar(t2, 118);
+        const fp = polar(t2, 210);
+        if (v === 'middle') { pose('P', C + 80, C + 330, 'jump'); }
+        addBall(C, C + 420, [0, 2, 1], [gp[0], gp[1], 0.5], { bounce: 2 });
+        addBall(C + 420, C + 1000, [gp[0], gp[1], 0.5], [fp[0], fp[1], 0.3], { bounce: 1 });
+        const ik = nearestOf(gp, ['1B', '2B', 'SS', '3B']);
+        move(ik, C + 60, C + 380, toward(FPOS[ik], gp, dist(FPOS[ik], gp) - 7));
+        pose(ik, C + 300, C + 1100, 'dive', side([gp[0] - FPOS[ik][0], 0]));
+        puff(C + 420, gp);
+        const ok = nearestOf(fp, OF_KEYS);
+        move(ok, C + 100, C + 1050, fp);
+        res.tLabel = C + 520;
+        cutoffThrow(C + 1200, fp);
+      } else if (v === 'liner') {
+        const lpt = polar(th, 175), fp = polar(th, 210);
+        addBall(C, C + 620, [0, 2, 3], [lpt[0], lpt[1], 0.5], { arc: 14 });
+        addBall(C + 620, C + 1000, [lpt[0], lpt[1], 0.5], [fp[0], fp[1], 0.3], { bounce: 1 });
+        const ok = nearestOf(lpt, OF_KEYS);
+        move(ok, C + 80, C + 640, toward(FPOS[ok], lpt, dist(FPOS[ok], lpt) - 4));
+        pose(ok, C + 520, C + 1150, 'dive', side([lpt[0] - FPOS[ok][0], 0]));
+        puff(C + 640, lpt);
+        move(ok, C + 1200, C + 1500, fp);
+        res.tLabel = C + 640;
+        cutoffThrow(C + 1600, fp);
+      } else if (v === 'bloop') {
+        const lpt = polar(th, R(140, 160)), fp = polar(th, 172);
+        addBall(C, C + 1100, [0, 2, 3], [lpt[0], lpt[1], 0.5], { arc: 36 });
+        addBall(C + 1100, C + 1350, [lpt[0], lpt[1], 0.5], [fp[0], fp[1], 0.3], { bounce: 1 });
+        const ik = nearestOf(lpt, ['1B', '2B', 'SS', '3B']);
+        const ok = nearestOf(lpt, OF_KEYS);
+        move(ik, C + 150, C + 1100, toward(FPOS[ik], lpt, dist(FPOS[ik], lpt) - 14));
+        move(ok, C + 150, C + 1100, toward(FPOS[ok], lpt, dist(FPOS[ok], lpt) - 12));
+        if (Math.random() < 0.5) { pose(ok, C + 950, C + 1500, 'dive', side([lpt[0] - FPOS[ok][0], 0])); puff(C + 1100, lpt); }
+        move(ok, C + 1500, C + 1700, fp);
+        res.tLabel = C + 1100;
+        cutoffThrow(C + 1800, fp);
+      } else {
+        const fp = polar(th, 215);
+        addBall(C, C + 520, [0, 2, 1], [fp[0], fp[1], 0.4], { bounce: 1 });
+        const ok = nearestOf(fp, OF_KEYS);
+        move(ok, C + 60, C + 560, fp);
+        res.tLabel = C + 330;
+        if (lp.before[1] || lp.before[2]) throwBall(C + 700, fp, [0, 1], { high: true });
+        else cutoffThrow(C + 700, fp);
+      }
+    }
+    function doExtraBase(th, triple) {
+      const v = pickV(['gap', 'line', 'over', 'wall', 'dive']);
+      let wallPt, tField, tl;
+      if (v === 'line') {
+        const t2 = (th < 0 ? -1 : 1) * 41;
+        const ik = t2 < 0 ? '3B' : '1B';
+        const gp = polar(t2, 95);
+        wallPt = polar(t2, fenceR(t2) - 6);
+        addBall(C, C + 330, [0, 2, 1], [gp[0], gp[1], 0.4], { bounce: 2 });
+        addBall(C + 330, C + 1500, [gp[0], gp[1], 0.4], [wallPt[0], wallPt[1], 0.3], { bounce: 1 });
+        move(ik, C + 40, C + 300, toward(FPOS[ik], gp, dist(FPOS[ik], gp) - 6));
+        pose(ik, C + 220, C + 900, 'dive', t2 < 0 ? -1 : 1);
+        puff(C + 330, gp);
+        tl = C + 420; tField = C + 1700;
+      } else if (v === 'gap' || v === 'dive') {
+        const t2 = Math.abs(th) < 10 ? (Math.random() < 0.5 ? -18 : 18) : th;
+        const lpt = polar(t2, R(240, 270));
+        wallPt = polar(t2, fenceR(t2) - 6);
+        addBall(C, C + 800, [0, 2, 3], [lpt[0], lpt[1], 0.5], { arc: 16 });
+        addBall(C + 800, C + 1500, [lpt[0], lpt[1], 0.5], [wallPt[0], wallPt[1], 0.3], { bounce: 1 });
+        const ok = nearestOf(lpt, OF_KEYS);
+        if (v === 'dive') {
+          move(ok, C + 60, C + 800, toward(FPOS[ok], lpt, dist(FPOS[ok], lpt) - 5));
+          pose(ok, C + 680, C + 1300, 'dive', side([lpt[0] - FPOS[ok][0], 0]));
+          puff(C + 800, lpt);
+          const other = OF_KEYS.filter((k) => k !== ok).sort((a, b) => dist(FPOS[a], wallPt) - dist(FPOS[b], wallPt))[0];
+          move(other, C + 200, C + 1700, wallPt);
+          tField = C + 1750;
+          cutoffThrow(tField + 200, wallPt);
+          res.tLabel = C + 800;
+          return;
+        }
+        tl = C + 800; tField = C + 1700;
+      } else if (v === 'over') {
+        const lpt = polar(th, fenceR(th) - 28);
+        wallPt = polar(th, fenceR(th) - 6);
+        addBall(C, C + 1450, [0, 2, 3], [lpt[0], lpt[1], 0.5], { arc: 75 });
+        addBall(C + 1450, C + 1800, [lpt[0], lpt[1], 0.5], [wallPt[0], wallPt[1], 0.3], { bounce: 1 });
+        tl = C + 1450; tField = C + 2000;
+      } else {
+        const hit = polar(th, fenceR(th) - 1);
+        wallPt = polar(th, fenceR(th) - 45);
+        addBall(C, C + 1350, [0, 2, 3], [hit[0], hit[1], 9], { arc: 60 });
+        addBall(C + 1350, C + 1800, [hit[0], hit[1], 9], [wallPt[0], wallPt[1], 0.3], { arc: 6 });
+        const ok = nearestOf(hit, OF_KEYS);
+        move(ok, C + 100, C + 1250, toward(FPOS[ok], hit, dist(FPOS[ok], hit) - 4));
+        pose(ok, C + 1200, C + 1500, 'jump');
+        move(ok, C + 1550, C + 1850, wallPt);
+        res.tLabel = C + 1360;
+        tField = C + 1900;
+        cutoffThrow(tField + 150, wallPt);
+        return;
+      }
+      const ok = nearestOf(wallPt, OF_KEYS);
+      move(ok, C + 100, tField, wallPt);
+      if (triple) { tField += 300; }
+      res.tLabel = tl;
+      cutoffThrow(tField + 150, wallPt);
+    }
+    function doHomeRun(th) {
+      const v = pickV(['high', 'liner', 'robbed', 'pole', 'deep']);
+      const t2 = v === 'pole' ? (th < 0 ? -1 : 1) * 43.5 : th;
+      const fr = fenceR(t2);
+      const d = { high: fr + 50, liner: fr + 40, robbed: fr + 25, pole: fr + 40, deep: fr + 130 }[v];
+      const T = { high: 1900, liner: 1100, robbed: 1500, pole: 1600, deep: 2100 }[v];
+      const arc = { high: 130, liner: 45, robbed: 90, pole: 100, deep: 150 }[v];
+      const L = polar(t2, d);
+      addBall(C, C + T, [0, 2, 3], [L[0], L[1], 20], { arc, hide: false });
+      balls[balls.length - 1].hideAfter = true;
+      const cross = C + T * (fr / d);
+      const ok = nearestOf(polar(t2, fr), OF_KEYS);
+      const wall = polar(t2, fr - 4);
+      move(ok, C + 100, cross - 80, toward(FPOS[ok], wall, dist(FPOS[ok], wall) * (v === 'high' || v === 'deep' ? 0.85 : 1)));
+      if (v === 'robbed') pose(ok, cross - 140, cross + 200, 'jump');
+      res.tLabel = cross;
+      res.slow = true;
+    }
+
+    // ---- 外野フライ ----
+    function doFly(th, sac) {
+      const infield = /ショート|セカンド|サード|ファースト|ピッチャー/.test(text) && !sac;
+      if (infield) {
+        const v = pickV(['drift', 'back', 'calloff']);
+        const base = /ピッチャー/.test(text) ? 55 : 125;
+        const L = polar(th, base + (v === 'back' ? 35 : R(-10, 10)));
+        const T = R(1000, 1300);
+        addBall(C, C + T, [0, 2, 3], [L[0], L[1], 5], { arc: R(70, 95) });
+        const k = nearestOf(L, IF_KEYS);
+        move(k, C + 150, C + T - 100, L);
+        if (v === 'calloff') {
+          const k2 = nearestOf(L, IF_KEYS.filter((x) => x !== k));
+          move(k2, C + 150, C + T - 300, toward(FPOS[k2], L, dist(FPOS[k2], L) - 12));
+        }
+        if (v === 'back') pose(k, C + T - 150, C + T + 300, 'jump');
+        res.tLabel = C + T; res.batterOutAt = C + T; res.batterOutProg = 0.7; res.runStart = C + T;
+        return C + T;
+      }
+      const v = pickV(['routine', 'back', 'divein', 'fence', 'gap', 'slide']);
+      let t2 = th, d, T, arc, poseType = null;
+      if (v === 'routine') { d = R(235, 270); T = 1300; arc = 85; }
+      if (v === 'back') { d = fenceR(th) - 25; T = 1550; arc = 95; }
+      if (v === 'divein') { d = R(165, 185); T = 1100; arc = 40; poseType = 'dive'; }
+      if (v === 'fence') { d = fenceR(th) - 5; T = 1600; arc = 100; poseType = 'jump'; }
+      if (v === 'gap') { t2 = Math.abs(th) < 10 ? (Math.random() < 0.5 ? -19 : 19) : th; d = R(270, 300); T = 1400; arc = 90; }
+      if (v === 'slide') { t2 = (th < 0 ? -1 : 1) * 40; d = R(215, 245); T = 1250; arc = 70; poseType = 'dive'; }
+      if (sac) { d = Math.max(d, 270); }
+      const L = polar(t2, d);
+      const ok = nearestOf(L, OF_KEYS);
+      addBall(C, C + T, [0, 2, 3], [L[0], L[1], poseType === 'jump' ? 9 : 4], { arc });
+      move(ok, C + 120, C + T - (poseType ? 120 : 250), L);
+      if (poseType) { pose(ok, C + T - 160, C + T + 500, poseType, side([L[0] - FPOS[ok][0], 0])); if (poseType === 'dive') puff(C + T, L); }
+      if (v === 'gap') {
+        const k2 = OF_KEYS.filter((k) => k !== ok).sort((a, b) => dist(FPOS[a], L) - dist(FPOS[b], L))[0];
+        move(k2, C + 120, C + T - 100, toward(FPOS[k2], L, dist(FPOS[k2], L) - 15));
+      }
+      res.tLabel = C + T; res.batterOutAt = C + T; res.batterOutProg = 0.85; res.runStart = C + T;
+      if (sac) {
+        const arr = throwBall(C + T + 150, L, [0, 1], { high: true });
+        move('C', C + T, C + T + 200, [0, 2]);
+        res.runnerSafeAt = arr - R(60, 200);
+        res.close = true;
+        puff(res.runnerSafeAt, [0, 1]);
+        res.tLabel = res.runnerSafeAt + 40;
+      }
+      return C + T;
+    }
+
+    // ---- 内野ゴロ系 ----
+    const coverFirst = (fk, t0) => {
+      if (fk === '1B') { move('P', t0, t0 + 700, FIRST); return 'P'; }
+      move('1B', t0, t0 + 350, FIRST);
+      return '1B';
+    };
+    function doGrounder(th) {
+      const r = Math.abs(th) < 6 ? 54 : Math.abs(th) < 22 ? 118 : 92;
+      let fk = nearestOf(polar(th, r), IF_KEYS.filter((k) => r > 70 || k === 'P'));
+      if (r <= 70) fk = 'P';
+      const isIH = kind === 'IH';
+      const isE = kind === 'E';
+      const isDP = kind === 'DP';
+      let v = pickV(['routine', 'routine', 'dive', 'charge', 'backhand', 'deflect', 'bangbang']);
+      if (isE) v = pickV(['legs', 'bobble', 'wildthrow']);
+      if (isDP) v = pickV(['routine', 'routine', 'dive']);
+      if (v === 'deflect' && fk === 'P') v = 'routine';
+      let fieldPt, tField, tThrow;
+      const fpos = FPOS[fk];
+      if (v === 'deflect') {
+        addBall(C, C + 260, [0, 2, 1], [0, 54, 1], { bounce: 1 });
+        pose('P', C + 120, C + 420, 'jump');
+        fk = Math.random() < 0.5 ? 'SS' : '2B';
+        fieldPt = toward(FPOS[fk], [0, 100], 14);
+        addBall(C + 260, C + 760, [0, 54, 1], [fieldPt[0], fieldPt[1], 0.5], { bounce: 2 });
+        move(fk, C + 260, C + 760, fieldPt);
+        tField = C + 760; tThrow = tField + 120;
+      } else if (v === 'charge') {
+        fieldPt = polar(th, R(50, 70));
+        if (fk === 'P') fieldPt = polar(th, 40);
+        addBall(C, C + 1000, [0, 2, 1], [fieldPt[0], fieldPt[1], 0.3], { bounce: 1 });
+        move(fk, C + 80, C + 980, fieldPt);
+        tField = C + 1000; tThrow = tField + 40;
+      } else if (v === 'dive' || v === 'backhand') {
+        const dir = fpos[0] < 0 ? -1 : 1;
+        const sidePt = [fpos[0] + (Math.random() < 0.5 ? -1 : 1) * 17, fpos[1] + (v === 'backhand' ? 10 : 0)];
+        if (fk === 'P') { sidePt[0] = fpos[0] + dir * 8; }
+        fieldPt = sidePt;
+        addBall(C, C + 520, [0, 2, 1], [fieldPt[0], fieldPt[1], 0.4], { bounce: 2 });
+        move(fk, C + 60, C + 500, fieldPt);
+        if (v === 'dive') { pose(fk, C + 380, C + 1050, 'dive', side([fieldPt[0] - fpos[0], 0])); puff(C + 520, fieldPt); tThrow = C + 1050; }
+        else tThrow = C + 780;
+        tField = C + 520;
+      } else if (v === 'legs') {
+        fieldPt = polar(th, r);
+        const past = polar(th, r + 70);
+        addBall(C, C + 560, [0, 2, 1], [fieldPt[0], fieldPt[1], 0.3], { bounce: 2 });
+        addBall(C + 560, C + 1100, [fieldPt[0], fieldPt[1], 0.3], [past[0], past[1], 0.2], { bounce: 1 });
+        move(fk, C + 60, C + 540, fieldPt);
+        const ok = nearestOf(past, OF_KEYS);
+        move(ok, C + 300, C + 1300, past);
+        res.tLabel = C + 600;
+        return;
+      } else if (v === 'bobble') {
+        fieldPt = polar(th, r);
+        const drop = [fieldPt[0] + R(-6, 6), fieldPt[1] + R(-8, -3)];
+        addBall(C, C + 560, [0, 2, 1], [fieldPt[0], fieldPt[1], 2], { bounce: 2 });
+        addBall(C + 560, C + 1000, [fieldPt[0], fieldPt[1], 2], [drop[0], drop[1], 0.2], { arc: 10 });
+        move(fk, C + 60, C + 540, fieldPt);
+        move(fk, C + 1000, C + 1250, drop);
+        pose(fk, C + 1000, C + 1300, 'dive', 1);
+        res.tLabel = C + 950;
+        return;
+      } else {
+        fieldPt = polar(th, r);
+        addBall(C, C + 560, [0, 2, 1], [fieldPt[0], fieldPt[1], 0.4], { bounce: 2 });
+        move(fk, C + 60, C + 540, fieldPt);
+        tField = C + 560; tThrow = tField + (v === 'bangbang' ? 380 : 140);
+      }
+
+      if (isDP) {
+        const pivotK = fieldPt[0] < -8 ? '2B' : 'SS';
+        move(pivotK, C + 100, tThrow - 20, SECOND);
+        const a1 = throwBall(tThrow, fieldPt, SECOND);
+        const cov = coverFirst(fk, C + 100);
+        const a2 = throwBall(a1 + R(80, 200), SECOND, FIRST);
+        puff(a1, SECOND);
+        res.runnerOutAt = a1 + 30;
+        res.batterOutAt = a2; res.batterOutProg = 0.95;
+        res.tLabel = a2;
+        void cov;
+        return;
+      }
+      if (v === 'wildthrow') {
+        coverFirst(fk, C + 100);
+        const miss = [88, R(30, 50)];
+        const arr = throwBall(tThrow, fieldPt, miss, { endZ: 1 });
+        pose('1B', arr - 260, arr + 150, 'jump');
+        res.tLabel = arr - 150;
+        return;
+      }
+      // 打者走者との競争
+      const cov = coverFirst(fk, C + 100);
+      if (fk === '1B' && v !== 'deflect' && v !== 'charge' && dist(fieldPt, FIRST) < 40) {
+        // 一塁手が自分でベースを踏む
+        move('1B', tField + 50, tField + 450, FIRST);
+        res.batterOutAt = tField + 470; res.batterOutProg = 0.85;
+        res.tLabel = tField + 470;
+        if (isIH) { res.batterSafeAt = tField + 400; res.batterOutAt = null; res.close = true; }
+        return;
+      }
+      void cov;
+      const arr = throwBall(tThrow, fieldPt, FIRST, { slow: v === 'charge' && Math.random() < 0.4 });
+      res.tLabel = arr + 40;
+      if (isIH) { res.batterSafeAt = arr - R(30, 140); res.close = true; }
+      else { res.batterOutAt = arr; res.batterOutProg = v === 'routine' ? 0.88 : 0.97; res.close = v !== 'routine'; }
+    }
+    function doLiner(th) {
+      const r = Math.abs(th) < 6 ? 56 : Math.abs(th) < 22 ? 120 : 94;
+      const base = polar(th, r);
+      const fk = r < 70 ? 'P' : nearestOf(base, ['1B', '2B', 'SS', '3B']);
+      const v = pickV(['chest', 'dive', 'leap', 'stab']);
+      let L = base.slice(), z = 4;
+      if (v === 'dive') L = [FPOS[fk][0] + (Math.random() < 0.5 ? -1 : 1) * 12, FPOS[fk][1] + 2];
+      if (v === 'leap') { L = FPOS[fk].slice(); z = 10; }
+      if (v === 'stab') L = [FPOS[fk][0] + R(-4, 4), FPOS[fk][1]];
+      const T = v === 'leap' ? 380 : R(260, 340);
+      addBall(C, C + T, [0, 2, 3], [L[0], L[1], z], { arc: v === 'leap' ? 10 : 3 });
+      move(fk, C + 20, C + T - 20, L);
+      if (v === 'dive') { pose(fk, C + T - 120, C + T + 600, 'dive', side([L[0] - FPOS[fk][0], 0])); puff(C + T, L); }
+      if (v === 'leap') pose(fk, C + T - 160, C + T + 200, 'jump');
+      res.tLabel = C + T; res.batterOutAt = C + T + 150; res.batterOutProg = 0.25; res.runStart = C + T + 200;
+    }
+    function doFoulFly() {
+      const v = pickV(['backstop', 'third', 'first', 'dugout']);
+      let L, k;
+      if (v === 'backstop') { L = [R(-20, 20), R(-30, -18)]; k = 'C'; }
+      if (v === 'third') { L = [R(-90, -70), R(30, 50)]; k = '3B'; }
+      if (v === 'first') { L = [R(70, 90), R(30, 50)]; k = '1B'; }
+      if (v === 'dugout') { const s = Math.random() < 0.5 ? -1 : 1; L = [s * R(45, 60), R(-5, 10)]; k = s < 0 ? '3B' : '1B'; }
+      const T = R(1000, 1300);
+      addBall(C, C + T, [0, 1, 3], [L[0], L[1], 4], { arc: R(55, 80) });
+      move(k, C + 150, C + T - 100, L);
+      if (Math.random() < 0.35) { pose(k, C + T - 140, C + T + 500, 'dive', side([L[0] - FPOS[k][0], 0])); puff(C + T, L); }
+      res.tLabel = C + T; res.batterOutAt = C + T; res.batterOutProg = 0.3; res.runStart = C + T;
+    }
+    function doBunt(popped) {
+      const fk = pickV(['P', '3B', '1B', 'C']);
+      const thb = fk === '3B' ? R(-32, -20) : fk === '1B' ? R(20, 32) : R(-8, 8);
+      const L = fk === 'C' ? [R(-4, 4), 12] : polar(thb, R(26, 38));
+      swings.push(C - 40);
+      if (fk !== 'P') move('P', C + 100, C + 500, toward(FPOS.P, L, 10));
+      if (popped) {
+        const T = R(650, 900);
+        addBall(C, C + T, [0, 2, 3], [L[0], L[1], 3], { arc: R(16, 28) });
+        move(fk, C + 60, C + T - 40, L);
+        if (Math.random() < 0.5) { pose(fk, C + T - 150, C + T + 500, 'dive', 1); puff(C + T, L); }
+        res.tLabel = C + T; res.batterOutAt = C + T; res.batterOutProg = 0.4; res.runStart = C + T + 300;
+        return;
+      }
+      const T = R(700, 950);
+      addBall(C, C + T, [0, 2, 1], [L[0], L[1], 0.2], { bounce: 1 });
+      move(fk, C + 80, C + T, L);
+      if (fk === '1B') move('2B', C + 100, C + 700, FIRST);
+      else move('1B', C + 80, C + 450, FIRST);
+      const target = outRunner && batterSafe ? BASE_COVER[outRunner.to] : FIRST;
+      if (target !== FIRST) move(target === THIRD ? 'SS' : 'SS', C + 100, C + 700, target);
+      const arr = throwBall(C + T + 120, L, target);
+      res.tLabel = arr + 30;
+      if (target !== FIRST) { res.runnerOutAt = arr + 20; res.batterSafeAt = arr - 200; }
+      else if (kind === 'BUNTHIT' || batterSafe) { res.batterSafeAt = arr - R(40, 140); res.close = true; }
+      else { res.batterOutAt = arr; res.batterOutProg = 0.85; }
+    }
+
+    // ---- 振り分け ----
+    if (kind === 'K') doK();
+    else if (kind === 'BB' || kind === 'IBB') doWalk();
+    else if (kind === 'STEAL') doSteal();
+    else if (kind === 'SQX') doSqueezeMiss();
+    else {
+      pitch(P0, [0, 0.5, 3]);
+      if (kind !== 'BUNT' && kind !== 'BUNTHIT' && kind !== 'POP') swings.push(C - 60);
+      const th = direction(text);
+      switch (kind) {
+        case 'HR': doHomeRun(th); break;
+        case '3B': doExtraBase(th, true); break;
+        case '2B': doExtraBase(th, false); break;
+        case '1B': doSingle(th); break;
+        case 'FO': doFly(th, false); break;
+        case 'SF': doFly(th, true); break;
+        case 'LO': doLiner(th); break;
+        case 'FOUL': doFoulFly(); break;
+        case 'POP': doBunt(true); break;
+        case 'BUNT': case 'BUNTHIT': doBunt(false); break;
+        default: doGrounder(th);
+      }
+    }
+
+    // ---- 走者の動きを時間軸にする ----
+    const speed = res.slow && kind !== 'HR' ? 0.075 : RUN;
+    const rTracks = runners.map((r) => {
+      const path = pathFor(r.from, r.to);
+      const len = path.slice(1).reduce((a, p, i) => a + dist(path[i], p), 0);
+      const t0 = kind === 'STEAL' ? res.runStart : res.runStart;
+      let t1, prog = 1, fadeAt = null;
+      if (r.out) {
+        prog = 0.75;
+        const outAt = res.runnerOutAt != null ? res.runnerOutAt : res.tLabel + 300;
+        t1 = Math.max(t0 + 120, outAt);
+        fadeAt = t1;
+      } else if (res.runnerSafeAt != null && (kind === 'STEAL' || (kind === 'SF' && r.to === 3))) {
+        t1 = Math.max(t0 + 200, res.runnerSafeAt);
+      } else {
+        t1 = t0 + len / speed;
+      }
+      if ((r.out || res.runnerSafeAt != null) && res.close) puff(t1, basePos(r.to));
+      return { path, t0, t1, prog, fadeAt, scoring: r.to === 3 && !r.out };
+    });
+    let bTrack = null;
     if (lp.batter) {
       const j = lp.after.indexOf(lp.batter);
-      if (j >= 0) bat = { path: pathFor(-1, j), out: false };
-      else if (kind === 'HR') bat = { path: pathFor(-1, 3), out: false, slow: true };
-      else if (batterOutAt === -1) bat = { path: [basePos(-1)], out: true, stay: true };
-      else bat = { path: pathFor(-1, 0), out: true, prog: batterOutProg, outAt: batterOutAt };
+      const t0 = kind === 'BB' || kind === 'IBB' ? res.runStart : C + 60;
+      if (j >= 0) {
+        const path = pathFor(-1, j);
+        const len = path.slice(1).reduce((a, p, i) => a + dist(path[i], p), 0);
+        let t1 = res.batterSafeAt != null && j === 0 ? Math.max(t0 + 300, res.batterSafeAt) : t0 + len / speed;
+        if (res.close && res.batterSafeAt != null) puff(t1, FIRST);
+        bTrack = { path, t0, t1, prog: 1 };
+      } else if (kind === 'HR') {
+        const path = pathFor(-1, 3);
+        bTrack = { path, t0, t1: t0 + 360 / 0.11, prog: 1, scoring: true };
+      } else if (res.batterStay || res.batterOutAt == null) {
+        bTrack = { stay: true };
+      } else {
+        const path = pathFor(-1, 0);
+        const t1 = Math.max(t0 + 200, res.batterOutAt);
+        if (res.close) puff(t1, FIRST);
+        bTrack = { path, t0, t1, prog: res.batterOutProg, fadeAt: t1 };
+      }
     }
-    const trackOf = (rn, isBatter) => {
-      const len = rn.path.length < 2 ? 0 : rn.path.slice(1).reduce((a, p, i) => a + dist(rn.path[i], p), 0);
-      const speed = rn.slow ? 0.1 : runSpeed;
-      const t0 = isBatter && kind !== 'BB' && kind !== 'IBB' ? PITCH + 60 : runStart;
-      const endOut = rn.out ? (isBatter ? rn.outAt : runnerOutAt) : null;
-      const prog = rn.out ? (isBatter ? rn.prog : 0.72) : 1;
-      const t1 = rn.out && endOut ? Math.max(t0 + 50, endOut) : t0 + (len * prog) / speed;
-      return { ...rn, t0, t1, prog, fadeAt: rn.out ? t1 : null };
-    };
-    const rTracks = runners.map((r) => trackOf(r, false));
-    const bTrack = bat && !bat.stay ? trackOf(bat, true) : bat;
 
-    let end = Math.max(tLabel, ...ballSegs.map((s) => s.t1), ...rTracks.map((r) => r.t1), bTrack && bTrack.t1 ? bTrack.t1 : 0) + 250;
-    const hold = 750;
-    const total = Math.max(end, tLabel + 500) + hold;
+    const lastBall = Math.max(...balls.map((s) => s.t1));
+    const ends = [res.tLabel, lastBall, ...rTracks.map((r) => r.t1), bTrack && bTrack.t1 ? bTrack.t1 : 0];
+    const total = Math.max(...ends, res.tLabel + 700) + 650;
     const sub = lp.scored > 0 ? `${lp.scored}点！` : lp.outsAfter >= 3 ? 'スリーアウト チェンジ' : '';
     const cls = (m.log.find((l) => l.text === lp.text) || {}).cls || 'info';
+    const byK = {};
+    for (const mv of moves) (byK[mv.k] = byK[mv.k] || []).push(mv);
+    for (const k of Object.keys(byK)) byK[k].sort((a, b) => a.t0 - b.t0);
 
-    function at(t) {
+    function swingAngle(tt) {
+      let sw = null;
+      for (const s of swings) if (s <= tt) sw = s;
+      if (sw == null || tt > sw + 600) return 2.2;
+      const f = tt - sw;
+      if (f < 120) return 2.2 - (f / 120) * 2.6;
+      if (f < 420) return -0.4;
+      return lerp(-0.4, 2.2, (f - 420) / 180);
+    }
+
+    function at(tt) {
       const fielders = {};
-      for (const [k, pos] of Object.entries(FPOS)) fielders[k] = pos.slice();
-      for (const mv of moves) {
-        const from = fielders[mv.k];
-        if (!from) continue;
-        if (t <= mv.t0) continue;
-        const f = ease(clamp((t - mv.t0) / (mv.t1 - mv.t0), 0, 1));
-        fielders[mv.k] = [lerp(FPOS[mv.k][0], mv.to[0], f), lerp(FPOS[mv.k][1], mv.to[1], f)];
+      const fposes = {};
+      for (const [k, pos0] of Object.entries(FPOS)) {
+        let pos = pos0.slice();
+        for (const mv of byK[k] || []) {
+          if (tt <= mv.t0) break;
+          const f = ease(clamp((tt - mv.t0) / (mv.t1 - mv.t0), 0, 1));
+          const np = [lerp(pos[0], mv.to[0], f), lerp(pos[1], mv.to[1], f)];
+          if (f < 1) { pos = np; break; }
+          pos = mv.to.slice();
+        }
+        fielders[k] = pos;
       }
+      for (const p of poses) if (tt >= p.t0 && tt <= p.t1) fposes[p.k] = { type: p.type, dir: p.dir, f: (tt - p.t0) / (p.t1 - p.t0) };
       // ボール
       let b = null;
-      for (const s of ballSegs) {
-        if (t >= s.t0 && t <= s.t1) {
-          const f = (t - s.t0) / (s.t1 - s.t0);
-          let z = lerp(s.a[2], s.b[2], f) + 4 * s.arc * f * (1 - f) / 1;
-          if (s.bounce) z = Math.abs(Math.sin(f * Math.PI * 3)) * 3 * (1 - f) + 0.6;
+      for (const s of balls) {
+        if (tt >= s.t0 && tt <= s.t1) {
+          const f = (tt - s.t0) / (s.t1 - s.t0);
+          let z = lerp(s.a[2], s.b[2], f) + 4 * s.arc * f * (1 - f);
+          if (s.bounce) z = Math.abs(Math.sin(f * Math.PI * (s.bounce + 1))) * 3 * (1 - f) + lerp(s.a[2], s.b[2], f);
           b = { x: lerp(s.a[0], s.b[0], f), y: lerp(s.a[1], s.b[1], f), z };
         }
       }
-      if (!b && ballSegs.length) {
-        const last = ballSegs.reduce((a, s) => (s.t1 <= t && (!a || s.t1 > a.t1) ? s : a), null);
-        if (last && kind !== 'HR') b = { x: last.b[0], y: last.b[1], z: last.b[2] };
+      if (!b && balls.length) {
+        const last = balls.reduce((a, s) => (s.t1 <= tt && (!a || s.t1 > a.t1) ? s : a), null);
+        if (last && !last.hide && !last.hideAfter) b = { x: last.b[0], y: last.b[1], z: last.b[2] };
       }
-      // 走者
       const rs = rTracks.map((r) => {
-        const f = t <= r.t0 ? 0 : clamp((t - r.t0) / Math.max(1, r.t1 - r.t0), 0, 1) * r.prog;
+        const f = tt <= r.t0 ? 0 : clamp((tt - r.t0) / Math.max(1, r.t1 - r.t0), 0, 1) * r.prog;
         const [x, y] = along(r.path, f);
-        const alpha = r.fadeAt && t > r.fadeAt ? clamp(1 - (t - r.fadeAt) / 300, 0, 1) : r.path[r.path.length - 1] === BASE[3] && f >= 1 ? clamp(1 - (t - r.t1) / 400, 0, 1) : 1;
-        return { x, y, alpha };
+        let alpha = 1;
+        if (r.fadeAt && tt > r.fadeAt) alpha = clamp(1 - (tt - r.fadeAt) / 300, 0, 1);
+        if (r.scoring && f >= 1) alpha = clamp(1 - (tt - r.t1) / 400, 0, 1);
+        const sliding = r.fadeAt ? tt > r.t1 - 150 && tt < r.t1 + 250 : false;
+        return { x, y, alpha, pose: sliding ? { type: 'slide', dir: 1 } : null };
       });
       let batter = null;
       if (bTrack) {
         if (bTrack.stay) {
-          batter = { x: -3.5, y: 0, alpha: t > tLabel + 200 ? clamp(1 - (t - tLabel - 200) / 300, 0, 1) : 1, bat: swingAngle(t) };
+          batter = { x: -3.5, y: 0, alpha: tt > res.tLabel + 250 ? clamp(1 - (tt - res.tLabel - 250) / 300, 0, 1) : 1, bat: swingAngle(tt) };
         } else {
-          const f = t <= bTrack.t0 ? 0 : clamp((t - bTrack.t0) / Math.max(1, bTrack.t1 - bTrack.t0), 0, 1) * bTrack.prog;
-          const [x, y] = t <= bTrack.t0 ? [-3.5, 0] : along(bTrack.path, f);
-          let alpha = bTrack.fadeAt && t > bTrack.fadeAt ? clamp(1 - (t - bTrack.fadeAt) / 300, 0, 1) : 1;
-          if (kind === 'HR' && f >= 1) alpha = clamp(1 - (t - bTrack.t1) / 400, 0, 1);
-          batter = { x, y, alpha, bat: t <= bTrack.t0 ? swingAngle(t) : null };
+          const started = tt > bTrack.t0;
+          const f = !started ? 0 : clamp((tt - bTrack.t0) / Math.max(1, bTrack.t1 - bTrack.t0), 0, 1) * bTrack.prog;
+          const [x, y] = started ? along(bTrack.path, f) : [-3.5, 0];
+          let alpha = 1;
+          if (bTrack.fadeAt && tt > bTrack.fadeAt) alpha = clamp(1 - (tt - bTrack.fadeAt) / 300, 0, 1);
+          if (bTrack.scoring && f >= 1) alpha = clamp(1 - (tt - bTrack.t1) / 400, 0, 1);
+          batter = { x, y, alpha, bat: started ? null : swingAngle(tt) };
         }
       }
-      const lab = t >= tLabel ? { text, cls, sub, alpha: clamp((t - tLabel) / 150, 0, 1) } : null;
-      return { fielders, runners: rs, batter, ball: b, label: lab, off, def };
+      const tg = tags.filter((g) => tt >= g.t && tt < g.t + 650).pop();
+      const pf = puffs.filter((p) => tt >= p.t && tt < p.t + 450).map((p) => ({ x: p.x, y: p.y, f: (tt - p.t) / 450 }));
+      const lab = tt >= res.tLabel ? { text, cls, sub, alpha: clamp((tt - res.tLabel) / 150, 0, 1) } : null;
+      return { fielders, poses: fposes, runners: rs, batter, ball: b, label: lab, tag: tg ? tg.txt : null, puffs: pf, off, def };
     }
-    function swingAngle(t) {
-      if (swingAt == null || t < swingAt) return 2.2;
-      return 2.2 - clamp((t - swingAt) / 120, 0, 1) * 2.6;
-    }
-    return { at, total };
+    return { at, total, kind, tLabel: res.tLabel };
   }
 
   // ---------- 待機中の画面 ----------
@@ -541,11 +1012,13 @@ const Anim = (() => {
   const busy = () => !!cur;
 
   /** テスト用: 指定割合の時点のコマを描く */
-  function drawAt(m, lp, frac) {
+  let drawAtCache = null;
+  function drawAt(m, lp, offset) {
     const cv = canvas();
     if (!cv) return;
-    const tl = build(m, lp);
-    draw(cv, tl.at(tl.total * frac));
+    if (!drawAtCache || drawAtCache.lp !== lp) drawAtCache = { lp, tl: build(m, lp) };
+    const tl = drawAtCache.tl;
+    draw(cv, tl.at(clamp(tl.tLabel + offset, 0, tl.total)));
   }
   return { play, drawIdle, skip, busy, _build: build, _classify: classify, _drawAt: drawAt, W, H };
 })();
