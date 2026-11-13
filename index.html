@@ -112,6 +112,14 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--ai); outline-of
 .ex b{font-weight:600}
 .actions{display:flex; flex-wrap:wrap; gap:10px}
 
+.sys{display:inline-flex; flex-direction:column; border-left:2px solid currentColor; border-radius:8px 0 0 8px; padding-left:.6em; line-height:1.6}
+.choices{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; width:100%}
+.choices button{background:var(--paper); color:var(--ink); border:1.5px solid var(--ink); border-radius:4px; padding:10px 12px; font:600 1.1rem var(--f-math); text-align:left; min-width:0}
+.choices button[aria-pressed="true"]{background:var(--ai); border-color:var(--ai); color:var(--ai-fg)}
+.choices button:disabled{cursor:default; opacity:1}
+.choices button.right{outline:3px solid var(--maru); outline-offset:1px}
+@media (max-width:420px){.choices{grid-template-columns:minmax(0,1fr)}}
+
 /* 時間制限 */
 .limit{display:flex; flex-wrap:wrap; align-items:center; gap:8px 14px; font-weight:700}
 .seg{display:flex; flex-wrap:wrap; gap:6px}
@@ -146,17 +154,17 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--ai); outline-of
   <section id="home">
     <div style="display:flex;flex-direction:column;gap:20px">
       <header>
-        <h1>算数やりなおしドリル</h1>
-        <p class="lead">小1〜小6の算数を、中学生が1回10問でふり返るドリルです。数字は毎回変わります。時間制限は1問ごとで、切れると不正解になります。</p>
+        <h1>算数・数学やりなおしドリル</h1>
+        <p class="lead">小1〜小6の算数と中1〜中3の数学を、1回10問でふり返るドリルです。数字は毎回変わります。時間制限は1問ごとで、切れると不正解になります。</p>
       </header>
       <div class="grades" id="grades" role="group" aria-label="学年"></div>
       <div class="limit"><span id="limitLabel">1問の時間制限</span><div class="seg" id="limit" role="group" aria-labelledby="limitLabel"></div></div>
       <ul class="topics" id="topics"></ul>
       <div class="mixrow">
         <button class="btn" id="mixGrade"></button>
-        <button class="btn primary" id="mixAll">全学年ミックス 10問</button>
+        <button class="btn primary" id="mixAll"></button>
       </div>
-      <p class="note">「中学で必須」の単元は、正負の数・方程式・比例・関数でそのまま使います。まずここから始めるのがおすすめです。</p>
+      <p class="note">小学校の「中学で必須」の単元は、正負の数・方程式・比例・関数でそのまま使います。まずここから始めるのがおすすめです。</p>
     </div>
   </section>
 
@@ -213,7 +221,7 @@ const pick=a=>a[ri(0,a.length-1)];
 const gcd=(a,b)=>b?gcd(b,a%b):Math.abs(a);
 const lcm=(a,b)=>a/gcd(a,b)*b;
 const fm=x=>String(parseFloat(x.toFixed(6)));
-const F=(n,d)=>d===1?String(n):'<span class="fr"><span>'+n+'</span><span>'+d+'</span></span>';
+const F=(n,d)=>typeof n==='number'&&n<0?'−'+F(-n,d):d===1?String(n):'<span class="fr"><span>'+n+'</span><span>'+d+'</span></span>';
 const red=(n,d)=>{const g=gcd(n,d);return [n/g,d/g]};
 const N=(ans,post,pre)=>({k:'n',ans:ans,post:post||'',pre:pre||''});
 const Q=(n,d,post,pre)=>{const r=red(n,d);return {k:'f',ans:r,post:post||'',pre:pre||''}};
@@ -399,6 +407,175 @@ G.vol6=()=>{const t=ri(0,2);
   if(t===1){const b=ri(2,6)*2,h=ri(3,9),H=ri(4,12);return {q:'底面が 底辺 '+b+' cm・高さ '+h+' cm の三角形で、高さ '+H+' cm の三角柱の体積は?',f:[N(b*h/2*H,'cm³')],ex:'底面積 '+b+' × '+h+' ÷ 2 = '+b*h/2+' cm²。'+b*h/2+' × '+H+' = <b>'+b*h/2*H+' cm³</b>'}}
   const S=ri(12,60),H=ri(4,12);return {q:'底面積が '+S+' cm²、高さが '+H+' cm の四角柱の体積は?',f:[N(S*H,'cm³')],ex:'柱の体積 = 底面積 × 高さ。'+S+' × '+H+' = <b>'+S*H+' cm³</b>'}};
 
+/* ---------- 中学数学 ---------- */
+const nz=(a,b)=>{let v;do{v=ri(a,b)}while(v===0);return v};
+const sg=x=>fm(x).replace('-','−');
+const pn=x=>x<0?'(−'+(-x)+')':String(x);
+const sp=x=>'('+(x>0?'+':'−')+Math.abs(x)+')';
+const poly=ts=>{let o='';ts.forEach(t=>{const c=t[0],v=t[1];if(!c)return;const a=Math.abs(c),body=(a===1&&v?'':sg(a))+v;o+=o?(c<0?' − ':' + ')+body:(c<0?'−':'')+body});return o||'0'};
+const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=ri(0,i),t=a[i];a[i]=a[j];a[j]=t}return a};
+const C=(ok,wrong)=>{const seen={};seen[ok]=1;const w=[];wrong.forEach(x=>{if(x!=='0'&&!seen[x]){seen[x]=1;w.push(x)}});const opts=shuffle([ok].concat(shuffle(w).slice(0,3)));return {k:'c',opts:opts,ans:opts.indexOf(ok),pre:'',post:''}};
+const fac=a=>'(x '+(a>0?'+ ':'− ')+Math.abs(a)+')';
+const ffac=a=>a===0?'x':fac(a);
+const fstr=(a,b)=>a===b?fac(a)+'²':fac(Math.max(a,b))+fac(Math.min(a,b));
+const A=Math.abs;
+
+/* 中1 */
+G.pm_add=()=>{const t=ri(0,2);
+  if(t===0){const a=nz(-12,12),b=nz(-12,12);
+    return {q:sp(a)+' + '+sp(b),f:[N(a+b)],ex:(a*b>0?'同じ符号どうし → 絶対値の和 '+(A(a)+A(b))+' に共通の符号をつけます。':'ちがう符号 → 絶対値の差 '+A(A(a)-A(b))+' に、絶対値が大きいほうの符号をつけます。')+'答えは <b>'+sg(a+b)+'</b>'}}
+  if(t===1){const a=nz(-12,12),b=nz(-12,12);
+    return {q:sp(a)+' − '+sp(b),f:[N(a-b)],ex:'ひく数の符号を変えて、たし算になおします。'+sp(a)+' + '+sp(-b)+' = <b>'+sg(a-b)+'</b>'}}
+  const v=[nz(-9,9),nz(-9,9),nz(-9,9)],P=v.filter(x=>x>0).reduce((s,x)=>s+x,0),M=v.filter(x=>x<0).reduce((s,x)=>s+x,0);
+  return {q:poly(v.map(x=>[x,''])),f:[N(P+M)],ex:'正の項の和は '+P+'、負の項の和は '+sg(M)+'。あわせて <b>'+sg(P+M)+'</b>'}};
+G.pm_mul=()=>{const t=ri(0,3);
+  if(t===0){let a,b;do{a=nz(-9,9);b=nz(-9,9)}while(a>0&&b>0);
+    return {q:pn(a)+' × '+pn(b),f:[N(a*b)],ex:(a*b>0?'同じ符号の積は +。':'ちがう符号の積は −。')+A(a)+' × '+A(b)+' = '+A(a*b)+' なので <b>'+sg(a*b)+'</b>'}}
+  if(t===1){let b,q;do{b=nz(-9,9);q=nz(-9,9)}while(b>0&&q>0);
+    return {q:pn(b*q)+' ÷ '+pn(b),f:[N(q)],ex:(q>0?'同じ符号の商は +。':'ちがう符号の商は −。')+A(b*q)+' ÷ '+A(b)+' = '+A(q)+' なので <b>'+sg(q)+'</b>'}}
+  if(t===2){const a=ri(2,6),k=ri(0,2);
+    if(k===0)return {q:'(−'+a+')²',f:[N(a*a)],ex:'(−'+a+') を 2 回かけます。(−'+a+') × (−'+a+') = <b>'+a*a+'</b>'};
+    if(k===1)return {q:'−'+a+'²',f:[N(-a*a)],ex:'2 乗するのは '+a+' だけ。−('+a+' × '+a+') = <b>−'+a*a+'</b>。(−'+a+')² とのちがいに注意。'};
+    const c=Math.min(a,4);return {q:'(−'+c+')³',f:[N(-c*c*c)],ex:'負の数を 3 回(奇数回)かけると負。<b>−'+c*c*c+'</b>'}}
+  const a=nz(-9,9),b=ri(2,6),c=-ri(2,6);
+  return {q:sg(a)+' + '+b+' × '+pn(c),f:[N(a+b*c)],ex:'かけ算が先。'+b+' × '+pn(c)+' = '+sg(b*c)+'、'+sg(a)+' + '+pn(b*c)+' = <b>'+sg(a+b*c)+'</b>'}};
+G.expr1=()=>{const t=ri(0,2);
+  if(t===0){let a,c;do{a=nz(-7,7);c=nz(-7,7)}while(a+c===0);const b=nz(-9,9),d=nz(-9,9);
+    return {q:poly([[a,'x'],[b,''],[c,'x'],[d,'']])+' を簡単にすると?',
+      f:[C(poly([[a+c,'x'],[b+d,'']]),[poly([[a+c,'x'],[b-d,'']]),poly([[a-c,'x'],[b+d,'']]),poly([[a+c+b+d,'x']]),poly([[a+c,'x²'],[b+d,'']]),poly([[a-c,'x'],[b-d,'']])])],
+      ex:'x の項どうし、数の項どうしをまとめます。('+sg(a)+' '+(c>0?'+ ':'− ')+A(c)+')x と '+sg(b)+' '+(d>0?'+ ':'− ')+A(d)+' → <b>'+poly([[a+c,'x'],[b+d,'']])+'</b>'}}
+  if(t===1){const k=-ri(1,5);
+    if(ri(0,1)){const a=nz(-6,6),b=ri(-9,9);return {q:'x = '+sg(k)+' のとき、'+poly([[a,'x'],[b,'']])+' の値は?',f:[N(a*k+b)],ex:'負の数は ( ) をつけて代入します。'+pn(a)+' × '+pn(k)+(b?' '+(b>0?'+ ':'− ')+A(b):'')+' = <b>'+sg(a*k+b)+'</b>'}}
+    const a=pick([1,-1,2,-2,3]);return {q:'x = '+sg(k)+' のとき、'+poly([[a,'x²']])+' の値は?',f:[N(a*k*k)],ex:'x² = '+pn(k)+'² = '+k*k+'。'+(a===1?'':pn(a)+' × '+k*k+' = ')+'<b>'+sg(a*k*k)+'</b>'}}
+  let a,b,c,d,e;do{a=ri(2,5);b=nz(-4,4);c=nz(-6,6);d=nz(-5,5);e=nz(-6,6)}while(a*b-d===0);
+  return {q:a+'('+poly([[b,'x'],[c,'']])+') − ('+poly([[d,'x'],[e,'']])+') を計算すると?',
+    f:[C(poly([[a*b-d,'x'],[a*c-e,'']]),[poly([[a*b-d,'x'],[a*c+e,'']]),poly([[a*b-d,'x'],[c-e,'']]),poly([[a*b+d,'x'],[a*c-e,'']]),poly([[b-d,'x'],[a*c-e,'']]),poly([[a*b+d,'x'],[a*c+e,'']])])],
+    ex:'かっこをはずします。− ( ) は中の符号が全部変わります。'+poly([[a*b,'x'],[a*c,''],[-d,'x'],[-e,'']])+' = <b>'+poly([[a*b-d,'x'],[a*c-e,'']])+'</b>'}};
+G.eq1=()=>{const t=ri(0,3),x=nz(-9,9);
+  if(t===0){let a;do{a=nz(-6,6)}while(A(a)<2);const b=nz(-12,12),c=a*x+b;
+    return {q:poly([[a,'x'],[b,'']])+' = '+sg(c),f:[N(x,'','x =')],ex:sg(b)+' を移項して '+poly([[a,'x']])+' = '+sg(c)+' '+(b>0?'− ':'+ ')+A(b)+' = '+sg(c-b)+'。両辺を '+sg(a)+' でわって x = <b>'+sg(x)+'</b>'}}
+  if(t===1){let a,c;do{a=nz(-7,7);c=nz(-7,7)}while(a===c);const b=nz(-12,12),d=(a-c)*x+b;
+    return {q:poly([[a,'x'],[b,'']])+' = '+poly([[c,'x'],[d,'']]),f:[N(x,'','x =')],ex:'x の項を左辺、数の項を右辺に移項します。'+poly([[a-c,'x']])+' = '+sg(d-b)+' → x = <b>'+sg(x)+'</b>'}}
+  if(t===2){let a;do{a=nz(-5,5)}while(A(a)<2);const b=nz(-8,8);
+    return {q:sg(a)+'(x '+(b>0?'+ ':'− ')+A(b)+') = '+sg(a*(x+b)),f:[N(x,'','x =')],ex:'両辺を '+sg(a)+' でわると x '+(b>0?'+ ':'− ')+A(b)+' = '+sg(x+b)+'。x = <b>'+sg(x)+'</b>(分配法則でかっこをはずしても OK)'}}
+  const p=coprimePair(1,7),k=ri(2,6),j=ri(2,5);
+  return {q:'x : '+p[1]*k+' = '+p[0]*j+' : '+p[1]*j,f:[N(p[0]*k,'','x =')],ex:'a : b = c : d ならば ad = bc。x × '+p[1]*j+' = '+p[1]*k+' × '+p[0]*j+' → x = <b>'+p[0]*k+'</b>'}};
+G.prop1=()=>{const t=ri(0,2);
+  if(t===0){const a=nz(-6,6),p=nz(-5,5);let r;do{r=nz(-8,8)}while(r===p);
+    return {q:'y は x に比例し、x = '+sg(p)+' のとき y = '+sg(a*p)+' です。x = '+sg(r)+' のとき y は?',f:[N(a*r,'','y =')],ex:'y = ax に代入して a = '+pn(a*p)+' ÷ '+pn(p)+' = '+sg(a)+'。y = '+poly([[a,'x']])+' に x = '+sg(r)+' を代入して <b>'+sg(a*r)+'</b>'}}
+  if(t===1){const c=pick([12,18,24,36])*pick([1,-1]),ds=[1,2,3,4,6].filter(d=>c%d===0),p=pick(ds)*pick([1,-1]);let r;do{r=pick(ds)*pick([1,-1])}while(r===p);
+    return {q:'y は x に反比例し、x = '+sg(p)+' のとき y = '+sg(c/p)+' です。x = '+sg(r)+' のとき y は?',f:[N(c/r,'','y =')],ex:'反比例の式は y = a/x。a = x × y = '+pn(p)+' × '+pn(c/p)+' = '+sg(c)+'。y = '+pn(c)+' ÷ '+pn(r)+' = <b>'+sg(c/r)+'</b>'}}
+  const a=nz(-6,6),k=nz(-7,7);
+  return {q:'y = '+poly([[a,'x']])+' について、x = '+sg(k)+' のとき y は?',f:[N(a*k,'','y =')],ex:pn(a)+' × '+pn(k)+' = <b>'+sg(a*k)+'</b>'}};
+G.geo1=()=>{const t=ri(0,4);
+  if(t<2){const r=ri(2,12),th=pick([30,45,60,90,120,135,150,180,270]);
+    if(t===0){const x=red(2*r*th,360);return {q:'半径 '+r+' cm、中心角 '+th+'° のおうぎ形の弧の長さは?',f:[Q(x[0],x[1],'π cm')],ex:'弧の長さ = 2π × 半径 × 中心角/360。2π × '+r+' × '+F(th,360)+' = <b>'+F(x[0],x[1])+'π cm</b>'}}
+    const x=red(r*r*th,360);return {q:'半径 '+r+' cm、中心角 '+th+'° のおうぎ形の面積は?',f:[Q(x[0],x[1],'π cm²')],ex:'面積 = π × 半径² × 中心角/360。π × '+r*r+' × '+F(th,360)+' = <b>'+F(x[0],x[1])+'π cm²</b>'}}
+  if(t===2){const r=ri(2,6),h=ri(3,9),x=red(r*r*h,3);return {q:'底面の半径 '+r+' cm、高さ '+h+' cm の円錐の体積は?',f:[Q(x[0],x[1],'π cm³')],ex:'錐の体積 = '+F(1,3)+' × 底面積 × 高さ。'+F(1,3)+' × π × '+r*r+' × '+h+' = <b>'+F(x[0],x[1])+'π cm³</b>'}}
+  if(t===3){const r=ri(2,6);if(ri(0,1))return {q:'半径 '+r+' cm の球の表面積は?',f:[N(4*r*r,'π cm²')],ex:'球の表面積 = 4πr²。4 × π × '+r*r+' = <b>'+4*r*r+'π cm²</b>'};
+    const x=red(4*r*r*r,3);return {q:'半径 '+r+' cm の球の体積は?',f:[Q(x[0],x[1],'π cm³')],ex:'球の体積 = '+F(4,3)+'πr³。'+F(4,3)+' × π × '+r*r*r+' = <b>'+F(x[0],x[1])+'π cm³</b>'}}
+  const a=ri(3,9),h=ri(4,10),x=red(a*a*h,3);return {q:'底面が 1辺 '+a+' cm の正方形で、高さ '+h+' cm の正四角錐の体積は?',f:[Q(x[0],x[1],'cm³')],ex:'錐の体積 = '+F(1,3)+' × 底面積 × 高さ。'+F(1,3)+' × '+a*a+' × '+h+' = <b>'+F(x[0],x[1])+' cm³</b>'}};
+G.data1=()=>{const t=ri(0,2),n=t===0?pick([5,7]):t===1?6:ri(5,7),v=[];for(let i=0;i<n;i++)v.push(ri(1,20));
+  const s=v.slice().sort((a,b)=>a-b),list='<br>'+v.join('、');
+  if(t===0)return {q:'次のデータの中央値は?'+list,f:[N(s[(n-1)/2])],ex:'小さい順にならべると '+s.join('、')+'。まん中('+((n+1)/2)+' 番目)の値は <b>'+s[(n-1)/2]+'</b>'};
+  if(t===1)return {q:'次のデータの中央値は?'+list,f:[N((s[2]+s[3])/2)],ex:'小さい順にならべると '+s.join('、')+'。個数が偶数なので、まん中の 2 つ '+s[2]+' と '+s[3]+' の平均 <b>'+fm((s[2]+s[3])/2)+'</b>'};
+  return {q:'次のデータの範囲は?'+list,f:[N(s[n-1]-s[0])],ex:'範囲 = 最大値 − 最小値。'+s[n-1]+' − '+s[0]+' = <b>'+(s[n-1]-s[0])+'</b>'}};
+
+/* 中2 */
+G.expr2=()=>{const t=ri(0,2);
+  if(t===0){const a=nz(-6,6),b=nz(-6,6),c=nz(-6,6),d=nz(-6,6),m=ri(0,1)?1:-1;
+    const P=(u,w)=>poly([[u,'x'],[w,'y']]),v=[P(a+c,b+d),P(a-c,b-d),P(a-c,b+d),P(a+c,b-d),P(a+m*c,d-b)];
+    const ok=P(a+m*c,b+m*d);
+    return {q:'('+P(a,b)+') '+(m>0?'+':'−')+' ('+P(c,d)+') を計算すると?',f:[C(ok,v)],ex:(m>0?'かっこをそのままはずして':'− ( ) は中の符号を全部変えてはずして')+'、同類項をまとめます。'+poly([[a,'x'],[b,'y'],[m*c,'x'],[m*d,'y']])+' = <b>'+ok+'</b>'}}
+  if(t===1){const a=nz(-6,6),b=nz(-6,6);
+    return {q:poly([[a,'x']])+' × '+(b<0?'('+poly([[b,'xy']])+')':poly([[b,'xy']]))+' を計算すると?',
+      f:[C(poly([[a*b,'x²y']]),[poly([[a*b,'xy']]),poly([[a+b,'x²y']]),poly([[a*b,'x²y²']]),poly([[-a*b,'x²y']]),poly([[a+b,'xy']])])],
+      ex:'係数どうし、文字どうしをかけます。'+pn(a)+' × '+pn(b)+' = '+sg(a*b)+'、x × xy = x²y → <b>'+poly([[a*b,'x²y']])+'</b>'}}
+  const k=nz(-6,6),c=nz(-5,5);
+  return {q:poly([[k*c,'x²y']])+' ÷ '+(c<0?'('+poly([[c,'x']])+')':poly([[c,'x']]))+' を計算すると?',
+    f:[C(poly([[k,'xy']]),[poly([[k,'x²y']]),poly([[k,'xy²']]),poly([[-k,'xy']]),poly([[k,'x']]),poly([[k*c,'xy']])])],
+    ex:'分数の形にして約分します。係数は '+pn(k*c)+' ÷ '+pn(c)+' = '+sg(k)+'、文字は x²y ÷ x = xy → <b>'+poly([[k,'xy']])+'</b>'}};
+G.sim2=()=>{const x=nz(-6,6),y=nz(-6,6),sys=(l1,l2)=>'<span class="sys"><span>'+l1+'</span><span>'+l2+'</span></span>';
+  if(ri(0,2)===0){let a,b,m;do{a=nz(-4,4);b=nz(-4,4);m=nz(-3,3)}while(a+b*m===0);const k=y-m*x,c=a*x+b*y;
+    return {q:sys(poly([[a,'x'],[b,'y']])+' = '+sg(c),'y = '+poly([[m,'x'],[k,'']])),f:[N(x,'','x ='),N(y,'','y =')],
+      ex:'下の式を上の式に代入します(代入法)。'+poly([[a,'x']])+' '+(b>0?'+ ':'− ')+(A(b)===1?'':A(b))+'('+poly([[m,'x'],[k,'']])+') = '+sg(c)+' → '+poly([[a+b*m,'x']])+' = '+sg(c-b*k)+'。x = <b>'+sg(x)+'</b>、y = <b>'+sg(y)+'</b>'}}
+  let a1,b1,a2,b2;do{a1=nz(-5,5);b1=nz(-5,5);a2=nz(-5,5);b2=nz(-5,5)}while(a1*b2-a2*b1===0);
+  const c1=a1*x+b1*y,c2=a2*x+b2*y,D=b1*a2-b2*a1,E=c1*a2-c2*a1;
+  return {q:sys(poly([[a1,'x'],[b1,'y']])+' = '+sg(c1),poly([[a2,'x'],[b2,'y']])+' = '+sg(c2)),f:[N(x,'','x ='),N(y,'','y =')],
+    ex:'上を①、下を②として x を消去します(加減法)。① × '+pn(a2)+' − ② × '+pn(a1)+' より '+poly([[D,'y']])+' = '+sg(E)+'、y = <b>'+sg(y)+'</b>。①に代入して x = <b>'+sg(x)+'</b>'}};
+G.lin2=()=>{const t=ri(0,2),a=nz(-4,4),b=ri(-8,8);
+  if(t===0){const x1=ri(-4,2),x2=x1+ri(1,4),y1=a*x1+b,y2=a*x2+b;
+    return {q:'2点 ('+sg(x1)+', '+sg(y1)+')、('+sg(x2)+', '+sg(y2)+') を通る直線の傾きと切片は?',f:[N(a,'','傾き'),N(b,'','切片')],
+      ex:'傾き = y の増加量 ÷ x の増加量 = '+pn(y2-y1)+' ÷ '+(x2-x1)+' = '+sg(a)+'。y = '+poly([[a,'x']])+' + b に ('+sg(x1)+', '+sg(y1)+') を代入して b = '+sg(b)+'。式は <b>y = '+poly([[a,'x'],[b,'']])+'</b>'}}
+  if(t===1){const d=ri(2,5);
+    return {q:'一次関数 y = '+poly([[a,'x'],[b,'']])+' で、x の増加量が '+d+' のとき、y の増加量は?',f:[N(a*d)],ex:'変化の割合(= 傾き)は '+sg(a)+' で一定。y の増加量 = '+pn(a)+' × '+d+' = <b>'+sg(a*d)+'</b>'}}
+  const p=nz(-4,4);
+  return {q:'傾きが '+sg(a)+' で、点 ('+sg(p)+', '+sg(a*p+b)+') を通る直線の切片は?',f:[N(b,'','切片')],ex:'y = '+poly([[a,'x']])+' + b に代入します。'+sg(a*p+b)+' = '+pn(a)+' × '+pn(p)+' + b → b = <b>'+sg(b)+'</b>'}};
+G.angle2=()=>{const t=ri(0,4);
+  if(t===0){const n=ri(5,12);return {q:n+' 角形の内角の和は何度?',f:[N(180*(n-2),'°')],ex:'n 角形の内角の和 = 180° × (n − 2)。180 × '+(n-2)+' = <b>'+180*(n-2)+'°</b>'}}
+  if(t===1){const n=pick([5,6,8,9,10,12,15,18]);return {q:'正 '+n+' 角形の 1 つの外角は何度?',f:[N(360/n,'°')],ex:'多角形の外角の和はいつも 360°。360 ÷ '+n+' = <b>'+360/n+'°</b>'}}
+  if(t===2){const n=pick([5,6,8,9,10,12,15,18]);return {q:'正 '+n+' 角形の 1 つの内角は何度?',f:[N(180-360/n,'°')],ex:'1 つの外角は 360 ÷ '+n+' = '+360/n+'°。内角 = 180 − '+360/n+' = <b>'+(180-360/n)+'°</b>'}}
+  if(t===3){const a=ri(25,80),b=ri(25,150-a);return {q:'三角形の 2 つの内角が '+a+'° と '+b+'° のとき、残りの角の外角は何度?',f:[N(a+b,'°')],ex:'三角形の外角は、となり合わない 2 つの内角の和に等しい。'+a+' + '+b+' = <b>'+(a+b)+'°</b>'}}
+  const a=ri(10,70)*2;return {q:'頂角が '+a+'° の二等辺三角形の底角は何度?',f:[N((180-a)/2,'°')],ex:'2 つの底角は等しい。(180 − '+a+') ÷ 2 = <b>'+(180-a)/2+'°</b>'}};
+G.prob2=()=>{const t=ri(0,3);
+  if(t===0){const k=ri(3,11),c=k<=7?k-1:13-k;return {q:'2 つのさいころを投げるとき、出た目の和が '+k+' になる確率は?',f:[Q(c,36)],ex:'目の出方は全部で 6 × 6 = 36 通り。和が '+k+' になるのは '+c+' 通り。'+F(c,36)+(gcd(c,36)>1?' = <b>'+F(red(c,36)[0],red(c,36)[1])+'</b>':' → <b>'+F(c,36)+'</b>')}}
+  if(t===1){return ri(0,1)?{q:'2 つのさいころを投げるとき、同じ目が出る確率は?',f:[Q(1,6)],ex:'全部で 36 通り。同じ目は (1,1)〜(6,6) の 6 通り。'+F(6,36)+' = <b>'+F(1,6)+'</b>'}
+    :{q:'2 つのさいころを投げるとき、出た目の積が奇数になる確率は?',f:[Q(1,4)],ex:'積が奇数になるのは両方とも奇数のとき。3 × 3 = 9 通り。'+F(9,36)+' = <b>'+F(1,4)+'</b>'}}
+  if(t===2){const n=ri(2,3),all=Math.pow(2,n);return ri(0,1)?{q:n+' 枚の硬貨を投げるとき、少なくとも 1 枚は表が出る確率は?',f:[Q(all-1,all)],ex:'全部で '+all+' 通り。「全部裏」の 1 通りをのぞいて '+(all-1)+' 通り → <b>'+F(all-1,all)+'</b>'}
+    :{q:n+' 枚の硬貨を投げるとき、ちょうど 1 枚だけ表が出る確率は?',f:[Q(n,all)],ex:'全部で '+all+' 通り。表が 1 枚だけなのは '+n+' 通り → <b>'+F(red(n,all)[0],red(n,all)[1])+'</b>'}}
+  const r=ri(2,5),w=ri(2,5),n=r+w;
+  if(ri(0,1))return {q:'赤玉 '+r+' 個、白玉 '+w+' 個が入った袋から 1 個取り出すとき、赤玉である確率は?',f:[Q(r,n)],ex:'全部で '+n+' 個のうち赤は '+r+' 個 → <b>'+F(red(r,n)[0],red(r,n)[1])+'</b>'};
+  const x=red(r*(r-1),n*(n-1));return {q:'赤玉 '+r+' 個、白玉 '+w+' 個が入った袋から同時に 2 個取り出すとき、2 個とも赤玉である確率は?',f:[Q(x[0],x[1])],ex:'2 個の選び方は全部で '+n+' × '+(n-1)+' ÷ 2 = '+n*(n-1)/2+' 通り。赤 2 個は '+r+' × '+(r-1)+' ÷ 2 = '+r*(r-1)/2+' 通り → <b>'+F(x[0],x[1])+'</b>'}};
+
+/* 中3 */
+G.expand3=()=>{const t=ri(0,2),X=(p,q)=>poly([[1,'x²'],[p,'x'],[q,'']]);
+  if(t===0){let a,b;do{a=nz(-9,9);b=nz(-9,9)}while(a+b===0||a===b);
+    return {q:fac(a)+fac(b)+' を展開すると?',f:[C(X(a+b,a*b),[X(a+b,-a*b),X(a*b,a+b),X(a-b,a*b),X(-(a+b),a*b),X(0,a*b)])],ex:'(x + a)(x + b) = x² + (a + b)x + ab。たして '+sg(a+b)+'、かけて '+sg(a*b)+' → <b>'+X(a+b,a*b)+'</b>'}}
+  if(t===1){const a=nz(-9,9);
+    return {q:fac(a)+'² を展開すると?',f:[C(X(2*a,a*a),[X(0,a*a),X(a,a*a),X(2*a,-a*a),X(-2*a,a*a),X(2*a,2*A(a))])],ex:'(x ± a)² = x² ± 2ax + a²。まん中の項 2 × '+pn(a)+' × x を忘れずに → <b>'+X(2*a,a*a)+'</b>'}}
+  const a=ri(2,9);
+  return {q:'(x + '+a+')(x − '+a+') を展開すると?',f:[C(X(0,-a*a),[X(0,a*a),X(-2*a,a*a),X(-2*a,-a*a),X(0,-a),X(2*a,-a*a)])],ex:'(x + a)(x − a) = x² − a²(和と差の積)→ <b>'+X(0,-a*a)+'</b>'}};
+G.factor3=()=>{const X=(p,q)=>poly([[1,'x²'],[p,'x'],[q,'']]);
+  if(ri(0,3)===0){const a=ri(2,9);
+    return {q:X(0,-a*a)+' を因数分解すると?',f:[C(fstr(a,-a),[fstr(-a,-a),fstr(a,a),fstr(-a*a,1),fstr(a*a,-1)])],ex:'x² − a² = (x + a)(x − a)。'+a*a+' = '+a+'² なので <b>'+fstr(a,-a)+'</b>'}}
+  let a,b;do{a=nz(-9,9);b=nz(-9,9)}while(a+b===0);
+  return {q:X(a+b,a*b)+' を因数分解すると?',f:[C(fstr(a,b),[fstr(-a,-b),fstr(a,-b),fstr(-a,b),fstr(a*b,1),fstr(a+b,1)])],ex:'かけて '+sg(a*b)+'、たして '+sg(a+b)+' になる 2 数は '+sg(a)+' と '+sg(b)+' → <b>'+fstr(a,b)+'</b>'}};
+G.sqrt3=()=>{const t=ri(0,4),b=pick([2,3,5,6,7]);
+  if(t===0){const a=ri(2,6);return {q:'√'+a*a*b+' を a√b の形にすると? <small>(√ の中はできるだけ小さく)</small>',f:[N(a,'√'),N(b)],ex:a*a*b+' = '+a+'² × '+b+'。2 乗の部分を外に出して <b>'+a+'√'+b+'</b>'}}
+  if(t===1){const a=ri(2,9);let c;do{c=nz(-9,9)}while(a+c===0);
+    return {q:a+'√'+b+(c>0?' + ':' − ')+A(c)+'√'+b,f:[N(a+c,'√'+b)],ex:'√'+b+' を文字と同じように考えて、係数だけ計算します。('+a+(c>0?' + ':' − ')+A(c)+')√'+b+' = <b>'+sg(a+c)+'√'+b+'</b>'}}
+  if(t===2){const a=ri(2,4);let c;do{c=ri(2,5)}while(c===a);
+    return {q:'√'+a*a*b+' + √'+c*c*b,f:[N(a+c,'√'+b)],ex:'√'+a*a*b+' = '+a+'√'+b+'、√'+c*c*b+' = '+c+'√'+b+'。あわせて <b>'+(a+c)+'√'+b+'</b>'}}
+  if(t===3){const k=ri(2,4);return {q:'√'+b*k*k+' × √'+b,f:[N(k*b)],ex:'√ の中どうしをかけます。√'+b*k*k*b+' = √('+k*b+'²) = <b>'+k*b+'</b>'}}
+  const k=ri(2,5);return {q:F(k*b,'√'+b)+' の分母を有理化すると?',f:[N(k,'√'+b)],ex:'分母と分子に √'+b+' をかけます。'+F(k*b+'√'+b,b)+' = <b>'+k+'√'+b+'</b>'}};
+G.quad3=()=>{const t=ri(0,3);
+  if(t<2){let r1,r2;do{r1=ri(-9,9);r2=ri(-9,9)}while(r1===r2);
+    return {q:poly([[1,'x²'],[-(r1+r2),'x'],[r1*r2,'']])+' = 0',un:true,f:[N(r1,'','x ='),N(r2,'','、')],ex:'左辺を因数分解します。'+ffac(-r1)+ffac(-r2)+' = 0 → x = <b>'+sg(r1)+'、'+sg(r2)+'</b>'}}
+  if(t===2){const k=ri(2,12);return {q:'x² = '+k*k,un:true,f:[N(k,'','x ='),N(-k,'','、')],ex:'2 乗して '+k*k+' になる数は正と負の 2 つ。x = <b>±'+k+'</b>'}}
+  const a=nz(-6,6),k=ri(1,7);
+  return {q:fac(a)+'² = '+k*k,un:true,f:[N(-a+k,'','x ='),N(-a-k,'','、')],ex:'x '+(a>0?'+ ':'− ')+A(a)+' = ±'+k+'。x = '+sg(-a)+' ± '+k+' → <b>'+sg(-a+k)+'、'+sg(-a-k)+'</b>'}};
+G.quadfn3=()=>{const t=ri(0,3);
+  if(t===0){const a=nz(-4,4),p=nz(-4,4);return {q:'y は x の 2 乗に比例し、x = '+sg(p)+' のとき y = '+sg(a*p*p)+' です。y = ax² の a は?',f:[N(a,'','a =')],ex:'y = ax² に代入。'+sg(a*p*p)+' = a × '+pn(p)+'² = '+p*p+'a → a = <b>'+sg(a)+'</b>'}}
+  if(t===1){const a=nz(-3,3),p=ri(-4,3),q=p+ri(1,4);return {q:'関数 y = '+poly([[a,'x²']])+' で、x が '+sg(p)+' から '+sg(q)+' まで増加するときの変化の割合は?',f:[N(a*(p+q))],ex:'変化の割合 = y の増加量 ÷ x の増加量 = ('+sg(a*q*q)+' − '+pn(a*p*p)+') ÷ '+(q-p)+' = <b>'+sg(a*(p+q))+'</b>。y = ax² では a(p + q) でも求められます。'}}
+  if(t===2){const a=nz(-4,4),p=nz(-5,5);return {q:'関数 y = '+poly([[a,'x²']])+' で、x = '+sg(p)+' のとき y は?',f:[N(a*p*p,'','y =')],ex:pn(p)+'² = '+p*p+'。'+(a===1?'':pn(a)+' × '+p*p+' = ')+'<b>'+sg(a*p*p)+'</b>'}}
+  const a=ri(1,3),p=ri(1,4);let q;do{q=ri(1,5)}while(q===p);const m=Math.max(p,q);
+  return {q:'関数 y = '+poly([[a,'x²']])+' で、x の変域が −'+p+' ≦ x ≦ '+q+' のとき、y の最小値と最大値は?',f:[N(0,'','最小値'),N(a*m*m,'','最大値')],ex:'変域が x = 0 をふくむので、最小値は x = 0 のときの <b>0</b>。最大値は絶対値が大きい x = '+(p>q?'−'+p:q)+' のときの <b>'+a*m*m+'</b>'}};
+G.geo3=()=>{const t=ri(0,5);
+  if(t<2){const T3=pick([[3,4,5],[5,12,13],[8,15,17],[6,8,10],[9,12,15]]),k=T3[2]>10?1:ri(1,2),a=T3[0]*k,b=T3[1]*k,c=T3[2]*k;
+    const fg=(la,lb,lc)=>fig([[0,0],[b,0],[0,a]],[],[[b/2,0,lb,0,18],[0,a/2,la,-8,4,'end'],[b/2,a/2,lc,10,-4,'start']]);
+    if(t===0)return {q:'直角をはさむ 2 辺が '+a+' cm と '+b+' cm の直角三角形の斜辺は?',fig:fg(a+' cm',b+' cm','?'),f:[N(c,'cm')],ex:'三平方の定理 a² + b² = c²。'+a*a+' + '+b*b+' = '+c*c+' = '+c+'² → <b>'+c+' cm</b>'};
+    return {q:'斜辺が '+c+' cm、他の 1 辺が '+a+' cm の直角三角形の残りの辺は?',fig:fg(a+' cm','?',c+' cm'),f:[N(b,'cm')],ex:'三平方の定理より '+c+'² − '+a+'² = '+c*c+' − '+a*a+' = '+b*b+' = '+b+'² → <b>'+b+' cm</b>'}}
+  if(t===2){const p=pick([[1,2],[1,3],[2,3],[1,4],[2,5],[3,5],[1,5],[1,6],[2,7]]),n=p[0]*p[0]+p[1]*p[1];
+    return {q:'直角をはさむ 2 辺が '+p[0]+' cm と '+p[1]+' cm の直角三角形の斜辺は?',f:[N(n,'cm','√')],ex:'斜辺² = '+p[0]+'² + '+p[1]+'² = '+n+'。斜辺は正の数なので <b>√'+n+' cm</b>'}}
+  if(t===3){const p=coprimePair(1,5),m=p[0],n=p[1];
+    return ri(0,1)?{q:'相似比が '+m+' : '+n+' の 2 つの図形の面積比は?',f:[N(m*m),N(n*n,'',':')],ex:'面積比は相似比の 2 乗。'+m+'² : '+n+'² = <b>'+m*m+' : '+n*n+'</b>'}
+      :{q:'相似比が '+m+' : '+n+' の 2 つの立体の体積比は?',f:[N(m*m*m),N(n*n*n,'',':')],ex:'体積比は相似比の 3 乗。'+m+'³ : '+n+'³ = <b>'+m*m*m+' : '+n*n*n+'</b>'}}
+  if(t===4){const p=coprimePair(1,5),u=ri(2,5),v=ri(2,6);
+    return {q:'△ABC ∽ △DEF で、AB = '+p[0]*u+' cm、DE = '+p[1]*u+' cm、BC = '+p[0]*v+' cm のとき、EF は?',f:[N(p[1]*v,'cm')],ex:'相似比は AB : DE = '+p[0]*u+' : '+p[1]*u+' = '+p[0]+' : '+p[1]+'。BC : EF も同じなので '+p[0]*v+' × '+F(p[1],p[0])+' = <b>'+p[1]*v+' cm</b>'}}
+  const a=ri(20,85);
+  return ri(0,1)?{q:'1 つの弧に対する円周角が '+a+'° のとき、同じ弧に対する中心角は何度?',f:[N(2*a,'°')],ex:'中心角は円周角の 2 倍。'+a+' × 2 = <b>'+2*a+'°</b>'}
+    :{q:'1 つの弧に対する中心角が '+2*a+'° のとき、同じ弧に対する円周角は何度?',f:[N(a,'°')],ex:'円周角は中心角の半分。'+2*a+' ÷ 2 = <b>'+a+'°</b>'}};
+
 /* ---------- 単元表 ---------- */
 const T=(id,name,ex,key)=>({id:id,name:name,ex:ex,key:!!key});
 const GRADES=[
@@ -407,8 +584,12 @@ const GRADES=[
  {g:3,topics:[T('divrem','あまりのあるわり算','47 ÷ 6'),T('mul3','かけ算の筆算','386 × 7、34 × 56'),T('box3','□を使った式','□ × 7 = 63',1),T('unit3','km・kg・秒・t','2 km 350 m = □ m'),T('fracdec3','小数・分数のはじめ','0.8 + 0.5、1 − 3/7')]},
  {g:4,topics:[T('order4','計算の順序','12 + 4 × 6、(8 + 5) × 3',1),T('div4','2けたでわるわり算','437 ÷ 23'),T('dec4','小数のたし算・ひき算','3.4 + 2.58'),T('round4','がい数(四捨五入)','47382 → 千の位まで'),T('area4','長方形・正方形の面積','たて 6 cm、横 9 cm')]},
  {g:5,topics:[T('decmul5','小数のかけ算・わり算','2.4 × 0.7、3.6 ÷ 0.4',1),T('gcdlcm5','約数と倍数','最大公約数・最小公倍数',1),T('fracadd5','分数のたし算・ひき算(通分)','2/3 + 1/4',1),T('percent5','割合と百分率','800 円の 15 %',1),T('avg5','平均','72 点、85 点、…の平均'),T('speed5','速さ','時速 60 km で 3 時間',1),T('area5','三角形・四角形の面積と角','底辺 × 高さ ÷ 2'),T('vol5','体積','直方体、水そうの容積')]},
- {g:6,topics:[T('fracmul6','分数のかけ算・わり算','3/4 × 2/9、5/6 ÷ 2/3',1),T('mix6','小数と分数のまじった計算','0.25 + 1/3',1),T('ratio6','比','12 : 18、3 : 5 = 12 : □',1),T('circle6','円周と円の面積','半径 5 cm の円'),T('prop6','比例・反比例・文字と式','y は x に比例…',1),T('cases6','場合の数','ならび方、組み合わせ'),T('vol6','角柱・円柱の体積','底面積 × 高さ')]}
+ {g:6,topics:[T('fracmul6','分数のかけ算・わり算','3/4 × 2/9、5/6 ÷ 2/3',1),T('mix6','小数と分数のまじった計算','0.25 + 1/3',1),T('ratio6','比','12 : 18、3 : 5 = 12 : □',1),T('circle6','円周と円の面積','半径 5 cm の円'),T('prop6','比例・反比例・文字と式','y は x に比例…',1),T('cases6','場合の数','ならび方、組み合わせ'),T('vol6','角柱・円柱の体積','底面積 × 高さ')]},
+ {g:7,topics:[T('pm_add','正負の数のたし算・ひき算','(−3) + (+5)、4 − (−7)'),T('pm_mul','正負の数のかけ算・わり算・累乗','(−4) × (−6)、−3²'),T('expr1','文字式の計算と式の値','3x + 5 − x + 2'),T('eq1','一次方程式・比例式','3x − 5 = x + 7'),T('prop1','比例と反比例','y = −3x、y = 12/x'),T('geo1','おうぎ形・錐・球','弧の長さ、円錐の体積'),T('data1','データの中央値・範囲','中央値、範囲')]},
+ {g:8,topics:[T('expr2','式の計算','(3x + 2y) − (x − 4y)、3x × 2xy'),T('sim2','連立方程式','加減法・代入法'),T('lin2','一次関数','傾き・切片・変化の割合'),T('angle2','多角形と角','内角の和、外角'),T('prob2','確率','さいころ、硬貨、玉')]},
+ {g:9,topics:[T('expand3','式の展開','(x + 3)(x − 5)'),T('factor3','因数分解','x² − 2x − 15'),T('sqrt3','平方根','√12 = 2√3、3√2 + 5√2'),T('quad3','二次方程式','x² − 5x + 6 = 0'),T('quadfn3','関数 y = ax²','変化の割合、変域'),T('geo3','三平方の定理・相似・円周角','3 : 4 : 5、面積比')]}
 ];
+const GL=g=>g<=6?'小'+g:'中'+(g-6);
 const ALL=[].concat.apply([],GRADES.map(g=>g.topics.map(t=>Object.assign({grade:g.g},t))));
 const byId={};ALL.forEach(t=>byId[t.id]=t);
 
@@ -420,7 +601,7 @@ const store={
 let best=store.get('sansu-best',{})||{};
 let grade=store.get('sansu-grade',5);
 if(!GRADES.some(g=>g.g===grade)) grade=5;
-const LIMITS=[[0,'なし'],[60,'60秒'],[30,'30秒'],[15,'15秒']];
+const LIMITS=[[0,'なし'],[120,'120秒'],[60,'60秒'],[30,'30秒'],[15,'15秒']];
 let limit=store.get('sansu-limit',60);
 if(!LIMITS.some(l=>l[0]===limit)) limit=60;
 
@@ -432,11 +613,12 @@ let S=null; // {title, key, pool, qs, i, res, judged}
 function show(name){['home','drill','result'].forEach(n=>{$(n).hidden=n!==name});window.scrollTo(0,0)}
 
 function renderHome(){
-  $('grades').innerHTML=GRADES.map(g=>'<button type="button" data-g="'+g.g+'" aria-pressed="'+(g.g===grade)+'">小'+g.g+'</button>').join('');
+  $('grades').innerHTML=GRADES.map(g=>'<button type="button" data-g="'+g.g+'" aria-pressed="'+(g.g===grade)+'">'+GL(g.g)+'</button>').join('');
   const g=GRADES.find(x=>x.g===grade);
   $('topics').innerHTML=g.topics.map(t=>'<li><button type="button" data-t="'+t.id+'"><span class="t-name">'+t.name+(t.key?'<span class="chip">中学で必須</span>':'')+'</span><span class="t-ex">'+t.ex+'</span><span class="t-best">'+(best[t.id]!=null?'ベスト <b>'+best[t.id]+'</b> / '+TOTAL:'まだ')+'</span></button></li>').join('');
   $('limit').innerHTML=LIMITS.map(l=>'<button type="button" data-l="'+l[0]+'" aria-pressed="'+(l[0]===limit)+'">'+l[1]+'</button>').join('');
-  $('mixGrade').textContent='小'+grade+' ぜんぶミックス 10問';
+  $('mixGrade').textContent=GL(grade)+' ぜんぶミックス 10問';
+  $('mixAll').textContent=(grade<=6?'小学校':'中学校')+'ぜんぶミックス 10問';
 }
 $('grades').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;grade=+b.dataset.g;store.set('sansu-grade',grade);renderHome()});
 $('limit').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;limit=+b.dataset.l;store.set('sansu-limit',limit);renderHome()});
@@ -455,9 +637,9 @@ function tick(){
   $('tRow').classList.toggle('low',left<=5000);
   if(left<=0){stopTimer();reveal(false,true)}
 }
-$('topics').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const t=byId[b.dataset.t];start('小'+t.grade+' '+t.name,t.id,[t.id])});
-$('mixGrade').addEventListener('click',()=>start('小'+grade+' ぜんぶミックス','mix'+grade,GRADES.find(x=>x.g===grade).topics.map(t=>t.id)));
-$('mixAll').addEventListener('click',()=>start('全学年ミックス','mixall',ALL.map(t=>t.id)));
+$('topics').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const t=byId[b.dataset.t];start(GL(t.grade)+' '+t.name,t.id,[t.id])});
+$('mixGrade').addEventListener('click',()=>start(GL(grade)+' ぜんぶミックス','mix'+grade,GRADES.find(x=>x.g===grade).topics.map(t=>t.id)));
+$('mixAll').addEventListener('click',()=>{const el=grade<=6;start(el?'小学校ぜんぶミックス':'中学校ぜんぶミックス',el?'mixel':'mixjh',ALL.filter(t=>(t.grade<=6)===el).map(t=>t.id))});
 
 function make(pool){
   const qs=[],seen={};
@@ -478,30 +660,48 @@ function start(title,key,pool,qs){
 function renderCells(){
   $('cells').innerHTML=S.qs.map((q,i)=>{const r=S.res[i];return '<i class="'+(r===true?'ok':r===false?'ng':i===S.i?'now':'')+'">'+(r===true?'○':r===false?'×':'')+'</i>'}).join('');
 }
+let signed=false;
 function fieldHTML(f,i){
+  if(f.k==='c') return '<div class="choices" id="a'+i+'" data-i="'+i+'" role="group" aria-label="答えを選ぶ">'+f.opts.map((o,j)=>'<button type="button" data-c="'+j+'" aria-pressed="false">'+o+'</button>').join('')+'</div>';
+  const im=signed?'text':null;
   const pre=f.pre?'<span>'+f.pre+'</span>':'',post=f.post?'<span>'+f.post+'</span>':'';
-  if(f.k==='f') return '<label>'+pre+'<span class="fin"><input id="a'+i+'n" inputmode="numeric" aria-label="分子"><hr><input id="a'+i+'d" inputmode="numeric" aria-label="分母"></span>'+post+'</label>';
-  return '<label>'+pre+'<input id="a'+i+'" inputmode="decimal" aria-label="答え">'+post+'</label>';
+  if(f.k==='f') return '<label>'+pre+'<span class="fin"><input id="a'+i+'n" inputmode="'+(im||'numeric')+'" aria-label="分子"><hr><input id="a'+i+'d" inputmode="numeric" aria-label="分母"></span>'+post+'</label>';
+  return '<label>'+pre+'<input id="a'+i+'" inputmode="'+(im||'decimal')+'" aria-label="答え">'+post+'</label>';
 }
 function ansHTML(q){
-  return q.f.map(f=>(f.pre?f.pre+' ':'')+(f.k==='f'?F(f.ans[0],f.ans[1]):fm(f.ans))+(f.post?' '+f.post:'')).join(' ');
+  return q.f.map(f=>(f.pre?f.pre+' ':'')+(f.k==='c'?f.opts[f.ans]:f.k==='f'?F(f.ans[0],f.ans[1]):sg(f.ans))+(f.post?' '+f.post:'')).join(' ');
 }
 function renderQ(){
-  const q=S.qs[S.i];S.judged=false;
+  const q=S.qs[S.i];S.judged=false;S.sel={};
+  signed=byId[q.tid].grade>=7;
   renderCells();
-  $('qMeta').textContent='第 '+(S.i+1)+' 問 / '+S.qs.length+' ・ 小'+byId[q.tid].grade+' '+byId[q.tid].name;
-  $('qText').innerHTML=q.q+(/[?。]$|small>$/.test(q.q)||q.q.indexOf('□')>=0?'':' =');
+  $('qMeta').textContent='第 '+(S.i+1)+' 問 / '+S.qs.length+' ・ '+GL(byId[q.tid].grade)+' '+byId[q.tid].name;
+  $('qText').innerHTML=q.q+(/[?。]$|small>$/.test(q.q)||q.q.indexOf('□')>=0||q.q.replace(/<[^>]+>/g,'').indexOf('=')>=0?'':' =');
   $('qFig').innerHTML=q.fig||'';
   $('qAns').innerHTML=q.f.map(fieldHTML).join('');
-  $('qNote').textContent=q.f.some(f=>f.k==='f')?'分数は約分して答えます。仮分数のままで OK(整数になるときは上の段だけ)。':'';
+  $('qNote').textContent=[q.f.some(f=>f.k==='f')?'分数は約分して答えます。仮分数のままで OK(整数になるときは上の段だけ)。':'',
+    q.un?'2 つの解はどちらの順番でも OK。':'',
+    signed&&q.f.some(f=>f.k!=='c')?'負の数は − をつけて入力します。':''].join('');
   $('qMsg').textContent='';
   $('qActions').hidden=false;$('judge').hidden=true;
   const first=$('qAns').querySelector('input');if(first)first.focus();
   startTimer();
 }
-const norm=s=>s.replace(/[０-９．]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0)).replace(/[,，\s　]/g,'');
+const norm=s=>s.replace(/[０-９．]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0)).replace(/[,，\s　]/g,'').replace(/[−－ー‐–—﹣]/g,'-').replace(/＋/g,'+');
+function judgeUn(q){
+  const v=q.f.map((f,i)=>norm($('a'+i).value));
+  if(v.some(x=>x===''||isNaN(Number(x))))return ['blank'];
+  const a=v.map(Number).sort((x,y)=>x-y),b=q.f.map(f=>f.ans).sort((x,y)=>x-y);
+  return [a.every((x,i)=>Math.abs(x-b[i])<1e-9)];
+}
+$('qAns').addEventListener('click',e=>{
+  const b=e.target.closest('.choices button');if(!b||S.judged)return;
+  const g=b.parentNode;g.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b));
+  S.sel[+g.dataset.i]=+b.dataset.c;$('qMsg').textContent='';
+});
 /* 返り値: true / false / 'blank' / 'reduce' */
 function judgeField(f,i){
+  if(f.k==='c'){const v=S.sel[i];return v==null?'blank':v===f.ans}
   if(f.k==='n'){
     const v=norm($('a'+i).value);if(v===''||isNaN(Number(v)))return 'blank';
     return Math.abs(Number(v)-f.ans)<1e-9;
@@ -517,15 +717,18 @@ function judgeField(f,i){
 $('sheet').addEventListener('submit',e=>{
   e.preventDefault();
   if(S.judged){next();return}
-  const q=S.qs[S.i],r=q.f.map(judgeField);
-  if(r.includes('blank')){$('qMsg').textContent='答えを数字で入れてください。';return}
+  const q=S.qs[S.i],r=q.un?judgeUn(q):q.f.map(judgeField);
+  if(r.includes('blank')){$('qMsg').textContent=q.f.some(f=>f.k==='c')?'答えを 1 つ選んでください。':'答えを数字で入れてください。';return}
   if(!r.includes(false)&&r.includes('reduce')){$('qMsg').textContent='値は合っています。まだ約分できるので、約分してからもう一度。';return}
   stopTimer();reveal(r.every(x=>x===true),false);
 });
 function reveal(ok,timeout){
   const q=S.qs[S.i];
   S.res[S.i]=ok;S.judged=true;
-  q.f.forEach((f,i)=>{(f.k==='f'?['a'+i+'n','a'+i+'d']:['a'+i]).forEach(id=>{$(id).readOnly=true})});
+  q.f.forEach((f,i)=>{
+    if(f.k==='c'){$('a'+i).querySelectorAll('button').forEach((b,j)=>{b.disabled=true;if(j===f.ans)b.classList.add('right')});return}
+    (f.k==='f'?['a'+i+'n','a'+i+'d']:['a'+i]).forEach(id=>{$(id).readOnly=true});
+  });
   renderCells();
   $('qMsg').textContent='';
   $('qActions').hidden=true;$('judge').hidden=false;
@@ -547,16 +750,16 @@ function finish(){
   if(!S.retry&&n===TOTAL&&S.pool.length===1&&(best[S.key]==null||c>best[S.key])){best[S.key]=c;store.set('sansu-best',best)}
   $('rTitle').textContent=S.title+(S.retry?'(まちがい直し)':'')+' の結果';
   $('rScore').innerHTML=c+'<small> / '+n+' 問 正解</small>';
-  $('rComment').textContent=c===n?'全問正解。この単元は中学の計算でもそのまま使えます。':c>=n*0.7?'あと少し。× の問題の解き方を読んでから、まちがい直しをしましょう。':'解き方を1問ずつ読んで、まちがい直しでもう一度ためしましょう。';
+  $('rComment').textContent=c===n?'全問正解。この単元はもう大丈夫です。':c>=n*0.7?'あと少し。× の問題の解き方を読んでから、まちがい直しをしましょう。':'解き方を1問ずつ読んで、まちがい直しでもう一度ためしましょう。';
   $('rList').innerHTML=S.qs.map((q,i)=>'<li><span class="mark '+(S.res[i]?'ok':'ng')+'">'+(S.res[i]?'○':'×')+'</span><div><div>'+q.q+'</div><div class="a">答え <b>'+ansHTML(q)+'</b>'+(S.res[i]?'':'<br>'+q.ex)+'</div></div></li>').join('');
   $('btnRetry').hidden=c===n;
   show('result');
 }
-$('btnRetry').addEventListener('click',()=>{const wrong=S.qs.filter((q,i)=>!S.res[i]).map(q=>({q:q.q,f:q.f,ex:q.ex,fig:q.fig,tid:q.tid}));start(S.title,S.key,S.pool,wrong)});
+$('btnRetry').addEventListener('click',()=>{const wrong=S.qs.filter((q,i)=>!S.res[i]).map(q=>Object.assign({},q));start(S.title,S.key,S.pool,wrong)});
 $('btnAgain').addEventListener('click',()=>start(S.title,S.key,S.pool));
 $('btnHome').addEventListener('click',goHome);
 
-window.__drill={G:G,ALL:ALL};
+window.__drill={G:G,ALL:ALL,cur:()=>S.qs[S.i]};
 renderHome();
 })();
 </script>
