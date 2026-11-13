@@ -112,6 +112,18 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--ai); outline-of
 .ex b{font-weight:600}
 .actions{display:flex; flex-wrap:wrap; gap:10px}
 
+/* 時間制限 */
+.limit{display:flex; flex-wrap:wrap; align-items:center; gap:8px 14px; font-weight:700}
+.seg{display:flex; flex-wrap:wrap; gap:6px}
+.seg button{background:var(--card); border:1.5px solid var(--line); border-radius:6px; padding:5px 14px; font:600 .95rem var(--f-math)}
+.seg button[aria-pressed="true"]{background:var(--ai); border-color:var(--ai); color:var(--ai-fg)}
+.timerrow{display:flex; align-items:center; gap:12px}
+.timer{flex:1; min-width:0; height:8px; background:var(--soft); border-radius:4px; overflow:hidden}
+.timer i{display:block; height:100%; width:100%; background:var(--ai)}
+.timerrow.low .timer i{background:var(--maru)}
+.t-left{font:600 .95rem var(--f-math); font-variant-numeric:tabular-nums; white-space:nowrap; min-width:5.5em; text-align:right}
+.timerrow.low .t-left{color:var(--maru)}
+
 /* 結果 */
 .score{font:600 3.4rem/1.1 var(--f-math); color:var(--maru)}
 .score small{font-size:1.3rem; color:var(--ink)}
@@ -135,9 +147,10 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--ai); outline-of
     <div style="display:flex;flex-direction:column;gap:20px">
       <header>
         <h1>算数やりなおしドリル</h1>
-        <p class="lead">小1〜小6の算数を、中学生が1回10問でふり返るドリルです。数字は毎回変わります。</p>
+        <p class="lead">小1〜小6の算数を、中学生が1回10問でふり返るドリルです。数字は毎回変わります。時間制限は1問ごとで、切れると不正解になります。</p>
       </header>
       <div class="grades" id="grades" role="group" aria-label="学年"></div>
+      <div class="limit"><span id="limitLabel">1問の時間制限</span><div class="seg" id="limit" role="group" aria-labelledby="limitLabel"></div></div>
       <ul class="topics" id="topics"></ul>
       <div class="mixrow">
         <button class="btn" id="mixGrade"></button>
@@ -155,6 +168,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--ai); outline-of
       </div>
       <form class="sheet" id="sheet" autocomplete="off">
         <div class="q-meta" id="qMeta"></div>
+        <div class="timerrow" id="tRow" hidden><div class="timer"><i id="tBar"></i></div><span class="t-left" id="tLeft"></span></div>
         <div class="q-text" id="qText"></div>
         <div id="qFig"></div>
         <div class="answer" id="qAns"></div>
@@ -406,6 +420,9 @@ const store={
 let best=store.get('sansu-best',{})||{};
 let grade=store.get('sansu-grade',5);
 if(!GRADES.some(g=>g.g===grade)) grade=5;
+const LIMITS=[[0,'なし'],[60,'60秒'],[30,'30秒'],[15,'15秒']];
+let limit=store.get('sansu-limit',60);
+if(!LIMITS.some(l=>l[0]===limit)) limit=60;
 
 /* ---------- 画面 ---------- */
 const $=id=>document.getElementById(id);
@@ -418,9 +435,26 @@ function renderHome(){
   $('grades').innerHTML=GRADES.map(g=>'<button type="button" data-g="'+g.g+'" aria-pressed="'+(g.g===grade)+'">小'+g.g+'</button>').join('');
   const g=GRADES.find(x=>x.g===grade);
   $('topics').innerHTML=g.topics.map(t=>'<li><button type="button" data-t="'+t.id+'"><span class="t-name">'+t.name+(t.key?'<span class="chip">中学で必須</span>':'')+'</span><span class="t-ex">'+t.ex+'</span><span class="t-best">'+(best[t.id]!=null?'ベスト <b>'+best[t.id]+'</b> / '+TOTAL:'まだ')+'</span></button></li>').join('');
+  $('limit').innerHTML=LIMITS.map(l=>'<button type="button" data-l="'+l[0]+'" aria-pressed="'+(l[0]===limit)+'">'+l[1]+'</button>').join('');
   $('mixGrade').textContent='小'+grade+' ぜんぶミックス 10問';
 }
 $('grades').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;grade=+b.dataset.g;store.set('sansu-grade',grade);renderHome()});
+$('limit').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;limit=+b.dataset.l;store.set('sansu-limit',limit);renderHome()});
+
+/* 1問ごとのタイマー。解き方を読んでいる間は止まる */
+let tm=null,tEnd=0;
+function stopTimer(){if(tm){clearInterval(tm);tm=null}}
+function startTimer(){
+  stopTimer();$('tRow').hidden=!limit;if(!limit)return;
+  tEnd=Date.now()+limit*1000;tick();tm=setInterval(tick,100);
+}
+function tick(){
+  const left=Math.max(0,tEnd-Date.now());
+  $('tBar').style.width=(left/(limit*10)).toFixed(1)+'%';
+  $('tLeft').textContent=left>0?'あと '+Math.ceil(left/1000)+' 秒':'時間切れ';
+  $('tRow').classList.toggle('low',left<=5000);
+  if(left<=0){stopTimer();reveal(false,true)}
+}
 $('topics').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const t=byId[b.dataset.t];start('小'+t.grade+' '+t.name,t.id,[t.id])});
 $('mixGrade').addEventListener('click',()=>start('小'+grade+' ぜんぶミックス','mix'+grade,GRADES.find(x=>x.g===grade).topics.map(t=>t.id)));
 $('mixAll').addEventListener('click',()=>start('全学年ミックス','mixall',ALL.map(t=>t.id)));
@@ -463,6 +497,7 @@ function renderQ(){
   $('qMsg').textContent='';
   $('qActions').hidden=false;$('judge').hidden=true;
   const first=$('qAns').querySelector('input');if(first)first.focus();
+  startTimer();
 }
 const norm=s=>s.replace(/[０-９．]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0)).replace(/[,，\s　]/g,'');
 /* 返り値: true / false / 'blank' / 'reduce' */
@@ -485,24 +520,27 @@ $('sheet').addEventListener('submit',e=>{
   const q=S.qs[S.i],r=q.f.map(judgeField);
   if(r.includes('blank')){$('qMsg').textContent='答えを数字で入れてください。';return}
   if(!r.includes(false)&&r.includes('reduce')){$('qMsg').textContent='値は合っています。まだ約分できるので、約分してからもう一度。';return}
-  const ok=r.every(x=>x===true);
+  stopTimer();reveal(r.every(x=>x===true),false);
+});
+function reveal(ok,timeout){
+  const q=S.qs[S.i];
   S.res[S.i]=ok;S.judged=true;
   q.f.forEach((f,i)=>{(f.k==='f'?['a'+i+'n','a'+i+'d']:['a'+i]).forEach(id=>{$(id).readOnly=true})});
   renderCells();
   $('qMsg').textContent='';
   $('qActions').hidden=true;$('judge').hidden=false;
   $('jMark').textContent=ok?'○':'×';$('jMark').className='mark pop '+(ok?'ok':'ng');
-  $('jText').innerHTML=ok?'正解':'正しい答えは '+ansHTML(q);
+  $('jText').innerHTML=ok?'正解':(timeout?'時間切れ。':'')+'正しい答えは '+ansHTML(q);
   $('jEx').innerHTML=q.ex;
   $('btnNext').textContent=S.i+1<S.qs.length?'次の問題':'結果を見る';
   $('btnNext').focus();
-});
+}
 function next(){
   if(S.i+1<S.qs.length){S.i++;renderQ()}else finish();
 }
 $('btnNext').addEventListener('click',next);
 $('btnQuit').addEventListener('click',goHome);
-function goHome(){renderHome();show('home')}
+function goHome(){stopTimer();renderHome();show('home')}
 
 function finish(){
   const n=S.qs.length,c=S.res.filter(Boolean).length;
