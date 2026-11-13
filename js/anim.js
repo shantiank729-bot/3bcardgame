@@ -138,6 +138,9 @@ const Anim = (() => {
     const ps = o.pose;
     if (ps && ps.type === 'jump') {
       c.translate(0, -Math.sin(Math.PI * clamp(ps.f, 0, 1)) * 9 * s);
+    } else if (ps && ps.type === 'reach') {
+      const lean = Math.sin(Math.PI * clamp(ps.f, 0, 1)) * 0.55;
+      c.translate(p.x, p.y); c.rotate((ps.dir || 1) * lean); c.translate(-p.x, -p.y);
     } else if (ps && (ps.type === 'dive' || ps.type === 'slide')) {
       // 飛び込み・スライディング: 足元を軸に体を倒す
       const lie = ps.type === 'slide' ? 1 : clamp(ps.f * 4, 0, 1) * (ps.f > 0.75 ? clamp((1 - ps.f) * 4, 0, 1) : 1);
@@ -194,16 +197,6 @@ const Anim = (() => {
     }
     c.restore();
   }
-  function pitchTag(c, txt) {
-    c.save();
-    c.font = "bold 13px 'Zen Kaku Gothic New', sans-serif";
-    const w = c.measureText(txt).width + 16;
-    c.fillStyle = txt === 'ストライク' || txt === '空振り' ? 'rgba(200,60,40,0.85)' : txt === 'ボール' ? 'rgba(40,110,60,0.85)' : 'rgba(30,40,60,0.8)';
-    c.beginPath(); c.roundRect(W - w - 8, 34, w, 22, 11); c.fill();
-    c.fillStyle = '#fff'; c.textAlign = 'center'; c.textBaseline = 'middle';
-    c.fillText(txt, W - w / 2 - 8, 45.5);
-    c.restore();
-  }
   const LABEL_COL = { hr: '#ff6150', hit: '#ffd23f', score: '#ffd23f', run: '#ffd23f', walk: '#a8dcff', out: '#ffffff', info: '#ffffff' };
   function label(c, l) {
     if (!l || l.alpha <= 0) return;
@@ -243,7 +236,6 @@ const Anim = (() => {
     if (st.ball) ents.push({ y: st.ball.y - 0.1, f: () => ball(c, st.ball) });
     ents.sort((a, b) => b.y - a.y);
     for (const e of ents) e.f();
-    if (st.tag && !st.label) pitchTag(c, st.tag);
     label(c, st.label);
   }
 
@@ -328,12 +320,11 @@ const Anim = (() => {
     const def = offSide === m.me ? UNI.opp : UNI.me;
     const RUN = 0.14; // ft/ms
 
-    const balls = [], moves = [], poses = [], puffs = [], tags = [], swings = [];
+    const balls = [], moves = [], poses = [], puffs = [], swings = [];
     const addBall = (t0, t1, a, b, o = {}) => { balls.push({ t0, t1, a, b, arc: o.arc || 0, bounce: o.bounce || 0, hide: !!o.hide }); return t1; };
     const move = (k, t0, t1, to) => moves.push({ k, t0, t1: Math.max(t0 + 1, t1), to: to.slice() });
     const pose = (k, t0, t1, type, dir = 1) => poses.push({ k, t0, t1, type, dir });
     const puff = (t, pt) => puffs.push({ t, x: pt[0], y: pt[1] });
-    const tag = (t, txt) => tags.push({ t, txt });
     const throwBall = (t0, a, b, o = {}) => {
       const d = dist(a, b);
       const t1 = t0 + Math.max(200, d * (o.slow ? 3.3 : 2.4));
@@ -361,56 +352,11 @@ const Anim = (() => {
     // 結果を決める情報(各プレーが書き込む)
     const res = { tLabel: 0, batterOutAt: null, batterOutProg: 0.9, batterSafeAt: null, runnerOutAt: null, runStart: null, runnerSafeAt: null, batterStay: false, slow: false, close: false };
 
-    // ---- 一球ずつの投球 ----
-    let t = 0;
+    // ---- 投球(勝負の一球のみ) ----
+    const t = 0;
     const mound = [0.6, 56, 6];
     const pitch = (t0, end) => addBall(t0, t0 + 430, mound, end, { arc: 0.5 });
     const returnBall = (t0) => addBall(t0, t0 + 420, [0, -4, 4], mound, { arc: 7 });
-    const runnerOn1 = lp.before[0] && !lp.before[1];
-
-    let extraTypes = [];
-    if (kind === 'IBB') extraTypes = ['wide', 'wide', 'wide'];
-    else {
-      const n = pickV([0, 1, 1, 1, 2, 2, 3]);
-      const pool = ['ball', 'ball', 'strike', 'swing', 'foulBack', 'foulSide', 'foulSide'];
-      if (runnerOn1 && kind !== 'STEAL') pool.push('pickoff');
-      for (let i = 0; i < n; i++) extraTypes.push(pickV(pool));
-      if (kind === 'BB' && extraTypes.length < 2) extraTypes.push('ball');
-      if (kind === 'K' && !extraTypes.some((x) => x !== 'ball' && x !== 'pickoff')) extraTypes.push(pickV(['strike', 'swing', 'foulBack']));
-      if (kind === 'STEAL' && Math.random() < 0.4) extraTypes = [runnerOn1 ? 'pickoff' : 'ball'];
-    }
-    for (const e of extraTypes) {
-      if (e === 'pickoff') {
-        throwBall(t + 250, [0, 58], [58, 64]);
-        move('1B', t, t + 300, [58, 66]);
-        puff(t + 500, [60, 62]);
-        tag(t + 520, 'けん制');
-        throwBall(t + 800, [58, 64], [0, 58]);
-        move('1B', t + 900, t + 1300, FPOS['1B']);
-        t += 1500;
-        continue;
-      }
-      if (e === 'wide') { pitch(t, [7, 0, 4]); move('C', t, t + 250, [6, -6]); move('C', t + 600, t + 800, FPOS.C); tag(t + 450, 'ボール'); returnBall(t + 650); t += 1150; continue; }
-      if (e === 'ball') { pitch(t, [R(-9, 9), 0, R(1, 8)]); tag(t + 450, 'ボール'); returnBall(t + 700); t += 1200; continue; }
-      if (e === 'strike') { pitch(t, [R(-1.5, 1.5), 0, R(2.5, 4.5)]); tag(t + 450, 'ストライク'); returnBall(t + 700); t += 1200; continue; }
-      if (e === 'swing') { pitch(t, [R(-1.5, 1.5), 0, R(1.5, 4)]); swings.push(t + 370); tag(t + 450, '空振り'); returnBall(t + 700); t += 1200; continue; }
-      if (e === 'foulBack') {
-        pitch(t, [0, 0.5, 3]); swings.push(t + 370);
-        addBall(t + 430, t + 950, [0, 1, 3], [R(-30, 30), -75, 25], { arc: 18, hide: true });
-        tag(t + 500, 'ファウル'); t += 1400; continue;
-      }
-      if (e === 'foulSide') {
-        pitch(t, [0, 0.5, 3]); swings.push(t + 370);
-        const s = Math.random() < 0.5 ? -1 : 1;
-        const pt = polar(s * R(50, 62), R(110, 220));
-        const fly = Math.random() < 0.5;
-        addBall(t + 430, t + (fly ? 1400 : 1000), [0, 1, 3], [pt[0], pt[1], 0.5], fly ? { arc: R(40, 70) } : { bounce: 1 });
-        const fk = nearestOf(pt, ['1B', '3B', 'LF', 'RF']);
-        move(fk, t + 500, t + 1300, toward(FPOS[fk], pt, 25));
-        move(fk, t + 1500, t + 1900, FPOS[fk]);
-        tag(t + 520, 'ファウル'); t += 2000; continue;
-      }
-    }
 
     // ---- 勝負の一球 ----
     const P0 = t;
@@ -467,55 +413,158 @@ const Anim = (() => {
       move(ck, t0 - 400, t0, cut);
       throwBall(t0, from, cut);
     }
+    // 外野からの返球先を走者の動きで決める
+    function ofReturn(t0, fp) {
+      const scoringFrom2 = runners.some((r) => r.from === 1 && r.to === 3);
+      const firstToThird = runners.some((r) => r.from === 0 && r.to === 2);
+      const x = Math.random();
+      if (scoringFrom2 && x < 0.6) { move('C', t0 - 300, t0, [0, 2]); throwBall(t0, fp, PLATE, { high: true }); return; }
+      if (firstToThird && x < 0.6) { move('3B', t0 - 400, t0, THIRD); throwBall(t0, fp, THIRD); return; }
+      if (x < 0.35) { const k = fp[0] < 0 ? 'SS' : '2B'; move(k, t0 - 400, t0, SECOND); throwBall(t0, fp, SECOND); return; }
+      cutoffThrow(t0, fp);
+    }
+    const IF4 = ['1B', '2B', 'SS', '3B'];
     function doSingle(th) {
-      const v = pickV(['through', 'liner', 'bloop', 'middle', 'onehop']);
-      if (v === 'through' || v === 'middle') {
-        const t2 = v === 'middle' ? th * 0.25 : th;
+      const v = pickV(['clean', 'clean', 'reach', 'dive', 'liner', 'liner-dive', 'bloop', 'bloop-reach', 'texas',
+        'middle-glove', 'middle-bag', 'chopper', 'deflect', 'onehop', 'charge', 'bobble', 'line-hug']);
+      res.variant = v;
+      const ofField = (fp, tArrive, tFirst) => { const ok = nearestOf(fp, OF_KEYS); move(ok, tFirst, tArrive, fp); return ok; };
+      // 内野を抜けるゴロ(ifPose: null / reach / dive / jump)
+      const through = (t2, ifPose, ifRange, fpDist) => {
         const gp = polar(t2, 118);
-        const fp = polar(t2, 210);
-        if (v === 'middle') { pose('P', C + 80, C + 330, 'jump'); }
+        const fp = polar(t2, fpDist || R(200, 222));
         addBall(C, C + 420, [0, 2, 1], [gp[0], gp[1], 0.5], { bounce: 2 });
         addBall(C + 420, C + 1000, [gp[0], gp[1], 0.5], [fp[0], fp[1], 0.3], { bounce: 1 });
-        const ik = nearestOf(gp, ['1B', '2B', 'SS', '3B']);
-        move(ik, C + 60, C + 380, toward(FPOS[ik], gp, dist(FPOS[ik], gp) - 7));
-        pose(ik, C + 300, C + 1100, 'dive', side([gp[0] - FPOS[ik][0], 0]));
-        puff(C + 420, gp);
-        const ok = nearestOf(fp, OF_KEYS);
-        move(ok, C + 100, C + 1050, fp);
-        res.tLabel = C + 520;
-        cutoffThrow(C + 1200, fp);
-      } else if (v === 'liner') {
-        const lpt = polar(th, 175), fp = polar(th, 210);
-        addBall(C, C + 620, [0, 2, 3], [lpt[0], lpt[1], 0.5], { arc: 14 });
-        addBall(C + 620, C + 1000, [lpt[0], lpt[1], 0.5], [fp[0], fp[1], 0.3], { bounce: 1 });
-        const ok = nearestOf(lpt, OF_KEYS);
-        move(ok, C + 80, C + 640, toward(FPOS[ok], lpt, dist(FPOS[ok], lpt) - 4));
-        pose(ok, C + 520, C + 1150, 'dive', side([lpt[0] - FPOS[ok][0], 0]));
-        puff(C + 640, lpt);
-        move(ok, C + 1200, C + 1500, fp);
-        res.tLabel = C + 640;
-        cutoffThrow(C + 1600, fp);
-      } else if (v === 'bloop') {
-        const lpt = polar(th, R(140, 160)), fp = polar(th, 172);
-        addBall(C, C + 1100, [0, 2, 3], [lpt[0], lpt[1], 0.5], { arc: 36 });
-        addBall(C + 1100, C + 1350, [lpt[0], lpt[1], 0.5], [fp[0], fp[1], 0.3], { bounce: 1 });
-        const ik = nearestOf(lpt, ['1B', '2B', 'SS', '3B']);
-        const ok = nearestOf(lpt, OF_KEYS);
-        move(ik, C + 150, C + 1100, toward(FPOS[ik], lpt, dist(FPOS[ik], lpt) - 14));
-        move(ok, C + 150, C + 1100, toward(FPOS[ok], lpt, dist(FPOS[ok], lpt) - 12));
-        if (Math.random() < 0.5) { pose(ok, C + 950, C + 1500, 'dive', side([lpt[0] - FPOS[ok][0], 0])); puff(C + 1100, lpt); }
-        move(ok, C + 1500, C + 1700, fp);
-        res.tLabel = C + 1100;
-        cutoffThrow(C + 1800, fp);
-      } else {
-        const fp = polar(th, 215);
-        addBall(C, C + 520, [0, 2, 1], [fp[0], fp[1], 0.4], { bounce: 1 });
-        const ok = nearestOf(fp, OF_KEYS);
-        move(ok, C + 60, C + 560, fp);
-        res.tLabel = C + 330;
-        if (lp.before[1] || lp.before[2]) throwBall(C + 700, fp, [0, 1], { high: true });
-        else cutoffThrow(C + 700, fp);
+        const ik = nearestOf(gp, IF4);
+        const reach = dist(FPOS[ik], gp) - (ifRange || 7);
+        move(ik, C + 60, C + 380, toward(FPOS[ik], gp, Math.max(2, reach)));
+        if (ifPose) pose(ik, C + 300, C + (ifPose === 'dive' ? 1100 : 650), ifPose, side([gp[0] - FPOS[ik][0], 0]));
+        if (ifPose === 'dive') puff(C + 420, gp);
+        ofField(fp, C + 1000, C + 100);
+        res.tLabel = C + 470;
+        return fp;
+      };
+      let fp, tDone;
+      switch (v) {
+        case 'clean': fp = through(th, null, 14); tDone = C + 1150; break;
+        case 'reach': fp = through(th, 'reach', 9); tDone = C + 1150; break;
+        case 'dive': fp = through(th, 'dive', 7); tDone = C + 1150; break;
+        case 'middle-bag': {
+          const t2 = R(-4, 4);
+          fp = through(t2, null, 16, R(230, 250));
+          const other = nearestOf(polar(t2, 118), ['SS', '2B']) === 'SS' ? '2B' : 'SS';
+          move(other, C + 60, C + 400, toward(FPOS[other], SECOND, 12));
+          tDone = C + 1150; break;
+        }
+        case 'line-hug': {
+          const t2 = (th < 0 ? -1 : 1) * R(38, 43);
+          fp = through(t2, 'reach', 8, R(185, 200));
+          tDone = C + 1150; break;
+        }
+        case 'liner': case 'liner-dive': {
+          const d = R(165, 185);
+          const lpt = polar(th, d);
+          const ok = nearestOf(lpt, OF_KEYS);
+          addBall(C, C + 620, [0, 2, 3], [lpt[0], lpt[1], 0.5], { arc: R(10, 16) });
+          if (v === 'liner') {
+            // 前に出てワンバウンドで処理
+            fp = toward(lpt, FPOS[ok], 18);
+            addBall(C + 620, C + 800, [lpt[0], lpt[1], 0.5], [fp[0], fp[1], 2], { arc: 3 });
+            move(ok, C + 80, C + 800, fp);
+            res.tLabel = C + 640; tDone = C + 900;
+          } else {
+            fp = polar(th, d + 35);
+            addBall(C + 620, C + 1000, [lpt[0], lpt[1], 0.5], [fp[0], fp[1], 0.3], { bounce: 1 });
+            move(ok, C + 80, C + 640, toward(FPOS[ok], lpt, dist(FPOS[ok], lpt) - 4));
+            pose(ok, C + 520, C + 1150, 'dive', side([lpt[0] - FPOS[ok][0], 0]));
+            puff(C + 640, lpt);
+            move(ok, C + 1200, C + 1500, fp);
+            res.tLabel = C + 640; tDone = C + 1550;
+          }
+          break;
+        }
+        case 'bloop': case 'bloop-reach': case 'texas': {
+          // テキサスヒットはライン際に落ちる打球なので、左右に引っ張った打球のときだけ
+          const t2 = v === 'texas' && Math.abs(th) >= 20 ? (th < 0 ? -1 : 1) * R(34, 41) : th;
+          const lpt = polar(t2, R(145, 162));
+          const T = R(1000, 1200);
+          addBall(C, C + T, [0, 2, 3], [lpt[0], lpt[1], 0.5], { arc: R(30, 42) });
+          const ik = nearestOf(lpt, IF4);
+          const ok = nearestOf(lpt, OF_KEYS);
+          fp = toward(lpt, FPOS[ok], 10); // 落ちた打球は外野手の方へ弾む
+          addBall(C + T, C + T + 250, [lpt[0], lpt[1], 0.5], [fp[0], fp[1], 0.3], { bounce: 1 });
+          move(ik, C + 150, C + T, toward(FPOS[ik], lpt, dist(FPOS[ik], lpt) - R(15, 22)));
+          move(ok, C + 150, C + T, toward(FPOS[ok], lpt, dist(FPOS[ok], lpt) - R(9, 14)));
+          if (v === 'bloop-reach') pose(ik, C + T - 200, C + T + 150, 'reach', side([lpt[0] - FPOS[ik][0], 0]));
+          if (v === 'texas') {
+            const k3 = nearestOf(lpt, IF4.filter((k) => k !== ik));
+            move(k3, C + 150, C + T, toward(FPOS[k3], lpt, dist(FPOS[k3], lpt) - 26));
+          }
+          move(ok, C + T + 50, C + T + 280, fp);
+          res.tLabel = C + T; tDone = C + T + 350;
+          break;
+        }
+        case 'middle-glove': {
+          const t2 = th * 0.2;
+          pose('P', C + 80, C + 330, 'jump');
+          fp = through(t2, null, 18, R(225, 245));
+          tDone = C + 1150; break;
+        }
+        case 'chopper': {
+          const ik = nearestOf(polar(th, 118), IF4);
+          const b1 = polar(th, 45);
+          const gp = toward(FPOS[ik], [0, 0], 4);
+          fp = polar(th, R(195, 215));
+          addBall(C, C + 300, [0, 2, 1], [b1[0], b1[1], 0], { arc: 4 });
+          addBall(C + 300, C + 950, [b1[0], b1[1], 0], [gp[0] * 1.35, gp[1] * 1.35, 0.5], { arc: 26 });
+          addBall(C + 950, C + 1400, [gp[0] * 1.35, gp[1] * 1.35, 0.5], [fp[0], fp[1], 0.3], { bounce: 1 });
+          move(ik, C + 100, C + 700, gp);
+          pose(ik, C + 650, C + 1000, 'jump');
+          ofField(fp, C + 1400, C + 300);
+          res.tLabel = C + 900; tDone = C + 1500;
+          break;
+        }
+        case 'deflect': {
+          const gp = polar(th, 112);
+          const ik = nearestOf(gp, IF4);
+          const t3 = th + (Math.random() < 0.5 ? -1 : 1) * R(12, 20);
+          fp = polar(t3, R(185, 205));
+          addBall(C, C + 400, [0, 2, 1], [gp[0], gp[1], 0.6], { bounce: 2 });
+          addBall(C + 400, C + 1050, [gp[0], gp[1], 1], [fp[0], fp[1], 0.3], { bounce: 2 });
+          move(ik, C + 60, C + 380, toward(FPOS[ik], gp, dist(FPOS[ik], gp) - 3));
+          pose(ik, C + 300, C + 650, 'reach', side([gp[0] - FPOS[ik][0], 0]));
+          ofField(fp, C + 1050, C + 350);
+          res.tLabel = C + 520; tDone = C + 1150;
+          break;
+        }
+        case 'onehop': {
+          fp = polar(th, R(205, 225));
+          addBall(C, C + 500, [0, 2, 1], [fp[0], fp[1], 0.4], { bounce: 1 });
+          ofField(fp, C + 540, C + 60);
+          res.tLabel = C + 330; tDone = C + 650;
+          break;
+        }
+        case 'charge': {
+          fp = polar(th, R(160, 175));
+          const gp = polar(th, 118);
+          addBall(C, C + 520, [0, 2, 1], [gp[0], gp[1], 0.4], { bounce: 2 });
+          addBall(C + 520, C + 1150, [gp[0], gp[1], 0.4], [fp[0], fp[1], 0.3], { bounce: 1 });
+          const ik = nearestOf(gp, IF4);
+          move(ik, C + 80, C + 450, toward(FPOS[ik], gp, Math.max(2, dist(FPOS[ik], gp) - 12)));
+          ofField(fp, C + 1150, C + 120);
+          res.tLabel = C + 560; tDone = C + 1180;
+          break;
+        }
+        case 'bobble': default: {
+          fp = through(th, null, 13);
+          const pop = [fp[0] + R(-5, 5), fp[1] - R(4, 8)];
+          addBall(C + 1000, C + 1350, [fp[0], fp[1], 1], [pop[0], pop[1], 0.3], { arc: 7 });
+          const ok = nearestOf(fp, OF_KEYS);
+          move(ok, C + 1350, C + 1550, pop);
+          fp = pop; tDone = C + 1650;
+        }
       }
+      ofReturn(tDone + 100, fp);
     }
     function doExtraBase(th, triple) {
       const v = pickV(['gap', 'line', 'over', 'wall', 'dive']);
@@ -946,12 +995,11 @@ const Anim = (() => {
           batter = { x, y, alpha, bat: started ? null : swingAngle(tt) };
         }
       }
-      const tg = tags.filter((g) => tt >= g.t && tt < g.t + 650).pop();
       const pf = puffs.filter((p) => tt >= p.t && tt < p.t + 450).map((p) => ({ x: p.x, y: p.y, f: (tt - p.t) / 450 }));
       const lab = tt >= res.tLabel ? { text, cls, sub, alpha: clamp((tt - res.tLabel) / 150, 0, 1) } : null;
-      return { fielders, poses: fposes, runners: rs, batter, ball: b, label: lab, tag: tg ? tg.txt : null, puffs: pf, off, def };
+      return { fielders, poses: fposes, runners: rs, batter, ball: b, label: lab, puffs: pf, off, def };
     }
-    return { at, total, kind, tLabel: res.tLabel };
+    return { at, total, kind, tLabel: res.tLabel, variant: res.variant || null, poses };
   }
 
   // ---------- 待機中の画面 ----------
@@ -1020,5 +1068,5 @@ const Anim = (() => {
     const tl = drawAtCache.tl;
     draw(cv, tl.at(clamp(tl.tLabel + offset, 0, tl.total)));
   }
-  return { play, drawIdle, skip, busy, _build: build, _classify: classify, _drawAt: drawAt, W, H };
+  return { play, drawIdle, skip, busy, _build: build, _classify: classify, _drawAt: drawAt, _drawState: (cv, st) => draw(cv, st), W, H };
 })();

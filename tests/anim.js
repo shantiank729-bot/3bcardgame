@@ -15,7 +15,8 @@ const path = require('path');
   const report = await page.evaluate(() => {
     const kinds = {};
     const problems = [];
-    let outfieldChecked = 0;
+    let outfieldChecked = 0, singles = 0, singleDives = 0;
+    const singleVariants = {};
     // 盗塁(成功・失敗)を直接作って確認
     for (let i = 0; i < 300; i++) {
       const A = makeOpponent(45), B = makeOpponent(45);
@@ -74,12 +75,17 @@ const path = require('path');
           }
           if (!first || !['LF', 'CF', 'RF'].includes(first)) problems.push(`外野ヒットを外野手が処理していない ${k} ${first} ${lp.text}`);
           outfieldChecked++;
+          if (k === '1B') {
+            singleVariants[tl.variant] = (singleVariants[tl.variant] || 0) + 1;
+            if (tl.poses.some((p) => p.type === 'dive')) singleDives++;
+            singles++;
+          }
         }
         // 結果表示より前にアウト/ヒットが分かる表示が出ていないこと
         if (tl.tLabel <= 0) problems.push(`ラベル時刻異常 ${k}`);
       }
     }
-    return { kinds, outfieldChecked, problems: problems.slice(0, 20), nProblems: problems.length };
+    return { kinds, outfieldChecked, singleVariants, singleDiveRate: (singleDives / singles).toFixed(2), problems: problems.slice(0, 20), nProblems: problems.length };
   });
   console.log(JSON.stringify(report, null, 1));
 
