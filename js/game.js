@@ -519,11 +519,13 @@ function userIsBatting(m) { return m.offense() === m.me; }
 function matchCmd(cmd) {
   const m = UI.match;
   if (!m || m.over) return;
+  if (Anim.busy()) return;
   if (cmd === 'autoHalf') { m.simHalf(); render(); return; }
   if (cmd === 'autoAll') { m.simToEnd(); render(); return; }
+  const seq = m.playSeq;
   if (userIsBatting(m)) {
     m.aiPitchingChange();
-    if (cmd === 'steal') { m.steal(); render(); return; }
+    if (cmd === 'steal') { m.steal(); showPlay(m, seq); return; }
     const ibb = m.aiDefenseCommand();
     if (ibb) m.plateAppearance('ibb');
     else m.plateAppearance(cmd);
@@ -535,7 +537,25 @@ function matchCmd(cmd) {
       else m.plateAppearance(ai);
     }
   }
+  showPlay(m, seq);
+}
+
+// ---------- アニメーション設定 ----------
+const ANIM_KEY = 'hakkyu-road-anim';
+UI.animMode = (() => {
+  try { const v = localStorage.getItem(ANIM_KEY); if (v) return v; } catch (e) { /* noop */ }
+  return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'off' : 'normal';
+})();
+function setAnimMode(k) {
+  UI.animMode = k;
+  try { localStorage.setItem(ANIM_KEY, k); } catch (e) { /* noop */ }
   render();
+}
+/** 直前のプレーを再生してから画面を更新する */
+function showPlay(m, prevSeq) {
+  const lp = m.lastPlay;
+  if (UI.animMode === 'off' || !lp || lp.seq === prevSeq) { render(); return; }
+  Anim.play(m, lp, UI.animMode === 'fast' ? 2.2 : 1, () => render());
 }
 
 function changeMyPitcher(id) {
@@ -571,6 +591,7 @@ function render() {
   if (UI.screen === 'match') {
     const lg = $('mlog');
     if (lg) lg.scrollTop = lg.scrollHeight;
+    Anim.drawIdle(UI.match);
   }
 }
 
@@ -899,7 +920,6 @@ function renderMatch() {
   const bs = m.bs(B);
   const tired = clamp(1 - def.pc / def.stamMax, 0, 1);
   const batting = userIsBatting(m);
-  const base = (i) => `<span class="base b${i} ${m.bases[i] ? 'on' : ''}" title="${m.bases[i] ? esc(m.bases[i].name) : ''}"></span>`;
   const outs = [0, 1].map((i) => `<i class="out ${m.outs > i ? 'on' : ''}"></i>`).join('');
   const recent = m.log.slice(-40);
   let controls = '';
@@ -956,14 +976,18 @@ function renderMatch() {
         <tbody>${lineRow(m.sides[0], 0)}${lineRow(m.sides[1], 1)}</tbody>
       </table>
     </div>
-    <div class="field-row">
-      <div class="diamond" aria-label="走者 ${[0, 1, 2].filter((i) => m.bases[i]).map((i) => i + 1 + '塁').join('・') || 'なし'}">
-        ${base(1)}${base(2)}${base(0)}<span class="home"></span>
+    <div class="stage">
+      <canvas id="fieldCanvas" class="field-cv" width="${Anim.W}" height="${Anim.H}" data-act="skipAnim" role="img" aria-label="${m.inning}回${m.top ? '表' : '裏'} ${m.outs}アウト 走者 ${[0, 1, 2].filter((i) => m.bases[i]).map((i) => i + 1 + '塁').join('・') || 'なし'}"></canvas>
+      <div class="stage-hud">
+        <span class="sit-inn">${m.inning}回${m.top ? '表' : '裏'}</span>
+        <span class="${batting ? 'atk' : 'dfn'}">${batting ? '攻撃中' : '守備中'}</span>
+        <span class="sit-outs">OUT ${outs}</span>
       </div>
-      <div class="sit">
-        <p class="sit-inn">${m.inning}回${m.top ? '表' : '裏'}　<span class="${batting ? 'atk' : 'dfn'}">${batting ? '攻撃中' : '守備中'}</span></p>
-        <p class="sit-outs">OUT ${outs}</p>
-      </div>
+      <p class="skip-hint">タップでスキップ</p>
+    </div>
+    <div class="anim-set" role="group" aria-label="アニメーション">
+      <span>アニメ</span>
+      ${[['normal', '標準'], ['fast', '速い'], ['off', 'なし']].map(([k, l]) => `<button class="${UI.animMode === k ? 'on' : ''}" data-act="animMode" data-k="${k}">${l}</button>`).join('')}
     </div>
     <div class="matchup">
       <div class="mu mu-b ${off === m.me ? 'mine' : ''}">
@@ -1027,6 +1051,8 @@ document.addEventListener('click', (e) => {
     case 'ace': S.aceId = S.aceId === id ? null : id; save(); render(); break;
     case 'startMatch': startMatch(); break;
     case 'quickMatch': startMatch(); UI.match.simToEnd(); render(); break;
+    case 'skipAnim': Anim.skip(); break;
+    case 'animMode': setAnimMode(t.dataset.k); break;
     case 'cmd': {
       const c = t.dataset.c;
       matchCmd(c === 'pitch' ? 'normal' : c);

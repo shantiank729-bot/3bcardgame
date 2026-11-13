@@ -9,6 +9,7 @@ const path = require('path');
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => { if (m.type() === 'error' && !/fonts|ERR_/.test(m.text())) errors.push(m.text()); });
   await page.route(/fonts\.(googleapis|gstatic)/, (r) => r.abort());
+  await page.addInitScript(() => { try { localStorage.setItem('hakkyu-road-anim', 'fast'); } catch (e) {} });
   await page.goto('file://' + path.resolve(__dirname, '../index.html'));
   await page.click('#newForm button[type=submit]');
   let manualMatches = 0;
@@ -39,6 +40,7 @@ const path = require('path');
         if (c !== 'autoAll' && c !== 'autoHalf') choices.push(b);
       }
       await choices[Math.floor(Math.random() * choices.length)].click();
+      await page.waitForFunction(() => !Anim.busy(), null, { timeout: 15000 });
     } else { console.log('unknown screen', screen); break; }
     if (errors.length) break;
   }

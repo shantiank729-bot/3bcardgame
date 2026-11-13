@@ -192,6 +192,7 @@ class Match {
     const speed = B.speed * cond(B);
     const name = `${(off.idx % 9) + 1}番 ${B.name.split(' ')[0]}`;
     const runsBefore = off.runs;
+    const snap = this.snapshot();
     const bstat = this.bs(B);
     let pitches = 4;
 
@@ -374,9 +375,31 @@ class Match {
     def.pc += pitches;
     plog.pc += pitches;
     const scored = off.runs - runsBefore;
+    this.recordPlay(snap, B, mode === 'ibb' ? 'IBB' : null);
     if (scored > 0) this.say(`${off.name} ${scored}点！（${this.sides[0].runs}-${this.sides[1].runs}）`, 'score');
     off.idx++;
     this.afterPlay();
+  }
+
+  // ---- アニメーション用の記録 ----
+  snapshot() {
+    return { bases: this.bases.slice(), outs: this.outs, runs: this.offense().runs, logAt: this.log.length, top: this.top };
+  }
+  recordPlay(snap, batter, kind) {
+    const line = this.log[snap.logAt];
+    this.playSeq = (this.playSeq || 0) + 1;
+    this.lastPlay = {
+      seq: this.playSeq,
+      kind,
+      text: line ? line.text : '',
+      before: snap.bases,
+      after: this.bases.slice(),
+      outsBefore: snap.outs,
+      outsAfter: Math.min(3, this.outs),
+      scored: this.offense().runs - snap.runs,
+      batter,
+      top: snap.top,
+    };
   }
 
   // ---- 盗塁 ----
@@ -387,6 +410,7 @@ class Match {
     if (!this.canSteal()) return;
     const from = this.bases[0] && !this.bases[1] ? 0 : 1;
     const runner = this.bases[from];
+    const snap = this.snapshot();
     const p = clamp(0.62 + (runner.speed * cond(runner) - 50) * 0.009 - (catcherArm(this.defense()) - 50) * 0.006 - (from === 1 ? 0.08 : 0), 0.15, 0.94);
     this.bases[from] = null;
     const short = runner.name.split(' ')[0];
@@ -398,6 +422,7 @@ class Match {
       this.say(`${short}：盗塁失敗…タッチアウト`, 'out');
     }
     this.defense().pc += 1;
+    this.recordPlay(snap, null, 'STEAL');
     this.afterPlay();
   }
 
