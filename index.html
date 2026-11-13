@@ -148,6 +148,41 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--ai); outline-of
   .mark.pop{animation:pop .25s ease-out}
   @keyframes pop{from{transform:scale(1.6); opacity:.3} to{transform:none; opacity:1}}
 }
+
+/* RPG */
+.status{background:var(--card); border:1.5px solid var(--line); border-radius:8px; padding:12px 14px; display:flex; flex-direction:column; gap:6px}
+.st-main{font:600 1.1rem var(--f-math)}
+.st-main b{font-size:1.4rem; color:var(--ai)}
+.xp{height:8px; background:var(--soft); border-radius:4px; overflow:hidden}
+.xp i{display:block; height:100%; background:var(--ai)}
+.st-sub{font-size:.85rem; color:var(--sub)}
+.topics button{grid-template-columns:auto minmax(0,1fr) auto}
+.topics .t-ex,.topics .t-best{grid-column:auto; grid-row:auto}
+.t-body{display:flex; flex-direction:column; min-width:0}
+.spr{width:44px; height:44px; image-rendering:pixelated; display:block}
+.btn.boss{text-align:left; display:flex; flex-direction:column}
+.btn.boss small{font-weight:400; font-size:.8rem}
+.battle{background:var(--card); border:1.5px solid var(--ink); border-radius:8px; padding:14px; display:grid; grid-template-columns:auto minmax(0,1fr); gap:4px 14px; align-items:center}
+.battle img{width:96px; height:96px; image-rendering:pixelated; grid-row:1 / span 2}
+.b-name{font:600 1.2rem var(--f-math); align-self:end}
+.b-hp{display:flex; flex-wrap:wrap; align-items:center; gap:6px 10px; font:600 .9rem var(--f-math); font-variant-numeric:tabular-nums; align-self:start}
+.b-log{grid-column:1 / -1; font:600 1rem var(--f-math); min-height:1.7em}
+.b-me{grid-column:1 / -1; border-top:1px dashed var(--line); padding-top:8px}
+.hp{display:inline-flex; gap:2px}
+.hp i{width:13px; height:12px; border:1.5px solid var(--ink)}
+.hp.foe i.on{background:var(--ai)}
+.hp.me i.on{background:var(--maru)}
+.r-head{font:600 1.5rem/1.4 var(--f-math)}
+.r-head.win{color:var(--maru)}
+.r-xp{font:600 1rem var(--f-math)}
+.score{font-size:2.2rem}
+@media (max-width:420px){.battle img{width:80px; height:80px}}
+@media (prefers-reduced-motion:no-preference){
+  .hit{animation:hit .35s steps(4)}
+  .hurt{animation:hurt .35s steps(4)}
+  @keyframes hit{0%,100%{transform:none; opacity:1} 25%{transform:translateX(6px); opacity:.2} 50%{transform:translateX(-6px); opacity:1} 75%{transform:translateX(4px); opacity:.2}}
+  @keyframes hurt{0%,100%{transform:none} 25%{transform:translateX(-5px)} 50%{transform:translateX(5px)} 75%{transform:translateX(-3px)}}
+}
 </style>
 
 <main>
@@ -155,24 +190,30 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--ai); outline-of
     <div style="display:flex;flex-direction:column;gap:20px">
       <header>
         <h1>算数・数学やりなおしドリル</h1>
-        <p class="lead">小1〜小6の算数と中1〜中3の数学を、1回10問でふり返るドリルです。数字は毎回変わります。時間制限は1問ごとで、切れると不正解になります。</p>
+        <p class="lead">小1〜中3の単元がモンスターになりました。正解するとダメージを与え、まちがえると HP がへります。数字は毎回変わります。</p>
       </header>
+      <div class="status" id="status"></div>
       <div class="grades" id="grades" role="group" aria-label="学年"></div>
       <div class="limit"><span id="limitLabel">1問の時間制限</span><div class="seg" id="limit" role="group" aria-labelledby="limitLabel"></div></div>
+      <h2 class="area" id="area"></h2>
       <ul class="topics" id="topics"></ul>
       <div class="mixrow">
-        <button class="btn" id="mixGrade"></button>
-        <button class="btn primary" id="mixAll"></button>
+        <button class="btn boss" id="mixGrade"></button>
+        <button class="btn boss primary" id="mixAll"></button>
       </div>
-      <p class="note">小学校の「中学で必須」の単元は、正負の数・方程式・比例・関数でそのまま使います。まずここから始めるのがおすすめです。</p>
+      <p class="note">モンスターは HP 7、ボスは HP 10 以上。こちらの HP が先に 0 になると負けです。時間切れも 1 ミスになります。小学校の「中学で必須」の単元は、正負の数・方程式・比例・関数でそのまま使います。</p>
     </div>
   </section>
 
   <section id="drill" hidden>
     <div style="display:flex;flex-direction:column;gap:14px">
-      <div class="bar">
-        <h2 id="dTitle"></h2>
-        <div class="cells" id="cells" aria-hidden="true"></div>
+      <h2 id="dTitle"></h2>
+      <div class="battle" id="battle">
+        <img id="bImg" alt="">
+        <div class="b-name" id="bName"></div>
+        <div class="b-hp" id="bEhp"></div>
+        <div class="b-log" id="bLog" role="status"></div>
+        <div class="b-hp b-me" id="bPhp"></div>
       </div>
       <form class="sheet" id="sheet" autocomplete="off">
         <div class="q-meta" id="qMeta"></div>
@@ -183,7 +224,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--ai); outline-of
         <div class="note" id="qNote"></div>
         <div class="msg" id="qMsg" role="status"></div>
         <div class="actions" id="qActions">
-          <button class="btn primary" type="submit" id="btnCheck">答え合わせ</button>
+          <button class="btn primary" type="submit" id="btnCheck">こうげき(答え合わせ)</button>
         </div>
         <div class="judge" id="judge" hidden>
           <div class="verdict"><span class="mark" id="jMark"></span><span id="jText"></span></div>
@@ -191,7 +232,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--ai); outline-of
           <div class="actions"><button class="btn primary" type="button" id="btnNext">次の問題</button></div>
         </div>
       </form>
-      <div><button class="btn quiet" type="button" id="btnQuit">単元えらびにもどる</button></div>
+      <div><button class="btn quiet" type="button" id="btnQuit">にげる</button></div>
     </div>
   </section>
 
@@ -199,14 +240,16 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--ai); outline-of
     <div style="display:flex;flex-direction:column;gap:16px">
       <h2 id="rTitle"></h2>
       <div class="sheet">
+        <div class="r-head" id="rHead"></div>
+        <p class="r-xp" id="rXp"></p>
         <div class="score" id="rScore"></div>
         <p id="rComment"></p>
         <ul class="review" id="rList"></ul>
       </div>
       <div class="actions">
-        <button class="btn primary" id="btnRetry">まちがえた問題をもう一度</button>
-        <button class="btn" id="btnAgain">同じ単元でもう10問</button>
-        <button class="btn quiet" id="btnHome">単元えらびにもどる</button>
+        <button class="btn primary" id="btnRetry">まちがえた問題で とっくん</button>
+        <button class="btn" id="btnAgain">もう一度たたかう</button>
+        <button class="btn quiet" id="btnHome">マップにもどる</button>
       </div>
     </div>
   </section>
@@ -593,35 +636,89 @@ const GL=g=>g<=6?'小'+g:'中'+(g-6);
 const ALL=[].concat.apply([],GRADES.map(g=>g.topics.map(t=>Object.assign({grade:g.g},t))));
 const byId={};ALL.forEach(t=>byId[t.id]=t);
 
-/* ---------- 保存(ベスト記録だけ。使えなくても動く) ---------- */
+/* ---------- 保存(経験値と討伐記録。使えなくても動く) ---------- */
 const store={
   get(k,d){try{const v=localStorage.getItem(k);return v===null?d:JSON.parse(v)}catch(e){return d}},
   set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
 };
-let best=store.get('sansu-best',{})||{};
+let rpg=store.get('sansu-rpg',null);
+if(!rpg||typeof rpg.xp!=='number'||!rpg.won||typeof rpg.won!=='object')rpg={xp:0,won:{}};
 let grade=store.get('sansu-grade',5);
 if(!GRADES.some(g=>g.g===grade)) grade=5;
 const LIMITS=[[0,'なし'],[120,'120秒'],[60,'60秒'],[30,'30秒'],[15,'15秒']];
 let limit=store.get('sansu-limit',60);
 if(!LIMITS.some(l=>l[0]===limit)) limit=60;
 
+/* ---------- RPG の設定 ---------- */
+const AREA={1:'はじまりの草原',2:'九九の森',3:'あまりの洞くつ',4:'かっこの砦',5:'割合の砂漠',6:'比の塔',7:'マイナスの谷',8:'関数の峠',9:'ルートの城'};
+const MON={add1:'タシザル',sub1:'ヒキガエル',three1:'ミツゴン',hissan2:'ヒッサンダー',kuku:'クククロウ',unit2:'メモリン',
+  divrem:'アマリス',mul3:'カケルン',box3:'シカクン',unit3:'キログマ',fracdec3:'テンテン',
+  order4:'カッコウ',div4:'ワリバシラ',dec4:'ショースー',round4:'ガイスー',area4:'メンセキツネ',
+  decmul5:'コンマムシ',gcdlcm5:'バイスウルフ',fracadd5:'ツーブン',percent5:'パーセンドリ',avg5:'ヘイキンギョ',speed5:'ハヤブサン',area5:'サンカクジラ',vol5:'タイセキレイ',
+  fracmul6:'ギャクスウ',mix6:'マゼコゼ',ratio6:'ヒリツム',circle6:'エンシュウ',prop6:'ヒレイカ',cases6:'バアイノカズラ',vol6:'エンチュウ',
+  pm_add:'マイナスズメ',pm_mul:'ルイジョウオ',expr1:'モジシキ',eq1:'ホウテイシカ',prop1:'ハンピレイ',geo1:'オウギガニ',data1:'チュウオウチ',
+  expr2:'タンコウ',sim2:'レンリツノ',lin2:'カタムキリン',angle2:'ガイカクタス',prob2:'カクリス',
+  expand3:'テンカイ',factor3:'インスウ',sqrt3:'ルートカゲ',quad3:'ニジホウ',quadfn3:'ホウブツセン',geo3:'サンヘイホウ'};
+const TITLES=[[20,'数の賢者'],[15,'達人'],[10,'うできき'],[6,'いっぱし'],[3,'かけだし'],[1,'みならい']];
+const lvOf=xp=>1+Math.floor(Math.sqrt(xp/40));
+const xpAt=l=>40*(l-1)*(l-1);
+const titleOf=l=>TITLES.find(t=>l>=t[0])[1];
+const maxHp=l=>4+(l>=5?1:0)+(l>=12?1:0);
+function foe(key){
+  if(key==='mixel')return {name:'算数の竜',max:12,big:true,xp:200,sub:'小学校ぜんぶミックス'};
+  if(key==='mixjh')return {name:'数学の竜',max:12,big:true,xp:400,sub:'中学校ぜんぶミックス'};
+  if(key.indexOf('mix')===0){const g=+key.slice(3);return {name:GL(g)+'の番人',max:10,big:true,xp:30*g,sub:GL(g)+' ぜんぶミックス'}}
+  return {name:MON[key],max:7,big:false,xp:10*byId[key].grade};
+}
+
+/* モンスターの絵: 単元ごとに決まる左右対称のドット絵をその場で作る */
+function hash(s){let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0}
+function rng(seed){return ()=>{seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const sprites={};
+function sprite(key,big){
+  if(sprites[key]!=null)return sprites[key];
+  try{
+    const n=big?12:10,half=n/2,r=rng(hash(key)),hue=Math.floor(r()*360),px=8,ey=big?4:3,ec=half-2;
+    const c=document.createElement('canvas');c.width=c.height=n*px;const x=c.getContext('2d');
+    const col=['','hsl('+hue+' 55% 50%)','hsl('+hue+' 55% 36%)','hsl('+((hue+40)%360)+' 70% 68%)','#ffffff','#e8b923','#1c2b3a'];
+    const g=[];
+    for(let y=0;y<n;y++){g.push([]);for(let i=0;i<half;i++){
+      const p=0.42+0.13*i-(y===0||y===n-1?0.25:0);
+      g[y].push(r()<p?(r()<0.22?2:r()<0.18?3:1):0)}}
+    for(let y=ey-1;y<=ey+3;y++)for(let i=ec-1;i<half;i++)if(i>=0&&!g[y][i])g[y][i]=1;
+    g[ey][ec]=4;g[ey+2][half-1]=6;if(r()<0.5)g[ey+2][half-2]=6;
+    if(big){g[0]=g[0].map((v,i)=>(half-1-i)%2===0?5:0);g[1]=g[1].map((v,i)=>i>=1?5:0)}
+    for(let y=0;y<n;y++)for(let i=0;i<half;i++){const v=g[y][i];if(!v)continue;x.fillStyle=col[v];x.fillRect(i*px,y*px,px,px);x.fillRect((n-1-i)*px,y*px,px,px)}
+    x.fillStyle=col[6];x.fillRect(ec*px+px/2,ey*px+px/2,px/2,px/2);x.fillRect((n-1-ec)*px,ey*px+px/2,px/2,px/2);
+    sprites[key]=c.toDataURL();
+  }catch(e){sprites[key]=''}
+  return sprites[key];
+}
+
 /* ---------- 画面 ---------- */
 const $=id=>document.getElementById(id);
-const TOTAL=10;
-let S=null; // {title, key, pool, qs, i, res, judged}
+let S=null;
 
 function show(name){['home','drill','result'].forEach(n=>{$(n).hidden=n!==name});window.scrollTo(0,0)}
+function hpBar(n,max,cls){let o='<span class="hp '+cls+'" aria-hidden="true">';for(let i=0;i<max;i++)o+='<i class="'+(i<n?'on':'')+'"></i>';return o+'</span>'}
+function bossLabel(key){const f=foe(key);return '<span>ボス戦 <b>'+f.name+'</b>'+(rpg.won[key]?' ・ 討伐 ×'+rpg.won[key]:'')+'</span><small>'+f.sub+'</small>'}
 
 function renderHome(){
+  const lv=lvOf(rpg.xp),a=xpAt(lv),b=xpAt(lv+1),beaten=ALL.filter(t=>rpg.won[t.id]).length;
+  $('status').innerHTML='<div class="st-main"><b>Lv '+lv+'</b> '+titleOf(lv)+'</div><div class="xp"><i style="width:'+((rpg.xp-a)/(b-a)*100).toFixed(0)+'%"></i></div><div class="st-sub">次のレベルまで あと '+(b-rpg.xp)+' ・ 最大 HP '+maxHp(lv)+' ・ たおしたモンスター '+beaten+' / '+ALL.length+'</div>';
   $('grades').innerHTML=GRADES.map(g=>'<button type="button" data-g="'+g.g+'" aria-pressed="'+(g.g===grade)+'">'+GL(g.g)+'</button>').join('');
+  $('area').textContent=GL(grade)+' ・ '+AREA[grade];
   const g=GRADES.find(x=>x.g===grade);
-  $('topics').innerHTML=g.topics.map(t=>'<li><button type="button" data-t="'+t.id+'"><span class="t-name">'+t.name+(t.key?'<span class="chip">中学で必須</span>':'')+'</span><span class="t-ex">'+t.ex+'</span><span class="t-best">'+(best[t.id]!=null?'ベスト <b>'+best[t.id]+'</b> / '+TOTAL:'まだ')+'</span></button></li>').join('');
+  $('topics').innerHTML=g.topics.map(t=>'<li><button type="button" data-t="'+t.id+'"><img class="spr" src="'+sprite(t.id)+'" alt=""><span class="t-body"><span class="t-name">'+t.name+(t.key?'<span class="chip">中学で必須</span>':'')+'</span><span class="t-ex">'+MON[t.id]+' ・ '+t.ex+'</span></span><span class="t-best">'+(rpg.won[t.id]?'<b>討伐</b> ×'+rpg.won[t.id]:'未討伐')+'</span></button></li>').join('');
   $('limit').innerHTML=LIMITS.map(l=>'<button type="button" data-l="'+l[0]+'" aria-pressed="'+(l[0]===limit)+'">'+l[1]+'</button>').join('');
-  $('mixGrade').textContent=GL(grade)+' ぜんぶミックス 10問';
-  $('mixAll').textContent=(grade<=6?'小学校':'中学校')+'ぜんぶミックス 10問';
+  $('mixGrade').innerHTML=bossLabel('mix'+grade);
+  $('mixAll').innerHTML=bossLabel(grade<=6?'mixel':'mixjh');
 }
 $('grades').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;grade=+b.dataset.g;store.set('sansu-grade',grade);renderHome()});
 $('limit').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;limit=+b.dataset.l;store.set('sansu-limit',limit);renderHome()});
+$('topics').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;start(b.dataset.t,[b.dataset.t])});
+$('mixGrade').addEventListener('click',()=>start('mix'+grade,GRADES.find(x=>x.g===grade).topics.map(t=>t.id)));
+$('mixAll').addEventListener('click',()=>{const el=grade<=6;start(el?'mixel':'mixjh',ALL.filter(t=>(t.grade<=6)===el).map(t=>t.id))});
 
 /* 1問ごとのタイマー。解き方を読んでいる間は止まる */
 let tm=null,tEnd=0;
@@ -637,29 +734,28 @@ function tick(){
   $('tRow').classList.toggle('low',left<=5000);
   if(left<=0){stopTimer();reveal(false,true)}
 }
-$('topics').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const t=byId[b.dataset.t];start(GL(t.grade)+' '+t.name,t.id,[t.id])});
-$('mixGrade').addEventListener('click',()=>start(GL(grade)+' ぜんぶミックス','mix'+grade,GRADES.find(x=>x.g===grade).topics.map(t=>t.id)));
-$('mixAll').addEventListener('click',()=>{const el=grade<=6;start(el?'小学校ぜんぶミックス':'中学校ぜんぶミックス',el?'mixel':'mixjh',ALL.filter(t=>(t.grade<=6)===el).map(t=>t.id))});
 
-function make(pool){
-  const qs=[],seen={};
-  let guard=0;
-  while(qs.length<TOTAL&&guard++<400){
-    const id=pool.length>=TOTAL?pool.splice(ri(0,pool.length-1),1)[0]:pick(pool);
-    const q=G[id]();q.tid=id;
-    if(seen[q.q]&&guard<300)continue;
-    seen[q.q]=1;qs.push(q);
-  }
-  return qs;
+/* ---------- バトル ---------- */
+function newQ(){let q,n=0;do{const id=pick(S.pool);q=G[id]();q.tid=id}while(S.seen[q.q]&&++n<30);S.seen[q.q]=1;return q}
+function start(key,pool,retryQs){
+  const f=foe(key),lv=lvOf(rpg.xp);
+  S={key:key,pool:pool,foe:f,retry:!!retryQs,qs:retryQs||[],i:0,res:[],judged:false,seen:{},sel:{},ehp:f.max,hp:maxHp(lv),mhp:maxHp(lv),lv:lv};
+  S.title=f.big?f.name+' とのボス戦':GL(byId[key].grade)+' '+byId[key].name;
+  if(!S.retry)S.qs.push(newQ());
+  $('dTitle').textContent=S.title+(S.retry?'(とっくん)':'');
+  $('battle').hidden=S.retry;
+  if(!S.retry){const src=sprite(key,f.big);$('bImg').hidden=!src;if(src)$('bImg').src=src;$('bName').textContent=f.name;$('bLog').textContent=f.name+' が あらわれた!'}
+  $('btnQuit').textContent=S.retry?'とっくんをやめる':'にげる';
+  show('drill');renderBattle();renderQ();
 }
-function start(title,key,pool,qs){
-  S={title:title,key:key,pool:pool,qs:qs||make(pool.slice()),i:0,res:[],judged:false,retry:!!qs};
-  $('dTitle').textContent=title+(S.retry?'(まちがい直し)':'');
-  show('drill');renderQ();
+function renderBattle(){
+  if(S.retry)return;
+  $('bEhp').innerHTML=hpBar(S.ehp,S.foe.max,'foe')+'<span>'+S.ehp+' / '+S.foe.max+'</span>';
+  $('bPhp').innerHTML='<span>あなた Lv '+S.lv+'</span>'+hpBar(S.hp,S.mhp,'me')+'<span>HP '+S.hp+' / '+S.mhp+'</span>';
 }
-function renderCells(){
-  $('cells').innerHTML=S.qs.map((q,i)=>{const r=S.res[i];return '<i class="'+(r===true?'ok':r===false?'ng':i===S.i?'now':'')+'">'+(r===true?'○':r===false?'×':'')+'</i>'}).join('');
-}
+function anim(el,c){el.classList.remove(c);void el.offsetWidth;el.classList.add(c)}
+const isOver=()=>S.retry?S.i+1>=S.qs.length:(S.ehp<=0||S.hp<=0);
+
 let signed=false;
 function fieldHTML(f,i){
   if(f.k==='c') return '<div class="choices" id="a'+i+'" data-i="'+i+'" role="group" aria-label="答えを選ぶ">'+f.opts.map((o,j)=>'<button type="button" data-c="'+j+'" aria-pressed="false">'+o+'</button>').join('')+'</div>';
@@ -674,8 +770,7 @@ function ansHTML(q){
 function renderQ(){
   const q=S.qs[S.i];S.judged=false;S.sel={};
   signed=byId[q.tid].grade>=7;
-  renderCells();
-  $('qMeta').textContent='第 '+(S.i+1)+' 問 / '+S.qs.length+' ・ '+GL(byId[q.tid].grade)+' '+byId[q.tid].name;
+  $('qMeta').textContent='第 '+(S.i+1)+' 問'+(S.retry?' / '+S.qs.length:'')+' ・ '+GL(byId[q.tid].grade)+' '+byId[q.tid].name;
   $('qText').innerHTML=q.q+(/[?。]$|small>$/.test(q.q)||q.q.indexOf('□')>=0||q.q.replace(/<[^>]+>/g,'').indexOf('=')>=0?'':' =');
   $('qFig').innerHTML=q.fig||'';
   $('qAns').innerHTML=q.f.map(fieldHTML).join('');
@@ -729,37 +824,52 @@ function reveal(ok,timeout){
     if(f.k==='c'){$('a'+i).querySelectorAll('button').forEach((b,j)=>{b.disabled=true;if(j===f.ans)b.classList.add('right')});return}
     (f.k==='f'?['a'+i+'n','a'+i+'d']:['a'+i]).forEach(id=>{$(id).readOnly=true});
   });
-  renderCells();
+  if(!S.retry){
+    if(ok){S.ehp--;$('bLog').textContent=S.ehp>0?S.foe.name+' に 1 ダメージ!':S.foe.name+' を たおした!';anim($('bImg'),'hit')}
+    else{S.hp--;$('bLog').textContent=S.foe.name+' の こうげき! '+(S.hp>0?'HP が 1 へった。':'ちからつきた…');anim($('bPhp'),'hurt')}
+    renderBattle();
+  }
   $('qMsg').textContent='';
   $('qActions').hidden=true;$('judge').hidden=false;
   $('jMark').textContent=ok?'○':'×';$('jMark').className='mark pop '+(ok?'ok':'ng');
   $('jText').innerHTML=ok?'正解':(timeout?'時間切れ。':'')+'正しい答えは '+ansHTML(q);
   $('jEx').innerHTML=q.ex;
-  $('btnNext').textContent=S.i+1<S.qs.length?'次の問題':'結果を見る';
+  $('btnNext').textContent=isOver()?'結果を見る':'次の問題';
   $('btnNext').focus();
 }
 function next(){
-  if(S.i+1<S.qs.length){S.i++;renderQ()}else finish();
+  if(isOver()){finish();return}
+  S.i++;if(!S.retry)S.qs.push(newQ());renderQ();
 }
 $('btnNext').addEventListener('click',next);
 $('btnQuit').addEventListener('click',goHome);
 function goHome(){stopTimer();renderHome();show('home')}
 
 function finish(){
-  const n=S.qs.length,c=S.res.filter(Boolean).length;
-  if(!S.retry&&n===TOTAL&&S.pool.length===1&&(best[S.key]==null||c>best[S.key])){best[S.key]=c;store.set('sansu-best',best)}
-  $('rTitle').textContent=S.title+(S.retry?'(まちがい直し)':'')+' の結果';
+  const n=S.res.length,c=S.res.filter(Boolean).length;let head,sub='',comment,win=false;
+  if(S.retry){head='とっくん おわり';comment=c===n?'全部できました。もう一度たたかってみましょう。':'× の問題の解き方をもう一度読んでおきましょう。'}
+  else{
+    win=S.ehp<=0;const gain=win?S.foe.xp+5*S.hp:c,before=lvOf(rpg.xp);
+    rpg.xp+=gain;if(win)rpg.won[S.key]=(rpg.won[S.key]||0)+1;store.set('sansu-rpg',rpg);
+    const after=lvOf(rpg.xp);
+    head=win?S.foe.name+' を たおした!':'ちからつきた…';
+    sub='けいけんち +'+gain+(after>before?' ・ レベルが '+after+' に上がった!'+(maxHp(after)>maxHp(before)?' 最大 HP が '+maxHp(after)+' になった。':''):'');
+    comment=!win?'× の問題の解き方を読んで、とっくんしてからもう一度いどみましょう。':c===n?'ノーミスの完全勝利です。':'× の問題は、とっくんで確認しておきましょう。';
+  }
+  $('rTitle').textContent=S.title+(S.retry?'(とっくん)':'')+' の結果';
+  $('rHead').textContent=head;$('rHead').className='r-head'+(win?' win':'');
+  $('rXp').textContent=sub;$('rXp').hidden=!sub;
   $('rScore').innerHTML=c+'<small> / '+n+' 問 正解</small>';
-  $('rComment').textContent=c===n?'全問正解。この単元はもう大丈夫です。':c>=n*0.7?'あと少し。× の問題の解き方を読んでから、まちがい直しをしましょう。':'解き方を1問ずつ読んで、まちがい直しでもう一度ためしましょう。';
-  $('rList').innerHTML=S.qs.map((q,i)=>'<li><span class="mark '+(S.res[i]?'ok':'ng')+'">'+(S.res[i]?'○':'×')+'</span><div><div>'+q.q+'</div><div class="a">答え <b>'+ansHTML(q)+'</b>'+(S.res[i]?'':'<br>'+q.ex)+'</div></div></li>').join('');
+  $('rComment').textContent=comment;
+  $('rList').innerHTML=S.qs.slice(0,n).map((q,i)=>'<li><span class="mark '+(S.res[i]?'ok':'ng')+'">'+(S.res[i]?'○':'×')+'</span><div><div>'+q.q+'</div><div class="a">答え <b>'+ansHTML(q)+'</b>'+(S.res[i]?'':'<br>'+q.ex)+'</div></div></li>').join('');
   $('btnRetry').hidden=c===n;
   show('result');
 }
-$('btnRetry').addEventListener('click',()=>{const wrong=S.qs.filter((q,i)=>!S.res[i]).map(q=>Object.assign({},q));start(S.title,S.key,S.pool,wrong)});
-$('btnAgain').addEventListener('click',()=>start(S.title,S.key,S.pool));
+$('btnRetry').addEventListener('click',()=>{const wrong=S.qs.filter((q,i)=>S.res[i]===false).map(q=>Object.assign({},q));start(S.key,S.pool,wrong)});
+$('btnAgain').addEventListener('click',()=>start(S.key,S.pool));
 $('btnHome').addEventListener('click',goHome);
 
-window.__drill={G:G,ALL:ALL,cur:()=>S.qs[S.i]};
+window.__drill={G:G,ALL:ALL,cur:()=>S.qs[S.i],state:()=>S,MON:MON};
 renderHome();
 })();
 </script>
