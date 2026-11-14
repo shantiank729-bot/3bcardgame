@@ -386,3 +386,12 @@ body[data-screen="match"] #app { padding-bottom: 24px; }
 }
 .stage-hud .out { width: 9px; height: 9px; border-width: 1.5px; border-color: #ff8a7a; }
 .stage-hud .out.on { background: #ff8a7a; }
+
+/* 自動進行とタイム */
+.flow-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 10px 12px; }
+.flow-state { margin: 0; display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 0.9rem; }
+.flow-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--good); animation: blink 1.2s infinite; }
+@keyframes blink { 50% { opacity: 0.25; } }
+.flow-btns { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.flow-btns .btn.primary { min-width: 7em; min-height: 44px; font-size: 1rem; }
+.cmd-h small { display: block; font-weight: 400; color: var(--muted); font-size: 0.75rem; }

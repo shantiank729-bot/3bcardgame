@@ -18,6 +18,7 @@ const path = require('path');
     let outfieldChecked = 0, singles = 0, singleDives = 0;
     const singleVariants = {};
     const variants = {}, dives = {}, combos = {};
+    const batterAt900 = new Set();
     // 盗塁(成功・失敗)を直接作って確認
     for (let i = 0; i < 300; i++) {
       const A = makeOpponent(45), B = makeOpponent(45);
@@ -84,6 +85,22 @@ const path = require('path');
         }
         // 結果表示より前にアウト/ヒットが分かる表示が出ていないこと
         if (tl.tLabel <= 0) problems.push(`ラベル時刻異常 ${k}`);
+        // 打球が飛んだプレーでは、結果が決まる前に走者が動かないこと(打者は最初の数歩だけ)
+        if (!['K', 'BB', 'IBB', 'STEAL', 'SQX'].includes(k)) {
+          const st0 = tl.at(0);
+          const until = k === 'SF' ? tl.tLabel - 1500 : tl.tLabel;
+          for (let t = 0; t < until; t += 25) {
+            const st = tl.at(t);
+            const moved = st.runners.some((r, i) => Math.hypot(r.x - st0.runners[i].x, r.y - st0.runners[i].y) > 0.01);
+            const bMove = st.batter ? Math.hypot(st.batter.x + 3.5, st.batter.y) : 0;
+            if (moved || bMove > 10) { problems.push(`結果前に走者が動いた ${k} ${tl.variant} t=${t} 打者${bMove.toFixed(1)}ft ${lp.text}`); break; }
+          }
+          // 打者の踏み出しはどのプレーでも同じ(結果の手前の時点で同じ位置)
+          if (tl.tLabel > 900 && k !== 'SF') {
+            const b = tl.at(Math.min(tl.tLabel - 1, 900)).batter;
+            if (b) batterAt900.add(`${b.x.toFixed(1)},${b.y.toFixed(1)}`);
+          }
+        }
         // 演出の種類と飛び込みの割合を集計
         if (['FO', 'SF', 'GO', 'IH', 'DP', 'E'].includes(k)) {
           const key = k === 'SF' ? 'FO' : k;
@@ -131,7 +148,7 @@ const path = require('path');
         }
       }
     }
-    return { kinds, outfieldChecked, singleVariants, variants, combos, diveRates: Object.fromEntries(Object.entries(dives).map(([k, [a, b]]) => [k, (a / b).toFixed(2)])), singleDiveRate: (singleDives / singles).toFixed(2), problems: problems.slice(0, 20), nProblems: problems.length };
+    return { kinds, batterAt900: [...batterAt900], outfieldChecked, singleVariants, variants, combos, diveRates: Object.fromEntries(Object.entries(dives).map(([k, [a, b]]) => [k, (a / b).toFixed(2)])), singleDiveRate: (singleDives / singles).toFixed(2), problems: problems.slice(0, 20), nProblems: problems.length };
   });
   console.log(JSON.stringify(report, null, 1));
 

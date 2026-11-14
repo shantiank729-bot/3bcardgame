@@ -754,6 +754,7 @@ const Anim = (() => {
       }
       res.tLabel = C + T; res.batterOutAt = C + T; res.batterOutProg = 0.85; res.runStart = C + T;
       if (sac) {
+        res.settle = C + T;
         const arr = throwBall(C + T + 150, L, [0, 1], { high: true });
         move('C', C + T, C + T + 200, [0, 2]);
         res.runnerSafeAt = arr - R(60, 200);
@@ -1077,18 +1078,30 @@ const Anim = (() => {
     }
 
     // ---- 走者の動きを時間軸にする ----
+    // 打球が飛んだプレーでは、結果が決まる(捕球・落下・送球が届く)まで走者は動かない。
+    // 打者だけは毎回同じ数歩を踏み出し、結果が決まってから進塁する(動きで結果が分からないように)。
+    const inPlay = !['K', 'BB', 'IBB', 'STEAL', 'SQX'].includes(kind);
+    const settle = res.settle != null ? res.settle : res.tLabel;
     const speed = res.slow && kind !== 'HR' ? 0.075 : RUN;
+    const pathLen = (path) => path.slice(1).reduce((a, p, i) => a + dist(path[i], p), 0);
     const rTracks = runners.map((r) => {
       const path = pathFor(r.from, r.to);
-      const len = path.slice(1).reduce((a, p, i) => a + dist(path[i], p), 0);
-      const t0 = kind === 'STEAL' ? res.runStart : res.runStart;
+      const len = pathLen(path);
+      if (inPlay) {
+        const t0 = settle + 80;
+        if (r.out) return { path, t0, t1: settle + 250, prog: 0, fadeAt: settle + 250, scoring: false };
+        let t1 = t0 + len / speed;
+        if (res.runnerSafeAt != null && kind === 'SF' && r.to === 3) t1 = Math.max(t0 + 200, res.runnerSafeAt);
+        return { path, t0, t1, prog: 1, fadeAt: null, scoring: r.to === 3 };
+      }
+      const t0 = res.runStart;
       let t1, prog = 1, fadeAt = null;
       if (r.out) {
         prog = 0.75;
         const outAt = res.runnerOutAt != null ? res.runnerOutAt : res.tLabel + 300;
         t1 = Math.max(t0 + 120, outAt);
         fadeAt = t1;
-      } else if (res.runnerSafeAt != null && (kind === 'STEAL' || (kind === 'SF' && r.to === 3))) {
+      } else if (res.runnerSafeAt != null && kind === 'STEAL') {
         t1 = Math.max(t0 + 200, res.runnerSafeAt);
       } else {
         t1 = t0 + len / speed;
@@ -1099,23 +1112,26 @@ const Anim = (() => {
     let bTrack = null;
     if (lp.batter) {
       const j = lp.after.indexOf(lp.batter);
-      const t0 = kind === 'BB' || kind === 'IBB' ? res.runStart : C + 60;
-      if (j >= 0) {
-        const path = pathFor(-1, j);
-        const len = path.slice(1).reduce((a, p, i) => a + dist(path[i], p), 0);
-        let t1 = res.batterSafeAt != null && j === 0 ? Math.max(t0 + 300, res.batterSafeAt) : t0 + len / speed;
-        if (res.close && res.batterSafeAt != null) puff(t1, FIRST);
-        bTrack = { path, t0, t1, prog: 1 };
-      } else if (kind === 'HR') {
-        const path = pathFor(-1, 3);
-        bTrack = { path, t0, t1: t0 + 360 / 0.11, prog: 1, scoring: true };
-      } else if (res.batterStay || res.batterOutAt == null) {
-        bTrack = { stay: true };
+      if (inPlay) {
+        const box = [-3.5, 0];
+        const stepPt = toward(basePos(-1), FIRST, 8);
+        const pre = { from: box, to: stepPt, t0: C + 60, t1: C + 460 };
+        const t0 = Math.max(settle + 80, pre.t1);
+        if (j >= 0 || kind === 'HR') {
+          const path = [stepPt, ...pathFor(-1, kind === 'HR' ? 3 : j).slice(1)];
+          const sp = kind === 'HR' ? 0.11 : speed;
+          bTrack = { path, t0, t1: t0 + pathLen(path) / sp, prog: 1, pre, scoring: kind === 'HR' };
+        } else {
+          bTrack = { path: [stepPt], t0, t1: settle + 250, prog: 0, pre, fadeAt: settle + 250 };
+        }
       } else {
-        const path = pathFor(-1, 0);
-        const t1 = Math.max(t0 + 200, res.batterOutAt);
-        if (res.close) puff(t1, FIRST);
-        bTrack = { path, t0, t1, prog: res.batterOutProg, fadeAt: t1 };
+        const t0 = kind === 'BB' || kind === 'IBB' ? res.runStart : C + 60;
+        if (j >= 0) {
+          const path = pathFor(-1, j);
+          bTrack = { path, t0, t1: t0 + pathLen(path) / speed, prog: 1 };
+        } else {
+          bTrack = { stay: true };
+        }
       }
     }
 
@@ -1183,11 +1199,16 @@ const Anim = (() => {
         } else {
           const started = tt > bTrack.t0;
           const f = !started ? 0 : clamp((tt - bTrack.t0) / Math.max(1, bTrack.t1 - bTrack.t0), 0, 1) * bTrack.prog;
-          const [x, y] = started ? along(bTrack.path, f) : [-3.5, 0];
+          let [x, y] = started ? along(bTrack.path, f) : [-3.5, 0];
+          if (!started && bTrack.pre) {
+            const q = bTrack.pre;
+            const g = ease(clamp((tt - q.t0) / (q.t1 - q.t0), 0, 1));
+            x = lerp(q.from[0], q.to[0], g); y = lerp(q.from[1], q.to[1], g);
+          }
           let alpha = 1;
           if (bTrack.fadeAt && tt > bTrack.fadeAt) alpha = clamp(1 - (tt - bTrack.fadeAt) / 300, 0, 1);
           if (bTrack.scoring && f >= 1) alpha = clamp(1 - (tt - bTrack.t1) / 400, 0, 1);
-          batter = { x, y, alpha, bat: started ? null : swingAngle(tt) };
+          batter = { x, y, alpha, bat: started || (bTrack.pre && tt > bTrack.pre.t0) ? null : swingAngle(tt) };
         }
       }
       const pf = puffs.filter((p) => tt >= p.t && tt < p.t + 450).map((p) => ({ x: p.x, y: p.y, f: (tt - p.t) / 450 }));

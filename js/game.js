@@ -384,7 +384,9 @@ function startMatch() {
   m.say(`先発：${me.pitcher.name}　対　${os.pitcher.name}`, 'info');
   UI.match = m;
   UI.screen = 'match';
+  UI.showBullpen = false;
   render();
+  startFlow(900);
 }
 
 /** 自動で一試合(練習試合用) */
@@ -423,6 +425,7 @@ function applyMatchStats(m, official) {
 }
 
 function finishMatch() {
+  stopFlow();
   const m = UI.match;
   const t = S.tourney;
   const win = m.winner() === m.me;
@@ -516,19 +519,69 @@ function retireSeniors() {
 // ---------- 試合中の操作 ----------
 function userIsBatting(m) { return m.offense() === m.me; }
 
+// 試合は基本的に自動で進み、「タイム」をかけたときだけ監督が指示を出す
+UI.flow = { token: 0, paused: false, timeReq: false, timer: null };
+
+function flowGap() { return UI.animMode === 'fast' ? 250 : UI.animMode === 'off' ? 800 : 550; }
+function stopFlow() {
+  UI.flow.token++;
+  clearTimeout(UI.flow.timer);
+  UI.flow.timer = null;
+}
+function startFlow(delay) {
+  stopFlow();
+  UI.flow.paused = false;
+  UI.flow.timeReq = false;
+  const token = UI.flow.token;
+  UI.flow.timer = setTimeout(() => flowStep(token), delay == null ? flowGap() : delay);
+}
+function flowStep(token) {
+  const m = UI.match;
+  if (token !== UI.flow.token || !m || m.over || UI.screen !== 'match') return;
+  if (UI.flow.timeReq) { pauseFlow(); return; }
+  const seq = m.playSeq;
+  m.autoStep();
+  showPlay(m, seq, () => {
+    if (token !== UI.flow.token) return;
+    if (m.over) { render(); return; }
+    if (UI.flow.timeReq) { pauseFlow(); return; }
+    UI.flow.timer = setTimeout(() => flowStep(token), flowGap());
+  });
+}
+function pauseFlow() {
+  stopFlow();
+  UI.flow.paused = true;
+  UI.flow.timeReq = false;
+  render();
+}
+/** タイムをかける。プレーの途中なら、そのプレーが終わってから止まる */
+function callTime(btn) {
+  if (UI.flow.paused) return;
+  if (Anim.busy()) {
+    UI.flow.timeReq = true;
+    if (btn) { btn.textContent = 'タイム要求中…'; btn.disabled = true; }
+    return;
+  }
+  pauseFlow();
+}
+
 function matchCmd(cmd) {
   const m = UI.match;
   if (!m || m.over) return;
   if (Anim.busy()) return;
-  if (cmd === 'autoHalf') { m.simHalf(); render(); return; }
-  if (cmd === 'autoAll') { m.simToEnd(); render(); return; }
+  if (cmd === 'autoAll') { stopFlow(); m.simToEnd(); render(); return; }
+  if (cmd === 'resume') { UI.showBullpen = false; startFlow(300); render(); return; }
   const seq = m.playSeq;
+  UI.flow.paused = false;
+  UI.showBullpen = false;
   if (userIsBatting(m)) {
     m.aiPitchingChange();
-    if (cmd === 'steal') { m.steal(); showPlay(m, seq); return; }
-    const ibb = m.aiDefenseCommand();
-    if (ibb) m.plateAppearance('ibb');
-    else m.plateAppearance(cmd);
+    if (cmd === 'steal') m.steal();
+    else {
+      const ibb = m.aiDefenseCommand();
+      if (ibb) m.plateAppearance('ibb');
+      else m.plateAppearance(cmd);
+    }
   } else {
     if (cmd === 'ibb') m.plateAppearance('ibb');
     else {
@@ -537,7 +590,12 @@ function matchCmd(cmd) {
       else m.plateAppearance(ai);
     }
   }
-  showPlay(m, seq);
+  // 指示したプレーが終わったら自動進行に戻る
+  render();
+  showPlay(m, seq, () => {
+    if (m.over) { render(); return; }
+    if (UI.flow.timeReq) pauseFlow(); else { render(); startFlow(); }
+  });
 }
 
 // ---------- アニメーション設定 ----------
@@ -552,10 +610,11 @@ function setAnimMode(k) {
   render();
 }
 /** 直前のプレーを再生してから画面を更新する */
-function showPlay(m, prevSeq) {
+function showPlay(m, prevSeq, then) {
+  const done = then || (() => render());
   const lp = m.lastPlay;
-  if (UI.animMode === 'off' || !lp || lp.seq === prevSeq) { render(); return; }
-  Anim.play(m, lp, UI.animMode === 'fast' ? 2.2 : 1, () => render());
+  if (UI.animMode === 'off' || !lp || lp.seq === prevSeq) { render(); if (then) then(); return; }
+  Anim.play(m, lp, UI.animMode === 'fast' ? 2.2 : 1, done);
 }
 
 function changeMyPitcher(id) {
@@ -931,15 +990,24 @@ function renderMatch() {
       ${renderMatchHeroes(m)}
       <button class="btn primary big" data-act="finishMatch">次へ</button>
     </div>`;
+  } else if (!UI.flow.paused) {
+    controls = `
+    <div class="flow-bar">
+      <p class="flow-state"><span class="flow-dot"></span>${batting ? '攻撃中' : '守備中'}・自動で進行中</p>
+      <div class="flow-btns">
+        <button class="btn primary" data-act="timeout" ${UI.flow.timeReq ? 'disabled' : ''}>${UI.flow.timeReq ? 'タイム要求中…' : 'タイム'}</button>
+        <button class="btn small ghost" data-act="cmd" data-c="autoAll">試合終了までスキップ</button>
+      </div>
+    </div>`;
   } else if (UI.showBullpen && !batting) {
     const bp = m.me.bullpen;
-    controls = `<div class="bullpen"><p>誰に代えますか？</p>${bp.length ? bp.map((p) => `<button class="btn" data-act="relief" data-id="${p.id}">${esc(p.name)} <small>${kmh(p.velo)}km/h 制${rank(p.ctrl)} 疲労${Math.round(p.fatigue)}</small></button>`).join('') : '<p class="muted">控え投手がいません</p>'}<button class="btn ghost" data-act="bullpenClose">やめる</button></div>`;
+    controls = `<div class="bullpen"><p>タイム：誰に代えますか？</p>${bp.length ? bp.map((p) => `<button class="btn" data-act="relief" data-id="${p.id}">${esc(p.name)} <small>${kmh(p.velo)}km/h 制${rank(p.ctrl)} 疲労${Math.round(p.fatigue)}</small></button>`).join('') : '<p class="muted">控え投手がいません</p>'}<button class="btn ghost" data-act="bullpenClose">やめる</button></div>`;
   } else if (batting) {
     const canBunt = (m.bases[0] || m.bases[1]) && m.outs < 2;
     const canSq = m.bases[2] && m.outs < 2;
     controls = `
     <div class="cmds">
-      <p class="cmd-h">攻撃の作戦</p>
+      <p class="cmd-h">タイム：攻撃の作戦<small>指示した1球が終わると自動進行に戻ります</small></p>
       <div class="cmd-grid">
         <button class="btn cmd" data-act="cmd" data-c="normal">打て</button>
         <button class="btn cmd" data-act="cmd" data-c="power">強振<small>長打狙い</small></button>
@@ -949,22 +1017,22 @@ function renderMatch() {
         <button class="btn cmd" data-act="cmd" data-c="steal" ${m.canSteal() ? '' : 'disabled'}>盗塁</button>
       </div>
       <div class="cmd-auto">
-        <button class="btn small" data-act="cmd" data-c="autoHalf">この回おまかせ</button>
-        <button class="btn small ghost" data-act="cmd" data-c="autoAll">試合終了までおまかせ</button>
+        <button class="btn small" data-act="cmd" data-c="resume">指示せず再開</button>
+        <button class="btn small ghost" data-act="cmd" data-c="autoAll">試合終了までスキップ</button>
       </div>
     </div>`;
   } else {
     controls = `
     <div class="cmds">
-      <p class="cmd-h">守備の指示</p>
+      <p class="cmd-h">タイム：守備の指示<small>指示した1球が終わると自動進行に戻ります</small></p>
       <div class="cmd-grid">
         <button class="btn cmd" data-act="cmd" data-c="pitch">勝負</button>
         <button class="btn cmd" data-act="cmd" data-c="ibb">敬遠</button>
         <button class="btn cmd" data-act="bullpen">投手交代<small>${m.me.bullpen.length}人</small></button>
       </div>
       <div class="cmd-auto">
-        <button class="btn small" data-act="cmd" data-c="autoHalf">この回おまかせ</button>
-        <button class="btn small ghost" data-act="cmd" data-c="autoAll">試合終了までおまかせ</button>
+        <button class="btn small" data-act="cmd" data-c="resume">指示せず再開</button>
+        <button class="btn small ghost" data-act="cmd" data-c="autoAll">試合終了までスキップ</button>
       </div>
     </div>`;
   }
@@ -1050,8 +1118,9 @@ document.addEventListener('click', (e) => {
     }
     case 'ace': S.aceId = S.aceId === id ? null : id; save(); render(); break;
     case 'startMatch': startMatch(); break;
-    case 'quickMatch': startMatch(); UI.match.simToEnd(); render(); break;
+    case 'quickMatch': startMatch(); stopFlow(); UI.match.simToEnd(); render(); break;
     case 'skipAnim': Anim.skip(); break;
+    case 'timeout': callTime(t); break;
     case 'animMode': setAnimMode(t.dataset.k); break;
     case 'cmd': {
       const c = t.dataset.c;
