@@ -18,6 +18,7 @@ const path = require('path');
     ['startFlow', 'pauseFlow', 'matchCmd'].forEach(wrap);
   });
   let manualMatches = 0, timeouts = 0, commands = 0;
+  const hudMismatch = [];
   for (let step = 0; step < 6000; step++) {
     const screen = await page.evaluate(() => document.body.dataset.screen);
     const year = await page.evaluate(() => S.year);
@@ -54,6 +55,15 @@ const path = require('path');
         commands++;
         continue;
       }
+      // 画面の回・アウト表示が試合の状態と一致していること(再生中は前のプレーの表示なので除く)
+      const shown = await page.evaluate(() => {
+        if (Anim.busy() || !UI.match || UI.match.over) return null;
+        const m = UI.match;
+        const hud = document.querySelector('.stage-hud .sit-inn');
+        const want = `${m.inning}回${m.top ? '表' : '裏'}`;
+        return hud && hud.textContent !== want ? `表示「${hud.textContent}」 実際「${want}」` : null;
+      });
+      if (shown) hudMismatch.push(shown);
       const r = Math.random();
       if (r < 0.15 && await page.$('[data-act=timeout]:not([disabled])')) await page.click('[data-act=timeout]');
       else if (r < 0.9 && await page.evaluate(() => Anim.busy())) await page.click('#fieldCanvas');
@@ -74,7 +84,8 @@ const path = require('path');
   }
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
   console.log('horizontal overflow:', overflow);
-  console.log('timeouts:', timeouts, 'commands:', commands);
+  console.log('timeouts:', timeouts, 'commands:', commands, 'HUD不一致:', hudMismatch.length, hudMismatch.slice(0, 3));
+  if (hudMismatch.length) errors.push('画面の回表示が更新されていない');
   console.log('errors:', errors);
   await browser.close();
   process.exit(errors.length ? 1 : 0);

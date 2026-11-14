@@ -545,6 +545,7 @@ function flowStep(token) {
     if (token !== UI.flow.token) return;
     if (m.over) { render(); return; }
     if (UI.flow.timeReq) { pauseFlow(); return; }
+    render(); // 1プレーごとにスコアボード・回・アウト・実況を更新する
     UI.flow.timer = setTimeout(() => flowStep(token), flowGap());
   });
 }
