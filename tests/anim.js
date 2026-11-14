@@ -17,6 +17,7 @@ const path = require('path');
     const problems = [];
     let outfieldChecked = 0, singles = 0, singleDives = 0;
     const singleVariants = {};
+    const variants = {}, dives = {}, combos = {};
     // 盗塁(成功・失敗)を直接作って確認
     for (let i = 0; i < 300; i++) {
       const A = makeOpponent(45), B = makeOpponent(45);
@@ -83,9 +84,54 @@ const path = require('path');
         }
         // 結果表示より前にアウト/ヒットが分かる表示が出ていないこと
         if (tl.tLabel <= 0) problems.push(`ラベル時刻異常 ${k}`);
+        // 演出の種類と飛び込みの割合を集計
+        if (['FO', 'SF', 'GO', 'IH', 'DP', 'E'].includes(k)) {
+          const key = k === 'SF' ? 'FO' : k;
+          const vv = (tl.variant || '-').split(' ')[0];
+          (variants[key] = variants[key] || {})[vv] = (variants[key][vv] || 0) + 1;
+          dives[key] = dives[key] || [0, 0];
+          dives[key][1]++;
+          if (tl.poses.some((p) => p.type === 'dive')) dives[key][0]++;
+          if (tl.variant && tl.variant.includes(' ')) combos[tl.variant.split(' ')[1]] = (combos[tl.variant.split(' ')[1]] || 0) + 1;
+        }
+        // 野手が瞬間移動していないこと(25ms で 25ft 以上動かない)
+        {
+          let prev = null;
+          for (let t = 0; t <= tl.total; t += 25) {
+            const st = tl.at(t);
+            if (prev) for (const [fk, pos] of Object.entries(st.fielders)) {
+              if (Math.hypot(pos[0] - prev[fk][0], pos[1] - prev[fk][1]) > 25) { problems.push(`瞬間移動 ${fk} ${k} ${tl.variant} t=${t}`); break; }
+            }
+            prev = st.fielders;
+          }
+        }
+        // フライは捕った野手がボールの位置にいること。内野フライは打球名の守備位置の選手
+        if (k === 'FO' || k === 'SF') {
+          const st = tl.at(tl.tLabel > 0 && k === 'SF' ? tl.tLabel - 1 : tl.tLabel);
+          const catchT = k === 'SF' ? null : tl.tLabel;
+          if (catchT != null && st.ball) {
+            let best = null, bd = 1e9;
+            for (const [fk, pos] of Object.entries(st.fielders)) { const d = Math.hypot(pos[0] - st.ball.x, pos[1] - st.ball.y); if (d < bd) { bd = d; best = fk; } }
+            const named = [['ショート', 'SS'], ['セカンド', '2B'], ['サード', '3B'], ['ファースト', '1B'], ['ピッチャー', 'P']].find(([w]) => lp.text.includes(w));
+            const ok = named ? best === named[1] : ['LF', 'CF', 'RF'].includes(best);
+            if (!ok || bd > 7) problems.push(`フライ捕球者 ${best} 距離${bd.toFixed(1)} ${tl.variant} ${lp.text}`);
+          }
+        }
+        // ゴロは打球名の守備位置の選手がボールに触れていること
+        if (k === 'GO' || k === 'DP' || k === 'E') {
+          const named = [['ショート', 'SS'], ['セカンド', '2B'], ['サード', '3B'], ['ファースト', '1B'], ['ピッチャー', 'P']].find(([w]) => lp.text.includes(w));
+          if (named) {
+            let touched = false;
+            for (let t = 0; t <= tl.total && !touched; t += 20) {
+              const st = tl.at(t);
+              if (st.ball && st.ball.z < 10) { const p = st.fielders[named[1]]; if (Math.hypot(p[0] - st.ball.x, p[1] - st.ball.y) < 6) touched = true; }
+            }
+            if (!touched) problems.push(`ゴロを${named[0]}が触っていない ${tl.variant} ${lp.text}`);
+          }
+        }
       }
     }
-    return { kinds, outfieldChecked, singleVariants, singleDiveRate: (singleDives / singles).toFixed(2), problems: problems.slice(0, 20), nProblems: problems.length };
+    return { kinds, outfieldChecked, singleVariants, variants, combos, diveRates: Object.fromEntries(Object.entries(dives).map(([k, [a, b]]) => [k, (a / b).toFixed(2)])), singleDiveRate: (singleDives / singles).toFixed(2), problems: problems.slice(0, 20), nProblems: problems.length };
   });
   console.log(JSON.stringify(report, null, 1));
 

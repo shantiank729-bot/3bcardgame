@@ -644,42 +644,113 @@ const Anim = (() => {
       res.slow = true;
     }
 
-    // ---- 外野フライ ----
-    function doFly(th, sac) {
-      const infield = /ショート|セカンド|サード|ファースト|ピッチャー/.test(text) && !sac;
-      if (infield) {
-        const v = pickV(['drift', 'back', 'calloff']);
-        const base = /ピッチャー/.test(text) ? 55 : 125;
-        const L = polar(th, base + (v === 'back' ? 35 : R(-10, 10)));
-        const T = R(1000, 1300);
-        addBall(C, C + T, [0, 2, 3], [L[0], L[1], 5], { arc: R(70, 95) });
-        const k = nearestOf(L, IF_KEYS);
-        move(k, C + 150, C + T - 100, L);
-        if (v === 'calloff') {
-          const k2 = nearestOf(L, IF_KEYS.filter((x) => x !== k));
-          move(k2, C + 150, C + T - 300, toward(FPOS[k2], L, dist(FPOS[k2], L) - 12));
+    // ---- フライ ----
+    // 打球の記述にある守備位置(ショートゴロならショート)
+    const NAMED = [['ショート', 'SS'], ['セカンド', '2B'], ['サード', '3B'], ['ファースト', '1B'], ['ピッチャー', 'P']];
+    const namedFielder = () => { for (const [w, k] of NAMED) if (text.includes(w)) return k; return null; };
+    const lean = (k, pt) => side([pt[0] - FPOS[k][0], 0]);
+
+    function doInfieldFly(th) {
+      const nk = namedFielder();
+      const k = nk || nearestOf(polar(th, 120), IF_KEYS);
+      const home = FPOS[k];
+      const v = pickV(k === 'P'
+        ? ['p-drift', 'p-back', 'p-camp', 'p-side']
+        : ['drift', 'back', 'calloff', 'camp', 'toward-line', 'in', 'reach', 'wind']);
+      res.variant = 'IF:' + v;
+      let L, T = R(1000, 1300), arc = R(70, 95), z = 5, arrive = T - 100, ps = null;
+      const out = (pt) => { const d = dist(pt, [0, 0]); return polar(Math.atan2(pt[0], pt[1]) / DEG, d); };
+      switch (v) {
+        case 'p-drift': L = [home[0] + R(-8, 8), home[1] + R(-10, 6)]; break;
+        case 'p-back': L = [home[0] + R(-5, 5), home[1] + R(18, 26)]; ps = 'reach'; arrive = T - 30; break;
+        case 'p-camp': L = [home[0] + R(-4, 4), home[1] + R(-4, 4)]; arc = 130; T = 1600; arrive = T - 700; break;
+        case 'p-side': L = [home[0] + (Math.random() < 0.5 ? -1 : 1) * R(14, 20), home[1] + R(-5, 5)]; ps = 'reach'; arrive = T - 30; break;
+        case 'drift': L = [home[0] + R(-10, 10), home[1] + R(-8, 8)]; break;
+        case 'back': L = out([home[0] * 1.15, home[1] + R(28, 40)]); ps = 'reach'; arrive = T - 40; break;
+        case 'calloff': L = [home[0] * 0.8, home[1] + R(5, 15)]; break;
+        case 'camp': L = [home[0] + R(-5, 5), home[1] + R(-5, 5)]; arc = 135; T = 1700; arrive = T - 800; break;
+        case 'toward-line': L = [home[0] + (home[0] < 0 ? -1 : 1) * R(18, 26), home[1] - R(5, 15)]; ps = 'reach'; arrive = T - 40; z = 3.5; break;
+        case 'in': L = toward(home, [0, 40], R(25, 35)); z = 2.5; arrive = T - 60; break;
+        case 'reach': L = [home[0] + (Math.random() < 0.5 ? -1 : 1) * R(12, 18), home[1] + R(-6, 6)]; ps = 'reach'; arrive = T - 20; break;
+        case 'wind': default: {
+          L = [home[0] + R(-12, 12), home[1] + R(4, 14)];
+          const fake = [L[0] + (Math.random() < 0.5 ? -1 : 1) * 14, L[1] - 6];
+          move(k, C + 150, C + T * 0.55, fake);
+          break;
         }
-        if (v === 'back') pose(k, C + T - 150, C + T + 300, 'jump');
-        res.tLabel = C + T; res.batterOutAt = C + T; res.batterOutProg = 0.7; res.runStart = C + T;
-        return C + T;
       }
-      const v = pickV(['routine', 'back', 'divein', 'fence', 'gap', 'slide']);
-      let t2 = th, d, T, arc, poseType = null;
-      if (v === 'routine') { d = R(235, 270); T = 1300; arc = 85; }
-      if (v === 'back') { d = fenceR(th) - 25; T = 1550; arc = 95; }
-      if (v === 'divein') { d = R(165, 185); T = 1100; arc = 40; poseType = 'dive'; }
-      if (v === 'fence') { d = fenceR(th) - 5; T = 1600; arc = 100; poseType = 'jump'; }
-      if (v === 'gap') { t2 = Math.abs(th) < 10 ? (Math.random() < 0.5 ? -19 : 19) : th; d = R(270, 300); T = 1400; arc = 90; }
-      if (v === 'slide') { t2 = (th < 0 ? -1 : 1) * 40; d = R(215, 245); T = 1250; arc = 70; poseType = 'dive'; }
-      if (sac) { d = Math.max(d, 270); }
-      const L = polar(t2, d);
-      const ok = nearestOf(L, OF_KEYS);
-      addBall(C, C + T, [0, 2, 3], [L[0], L[1], poseType === 'jump' ? 9 : 4], { arc });
-      move(ok, C + 120, C + T - (poseType ? 120 : 250), L);
-      if (poseType) { pose(ok, C + T - 160, C + T + 500, poseType, side([L[0] - FPOS[ok][0], 0])); if (poseType === 'dive') puff(C + T, L); }
-      if (v === 'gap') {
+      addBall(C, C + T, [0, 2, 3], [L[0], L[1], z], { arc });
+      move(k, v === 'wind' ? C + T * 0.55 : C + 150, C + arrive, L);
+      if (ps) pose(k, C + T - 160, C + T + 250, ps, lean(k, L));
+      if (v === 'calloff') {
+        const k2 = nearestOf(L, IF_KEYS.filter((x) => x !== k && x !== 'P'));
+        move(k2, C + 150, C + T - 450, toward(FPOS[k2], L, dist(FPOS[k2], L) - 14));
+        move(k2, C + T - 300, C + T + 300, toward(FPOS[k2], L, dist(FPOS[k2], L) - 22));
+      }
+      res.tLabel = C + T; res.batterOutAt = C + T; res.batterOutProg = 0.7; res.runStart = C + T;
+      return C + T;
+    }
+
+    function doFly(th, sac) {
+      if (/ショート|セカンド|サード|ファースト|ピッチャー/.test(text) && !sac) return doInfieldFly(th);
+      const pool = sac
+        ? ['routine', 'camp', 'back', 'gap', 'gap-backup', 'fence-lean', 'high-sky', 'wind', 'back-shoulder']
+        : ['routine', 'routine', 'camp', 'basket', 'back', 'back-shoulder', 'come-in', 'divein', 'fence', 'fence-lean',
+          'gap', 'gap-backup', 'slide-line', 'line-drift', 'wind', 'high-sky', 'liner-of', 'lateral', 'shallow'];
+      const v = pickV(pool);
+      res.variant = 'OF:' + v;
+      let t2 = th, d = R(235, 270), T = 1300, arc = 85, z = 5, early = 300, ps = null;
+      let L = null, ok = null;
+      switch (v) {
+        case 'routine': break;
+        case 'camp': d = R(240, 275); T = 1550; arc = 115; early = 750; break;
+        case 'basket': d = R(215, 245); T = 1250; arc = 75; z = 2.2; early = 200; break;
+        case 'back': d = fenceR(th) - R(22, 30); T = 1550; arc = 95; early = 60; break;
+        case 'back-shoulder': d = fenceR(th) - R(30, 40); T = 1500; arc = 90; early = 0; ps = 'reach'; break;
+        case 'come-in': d = R(185, 205); T = 1150; arc = 55; z = 2.2; early = 40; break;
+        case 'divein': d = R(165, 185); T = 1100; arc = 40; z = 1; early = 0; ps = 'dive'; break;
+        case 'fence': d = fenceR(th) - 5; T = 1600; arc = 100; z = 9; early = 120; ps = 'jump'; break;
+        case 'fence-lean': d = fenceR(th) - 9; T = 1600; arc = 95; z = 7; early = 250; ps = 'reach'; break;
+        case 'gap': case 'gap-backup': t2 = Math.abs(th) < 10 ? (Math.random() < 0.5 ? -1 : 1) * R(17, 22) : th; d = R(270, 300); T = 1400; arc = 90; early = 100; break;
+        case 'slide-line': t2 = (th < 0 ? -1 : 1) * R(39, 42); d = R(215, 245); T = 1250; arc = 70; z = 1; early = 0; ps = 'dive'; break;
+        case 'line-drift': t2 = (th < 0 ? -1 : 1) * R(35, 40); d = R(230, 260); T = 1350; arc = 85; early = 30; ps = 'reach'; break;
+        case 'wind': d = R(240, 275); T = 1450; arc = 100; early = 150; break;
+        case 'high-sky': d = R(230, 265); T = 1950; arc = 155; early = 950; break;
+        case 'liner-of': d = R(230, 260); T = 800; arc = 22; z = 4; early = 30; break;
+        case 'lateral': {
+          ok = nearestOf(polar(th, 260), OF_KEYS);
+          const s = ok === 'LF' ? 1 : ok === 'RF' ? -1 : (Math.random() < 0.5 ? -1 : 1);
+          L = [FPOS[ok][0] + s * R(40, 50), FPOS[ok][1] + R(-10, 10)];
+          T = 1350; arc = 80; early = 0; ps = 'reach';
+          break;
+        }
+        case 'shallow': d = R(158, 172); T = 1200; arc = 70; z = 3; early = 50; break;
+        default: break;
+      }
+      if (sac) d = Math.max(d, 265);
+      if (!L) L = polar(t2, d);
+      if (!ok) ok = nearestOf(L, OF_KEYS);
+      addBall(C, C + T, [0, 2, 3], [L[0], L[1], z], { arc });
+      if (v === 'wind') {
+        // 風に流されて落下点を修正する
+        const fake = toward(L, [L[0] + (Math.random() < 0.5 ? -1 : 1) * 30, L[1] + 10], 22);
+        move(ok, C + 120, C + T * 0.55, fake);
+        move(ok, C + T * 0.6, C + T - early, L);
+      } else {
+        move(ok, C + 120, C + T - early, L);
+      }
+      if (ps) {
+        pose(ok, C + T - (ps === 'dive' ? 170 : 160), C + T + (ps === 'dive' ? 500 : 250), ps, lean(ok, L));
+        if (ps === 'dive') puff(C + T, L);
+      }
+      if (v === 'gap' || v === 'gap-backup') {
         const k2 = OF_KEYS.filter((k) => k !== ok).sort((a, b) => dist(FPOS[a], L) - dist(FPOS[b], L))[0];
-        move(k2, C + 120, C + T - 100, toward(FPOS[k2], L, dist(FPOS[k2], L) - 15));
+        const stop = v === 'gap' ? toward(FPOS[k2], L, dist(FPOS[k2], L) - 15) : toward(L, polar(Math.atan2(L[0], L[1]) / DEG, d + 40), 18);
+        move(k2, C + 120, C + T - 100, stop);
+      }
+      if (v === 'shallow') {
+        const ik = nearestOf(L, ['2B', 'SS', '1B', '3B']);
+        move(ik, C + 120, C + T - 350, toward(FPOS[ik], L, dist(FPOS[ik], L) - 16));
       }
       res.tLabel = C + T; res.batterOutAt = C + T; res.batterOutProg = 0.85; res.runStart = C + T;
       if (sac) {
@@ -699,107 +770,231 @@ const Anim = (() => {
       move('1B', t0, t0 + 350, FIRST);
       return '1B';
     };
+    // 一塁への送球と受け方(見た目だけ変える)
+    function throwToFirst(t0, from, recv, o = {}) {
+      const style = o.style || pickV(['normal', 'normal', 'normal', 'stretch', 'scoop', 'high']);
+      const end = style === 'scoop' ? 0.4 : style === 'high' ? 9 : 4;
+      const arr = throwBall(t0, from, style === 'scoop' ? [FIRST[0] - 3, FIRST[1] + 1] : FIRST, { endZ: end, slow: o.slow, high: style === 'high' });
+      if (style === 'stretch' || style === 'scoop') pose(recv, arr - 220, arr + 200, 'reach', from[0] < FIRST[0] ? -1 : 1);
+      if (style === 'high') pose(recv, arr - 220, arr + 180, 'jump');
+      return arr;
+    }
     function doGrounder(th) {
-      const r = Math.abs(th) < 6 ? 54 : Math.abs(th) < 22 ? 118 : 92;
-      let fk = nearestOf(polar(th, r), IF_KEYS.filter((k) => r > 70 || k === 'P'));
-      if (r <= 70) fk = 'P';
-      const isIH = kind === 'IH';
-      const isE = kind === 'E';
-      const isDP = kind === 'DP';
-      let v = pickV(['routine', 'routine', 'dive', 'charge', 'backhand', 'deflect', 'bangbang']);
-      if (isE) v = pickV(['legs', 'bobble', 'wildthrow']);
-      if (isDP) v = pickV(['routine', 'routine', 'dive']);
-      if (v === 'deflect' && fk === 'P') v = 'routine';
-      let fieldPt, tField, tThrow;
-      const fpos = FPOS[fk];
-      if (v === 'deflect') {
-        addBall(C, C + 260, [0, 2, 1], [0, 54, 1], { bounce: 1 });
-        pose('P', C + 120, C + 420, 'jump');
-        fk = Math.random() < 0.5 ? 'SS' : '2B';
-        fieldPt = toward(FPOS[fk], [0, 100], 14);
-        addBall(C + 260, C + 760, [0, 54, 1], [fieldPt[0], fieldPt[1], 0.5], { bounce: 2 });
-        move(fk, C + 260, C + 760, fieldPt);
-        tField = C + 760; tThrow = tField + 120;
-      } else if (v === 'charge') {
-        fieldPt = polar(th, R(50, 70));
-        if (fk === 'P') fieldPt = polar(th, 40);
-        addBall(C, C + 1000, [0, 2, 1], [fieldPt[0], fieldPt[1], 0.3], { bounce: 1 });
-        move(fk, C + 80, C + 980, fieldPt);
-        tField = C + 1000; tThrow = tField + 40;
-      } else if (v === 'dive' || v === 'backhand') {
-        const dir = fpos[0] < 0 ? -1 : 1;
-        const sidePt = [fpos[0] + (Math.random() < 0.5 ? -1 : 1) * 17, fpos[1] + (v === 'backhand' ? 10 : 0)];
-        if (fk === 'P') { sidePt[0] = fpos[0] + dir * 8; }
-        fieldPt = sidePt;
-        addBall(C, C + 520, [0, 2, 1], [fieldPt[0], fieldPt[1], 0.4], { bounce: 2 });
-        move(fk, C + 60, C + 500, fieldPt);
-        if (v === 'dive') { pose(fk, C + 380, C + 1050, 'dive', side([fieldPt[0] - fpos[0], 0])); puff(C + 520, fieldPt); tThrow = C + 1050; }
-        else tThrow = C + 780;
-        tField = C + 520;
-      } else if (v === 'legs') {
-        fieldPt = polar(th, r);
-        const past = polar(th, r + 70);
-        addBall(C, C + 560, [0, 2, 1], [fieldPt[0], fieldPt[1], 0.3], { bounce: 2 });
-        addBall(C + 560, C + 1100, [fieldPt[0], fieldPt[1], 0.3], [past[0], past[1], 0.2], { bounce: 1 });
-        move(fk, C + 60, C + 540, fieldPt);
-        const ok = nearestOf(past, OF_KEYS);
-        move(ok, C + 300, C + 1300, past);
-        res.tLabel = C + 600;
-        return;
-      } else if (v === 'bobble') {
-        fieldPt = polar(th, r);
-        const drop = [fieldPt[0] + R(-6, 6), fieldPt[1] + R(-8, -3)];
-        addBall(C, C + 560, [0, 2, 1], [fieldPt[0], fieldPt[1], 2], { bounce: 2 });
-        addBall(C + 560, C + 1000, [fieldPt[0], fieldPt[1], 2], [drop[0], drop[1], 0.2], { arc: 10 });
-        move(fk, C + 60, C + 540, fieldPt);
-        move(fk, C + 1000, C + 1250, drop);
-        pose(fk, C + 1000, C + 1300, 'dive', 1);
-        res.tLabel = C + 950;
-        return;
-      } else {
-        fieldPt = polar(th, r);
-        addBall(C, C + 560, [0, 2, 1], [fieldPt[0], fieldPt[1], 0.4], { bounce: 2 });
-        move(fk, C + 60, C + 540, fieldPt);
-        tField = C + 560; tThrow = tField + (v === 'bangbang' ? 380 : 140);
-      }
+      const isIH = kind === 'IH', isE = kind === 'E', isDP = kind === 'DP';
+      const nk = namedFielder();
+      const pitcherBall = nk === 'P' || (!nk && Math.abs(th) < 6);
+      let fk = pitcherBall ? 'P' : nk || nearestOf(polar(th, Math.abs(th) < 22 ? 118 : 92), ['1B', '2B', 'SS', '3B']);
+      let fpos = FPOS[fk];
+      let pool;
+      if (pitcherBall) pool = ['p-routine', 'p-highhop', 'p-reach', 'p-run', 'p-knock', 'p-toss'];
+      else pool = ['routine', 'routine', 'hard', 'side', 'dive', 'charge', 'backhand', 'forehand', 'deflect', 'chopper', 'bangbang', 'shorthop', 'badhop', 'range'];
+      if (fk === '1B' && !pitcherBall) pool = pool.filter((x) => x !== 'range' && x !== 'backhand').concat(['self', 'self', 'flip']);
+      if (fk === '3B') pool = pool.filter((x) => x !== 'range');
+      if (isE) pool = ['legs', 'bobble', 'wildthrow', 'dirtthrow', 'drop'];
+      if (isDP) pool = pitcherBall ? ['p-routine', 'p-reach', 'p-highhop'] : ['routine', 'routine', 'hard', 'hard', 'side', 'forehand', 'forehand', 'dive'];
+      if (nk && (nk === '3B' || nk === '1B')) pool = pool.filter((x) => x !== 'deflect');
+      const v = pickV(pool);
+      res.variant = 'GO:' + v;
+      const ground = (pt, T, o = {}) => addBall(o.t0 || C, (o.t0 || C) + T, o.from || [0, 2, 1], [pt[0], pt[1], o.z == null ? 0.4 : o.z], { bounce: o.bounce == null ? 2 : o.bounce, arc: o.arc || 0 });
+      const lat = (k) => (Math.random() < 0.5 ? -1 : 1) * k;
+      let fieldPt, tField, tThrow, throwSlow = false, close = false;
 
+      switch (v) {
+        // ピッチャーゴロ
+        case 'p-routine': fieldPt = [R(-3, 3), 50]; ground(fieldPt, 450, { bounce: 1 }); move('P', C + 40, C + 430, fieldPt); tField = C + 450; tThrow = tField + 200; break;
+        case 'p-highhop': fieldPt = [R(-3, 3), 52]; ground(fieldPt, 520, { z: 7, bounce: 0, arc: 9 }); pose('P', C + 330, C + 620, 'jump'); tField = C + 520; tThrow = tField + 260; break;
+        case 'p-reach': fieldPt = [lat(R(6, 9)), 52]; ground(fieldPt, 400, { bounce: 1 }); move('P', C + 30, C + 380, fieldPt); pose('P', C + 250, C + 560, 'reach', side(fieldPt)); tField = C + 400; tThrow = tField + 260; break;
+        case 'p-knock': {
+          const drop = [R(-6, 6), R(42, 48)];
+          addBall(C, C + 300, [0, 2, 2], [0.5, 54, 3], { arc: 2 });
+          addBall(C + 300, C + 650, [0.5, 54, 3], [drop[0], drop[1], 0.2], { bounce: 1 });
+          pose('P', C + 220, C + 520, 'reach', 1);
+          move('P', C + 650, C + 950, drop);
+          fieldPt = drop; tField = C + 950; tThrow = tField + 120; close = true;
+          break;
+        }
+        case 'p-run': case 'p-toss': {
+          fieldPt = [R(4, 10), 50];
+          ground(fieldPt, 470, { bounce: 1 });
+          move('P', C + 40, C + 450, fieldPt);
+          tField = C + 470;
+          if (v === 'p-run' && !isDP) {
+            // 投手が自分で一塁を踏む
+            move('1B', C + 100, C + 400, toward(FPOS['1B'], FIRST, 10));
+            move('P', tField + 60, tField + 900, FIRST);
+            res.tLabel = tField + 900;
+            if (isIH) { res.batterSafeAt = tField + 820; res.close = true; } else { res.batterOutAt = tField + 900; res.batterOutProg = 0.9; }
+            return;
+          }
+          tThrow = tField + 150; throwSlow = v === 'p-toss';
+          if (v === 'p-toss') { move('P', tField + 50, tField + 450, toward(fieldPt, FIRST, 30)); tThrow = tField + 450; }
+          break;
+        }
+        // 野手のゴロ
+        case 'hard': fieldPt = toward(fpos, [0, 0], 3); ground(fieldPt, 360, { bounce: 1 }); tField = C + 360; tThrow = tField + 120; break;
+        case 'side': fieldPt = [fpos[0] + lat(R(10, 14)), fpos[1] - R(0, 6)]; ground(fieldPt, 560); move(fk, C + 60, C + 540, fieldPt); tField = C + 560; tThrow = tField + 220; break;
+        case 'dive': {
+          fieldPt = [fpos[0] + lat(R(16, 19)), fpos[1] + R(-2, 4)];
+          ground(fieldPt, 520);
+          move(fk, C + 60, C + 500, fieldPt);
+          pose(fk, C + 380, C + 1050, 'dive', lean(fk, fieldPt));
+          puff(C + 520, fieldPt);
+          tField = C + 520; tThrow = C + 1050; close = true;
+          break;
+        }
+        case 'charge': fieldPt = polar(th, R(55, 72)); ground(fieldPt, 1000, { bounce: 1 }); move(fk, C + 80, C + 980, fieldPt); tField = C + 1000; tThrow = tField + 40; throwSlow = Math.random() < 0.4; close = true; break;
+        case 'backhand': {
+          const out = fpos[0] < 0 ? -1 : 1;
+          fieldPt = [fpos[0] + out * R(12, 16), fpos[1] + R(8, 14)];
+          ground(fieldPt, 560); move(fk, C + 60, C + 540, fieldPt);
+          pose(fk, C + 420, C + 700, 'reach', out);
+          tField = C + 560; tThrow = tField + 280; close = true;
+          break;
+        }
+        case 'forehand': {
+          const inward = fpos[0] < 0 ? 1 : -1;
+          fieldPt = [fpos[0] + inward * R(12, 16), fpos[1] + R(-4, 4)];
+          ground(fieldPt, 540); move(fk, C + 60, C + 520, fieldPt);
+          pose(fk, C + 400, C + 660, 'reach', inward);
+          tField = C + 540; tThrow = tField + 160;
+          break;
+        }
+        case 'deflect': {
+          addBall(C, C + 260, [0, 2, 1], [0, 54, 1], { bounce: 1 });
+          pose('P', C + 120, C + 420, 'jump');
+          if (!nk) fk = Math.random() < 0.5 ? 'SS' : '2B';
+          fpos = FPOS[fk];
+          fieldPt = toward(fpos, [0, 100], 14);
+          addBall(C + 260, C + 760, [0, 54, 1], [fieldPt[0], fieldPt[1], 0.5], { bounce: 2 });
+          move(fk, C + 260, C + 760, fieldPt);
+          tField = C + 760; tThrow = tField + 120; close = true;
+          break;
+        }
+        case 'chopper': {
+          const b1 = polar(th, R(14, 22));
+          fieldPt = toward(fpos, [0, 0], R(18, 28));
+          addBall(C, C + 260, [0, 2, 1], [b1[0], b1[1], 0], { arc: 3 });
+          addBall(C + 260, C + 1100, [b1[0], b1[1], 0], [fieldPt[0], fieldPt[1], 1.5], { arc: 32 });
+          move(fk, C + 300, C + 1080, fieldPt);
+          tField = C + 1100; tThrow = tField + 60; close = true;
+          break;
+        }
+        case 'bangbang': fieldPt = polar(th, dist(fpos, [0, 0])); ground(fieldPt, 560); move(fk, C + 60, C + 540, fieldPt); tField = C + 560; tThrow = tField + 380; close = true; break;
+        case 'shorthop': fieldPt = polar(th, dist(fpos, [0, 0]) - 4); ground(fieldPt, 520, { bounce: 3 }); move(fk, C + 60, C + 500, fieldPt); pose(fk, C + 420, C + 700, 'reach', 1); tField = C + 520; tThrow = tField + 230; break;
+        case 'badhop': fieldPt = polar(th, dist(fpos, [0, 0]) - 6); ground(fieldPt, 560, { z: 6, bounce: 0, arc: 6 }); move(fk, C + 60, C + 500, fieldPt); pose(fk, C + 420, C + 720, 'jump'); tField = C + 560; tThrow = tField + 260; break;
+        case 'range': {
+          fieldPt = [fk === 'SS' ? R(-8, -3) : R(3, 8), R(138, 146)];
+          ground(fieldPt, 720); move(fk, C + 40, C + 700, fieldPt);
+          pose(fk, C + 580, C + 820, 'reach', fk === 'SS' ? 1 : -1);
+          tField = C + 720; tThrow = tField + 90; close = true;
+          break;
+        }
+        case 'self': case 'flip': {
+          fieldPt = [fpos[0] + R(-10, 4), fpos[1] + R(-6, 6)];
+          ground(fieldPt, 500); move('1B', C + 60, C + 480, fieldPt);
+          tField = C + 500;
+          if (v === 'self' && !isDP) {
+            move('1B', tField + 60, tField + 520, FIRST);
+            res.tLabel = tField + 520;
+            if (isIH) { res.batterSafeAt = tField + 470; res.close = true; } else { res.batterOutAt = tField + 520; res.batterOutProg = 0.88; }
+            return;
+          }
+          tThrow = tField + 280; throwSlow = true;
+          break;
+        }
+        // エラー
+        case 'legs': {
+          fieldPt = polar(th, dist(fpos, [0, 0]));
+          const past = polar(th, dist(fpos, [0, 0]) + 70);
+          ground(fieldPt, 560, { z: 0.3 });
+          addBall(C + 560, C + 1100, [fieldPt[0], fieldPt[1], 0.3], [past[0], past[1], 0.2], { bounce: 1 });
+          move(fk, C + 60, C + 540, fieldPt);
+          move(nearestOf(past, OF_KEYS), C + 300, C + 1300, past);
+          res.tLabel = C + 600;
+          return;
+        }
+        case 'bobble': {
+          fieldPt = polar(th, dist(fpos, [0, 0]));
+          const drop = [fieldPt[0] + R(-6, 6), fieldPt[1] + R(-8, -3)];
+          ground(fieldPt, 560, { z: 2 });
+          addBall(C + 560, C + 1000, [fieldPt[0], fieldPt[1], 2], [drop[0], drop[1], 0.2], { arc: 10 });
+          move(fk, C + 60, C + 540, fieldPt);
+          move(fk, C + 1000, C + 1250, drop);
+          pose(fk, C + 1000, C + 1300, 'reach', 1);
+          res.tLabel = C + 950;
+          return;
+        }
+        default: {
+          fieldPt = polar(th, dist(fpos, [0, 0]));
+          ground(fieldPt, 560);
+          move(fk, C + 60, C + 540, fieldPt);
+          tField = C + 560; tThrow = tField + 150;
+        }
+      }
+      if (fk !== 'P' && v !== 'hard' && !(byKHas(fk))) move(fk, C + 60, tField - 20, fieldPt);
+
+      // ---- 併殺 ----
       if (isDP) {
-        const pivotK = fieldPt[0] < -8 ? '2B' : 'SS';
-        move(pivotK, C + 100, tThrow - 20, SECOND);
-        const a1 = throwBall(tThrow, fieldPt, SECOND);
-        const cov = coverFirst(fk, C + 100);
-        const a2 = throwBall(a1 + R(80, 200), SECOND, FIRST);
+        const combos = {
+          SS: ['6-4-3', '6-4-3', '6-6-3'], '2B': ['4-6-3', '4-6-3', '4-4-3'], '3B': ['5-4-3'], '1B': ['3-6-3', '3-6-1'], P: ['1-6-3', '1-4-3'],
+        }[fk] || ['6-4-3'];
+        const combo = pickV(combos);
+        res.variant += ' ' + combo;
+        const unassisted = combo[0] === combo[2];
+        let pivotK = { 4: '2B', 6: 'SS' }[combo[2]];
+        let a1;
+        if (unassisted) {
+          move(fk, tField + 40, tField + 450, SECOND);
+          a1 = tField + 450;
+        } else {
+          move(pivotK, C + 100, tThrow - 20, SECOND);
+          const near = dist(fieldPt, SECOND) < 40;
+          a1 = throwBall(tThrow, fieldPt, SECOND, { slow: near });
+        }
         puff(a1, SECOND);
+        const recv = combo[4] === '1' ? 'P' : '1B';
+        if (recv === 'P') { move('P', C + 100, C + 800, FIRST); move('1B', tThrow, tThrow + 400, toward(FPOS['1B'], SECOND, 10)); }
+        else if (fk === '1B') move('1B', tThrow + 60, tThrow + 520, FIRST);
+        else coverFirst(fk, C + 100);
+        const pivotWho = unassisted ? fk : pivotK;
+        if (Math.random() < 0.35) pose(pivotWho, a1 + 40, a1 + 380, 'jump');
+        const a2 = throwToFirst(a1 + R(90, 220), SECOND, recv);
         res.runnerOutAt = a1 + 30;
         res.batterOutAt = a2; res.batterOutProg = 0.95;
         res.tLabel = a2;
-        void cov;
         return;
       }
-      if (v === 'wildthrow') {
+      // ---- 送球エラー ----
+      if (v === 'wildthrow' || v === 'dirtthrow' || v === 'drop') {
         coverFirst(fk, C + 100);
-        const miss = [88, R(30, 50)];
-        const arr = throwBall(tThrow, fieldPt, miss, { endZ: 1 });
-        pose('1B', arr - 260, arr + 150, 'jump');
-        res.tLabel = arr - 150;
+        if (v === 'wildthrow') {
+          const arr = throwBall(tThrow, fieldPt, [88, R(30, 50)], { endZ: 1 });
+          pose('1B', arr - 260, arr + 150, 'jump');
+          res.tLabel = arr - 150;
+        } else if (v === 'dirtthrow') {
+          const arr = throwBall(tThrow, fieldPt, [FIRST[0] - 6, FIRST[1] + 3], { endZ: 0 });
+          const away = [FIRST[0] + R(15, 25), FIRST[1] - R(20, 30)];
+          addBall(arr, arr + 500, [FIRST[0] - 6, FIRST[1] + 3, 0], [away[0], away[1], 0.2], { bounce: 2 });
+          pose('1B', arr - 200, arr + 250, 'reach', -1);
+          move('1B', arr + 300, arr + 800, away);
+          res.tLabel = arr + 60;
+        } else {
+          const arr = throwBall(tThrow, fieldPt, FIRST);
+          const fall = [FIRST[0] + R(-4, 4), FIRST[1] - R(4, 8)];
+          addBall(arr, arr + 300, [FIRST[0], FIRST[1], 4], [fall[0], fall[1], 0.2], { arc: 4 });
+          pose('1B', arr - 150, arr + 300, 'reach', -1);
+          res.tLabel = arr + 120;
+        }
         return;
       }
-      // 打者走者との競争
-      const cov = coverFirst(fk, C + 100);
-      if (fk === '1B' && v !== 'deflect' && v !== 'charge' && dist(fieldPt, FIRST) < 40) {
-        // 一塁手が自分でベースを踏む
-        move('1B', tField + 50, tField + 450, FIRST);
-        res.batterOutAt = tField + 470; res.batterOutProg = 0.85;
-        res.tLabel = tField + 470;
-        if (isIH) { res.batterSafeAt = tField + 400; res.batterOutAt = null; res.close = true; }
-        return;
-      }
-      void cov;
-      const arr = throwBall(tThrow, fieldPt, FIRST, { slow: v === 'charge' && Math.random() < 0.4 });
+      // ---- 打者走者との競争 ----
+      const recv = coverFirst(fk, C + 100);
+      const arr = throwToFirst(tThrow, fieldPt, recv, { slow: throwSlow });
       res.tLabel = arr + 40;
       if (isIH) { res.batterSafeAt = arr - R(30, 140); res.close = true; }
-      else { res.batterOutAt = arr; res.batterOutProg = v === 'routine' ? 0.88 : 0.97; res.close = v !== 'routine'; }
+      else { res.batterOutAt = arr; res.batterOutProg = close ? 0.97 : 0.88; res.close = close; }
     }
+    function byKHas(k) { return moves.some((m) => m.k === k); }
     function doLiner(th) {
       const r = Math.abs(th) < 6 ? 56 : Math.abs(th) < 22 ? 120 : 94;
       const base = polar(th, r);
