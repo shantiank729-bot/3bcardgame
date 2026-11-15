@@ -183,6 +183,8 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--ai); outline-of
   @keyframes hit{0%,100%{transform:none; opacity:1} 25%{transform:translateX(6px); opacity:.2} 50%{transform:translateX(-6px); opacity:1} 75%{transform:translateX(4px); opacity:.2}}
   @keyframes hurt{0%,100%{transform:none} 25%{transform:translateX(-5px)} 50%{transform:translateX(5px)} 75%{transform:translateX(-3px)}}
 }
+.topics.plain button{grid-template-columns:minmax(0,1fr) auto}
+.cells{flex-wrap:wrap}
 </style>
 
 <main>
@@ -190,8 +192,9 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--ai); outline-of
     <div style="display:flex;flex-direction:column;gap:20px">
       <header>
         <h1>算数・数学やりなおしドリル</h1>
-        <p class="lead">小1〜中3の単元がモンスターになりました。正解するとダメージを与え、まちがえると HP がへります。数字は毎回変わります。</p>
+        <p class="lead" id="lead"></p>
       </header>
+      <div class="limit"><span id="modeLabel">モード</span><div class="seg" id="mode" role="group" aria-labelledby="modeLabel"></div></div>
       <div class="status" id="status"></div>
       <div class="grades" id="grades" role="group" aria-label="学年"></div>
       <div class="limit"><span id="limitLabel">1問の時間制限</span><div class="seg" id="limit" role="group" aria-labelledby="limitLabel"></div></div>
@@ -201,13 +204,14 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--ai); outline-of
         <button class="btn boss" id="mixGrade"></button>
         <button class="btn boss primary" id="mixAll"></button>
       </div>
-      <p class="note">モンスターは HP 7、ボスは HP 10 以上。こちらの HP が先に 0 になると負けです。時間切れも 1 ミスになります。小学校の「中学で必須」の単元は、正負の数・方程式・比例・関数でそのまま使います。</p>
+      <p class="note" id="homeNote"></p>
     </div>
   </section>
 
   <section id="drill" hidden>
     <div style="display:flex;flex-direction:column;gap:14px">
       <h2 id="dTitle"></h2>
+      <div class="cells" id="cells" aria-hidden="true"></div>
       <div class="battle" id="battle">
         <img id="bImg" alt="">
         <div class="b-name" id="bName"></div>
@@ -648,6 +652,10 @@ if(!GRADES.some(g=>g.g===grade)) grade=5;
 const LIMITS=[[0,'なし'],[120,'120秒'],[60,'60秒'],[30,'30秒'],[15,'15秒']];
 let limit=store.get('sansu-limit',60);
 if(!LIMITS.some(l=>l[0]===limit)) limit=60;
+let mode=store.get('sansu-mode','normal');
+if(mode!=='rpg') mode='normal';
+let best=store.get('sansu-best',{});
+if(!best||typeof best!=='object') best={};
 
 /* ---------- RPG の設定 ---------- */
 const AREA={1:'はじまりの草原',2:'九九の森',3:'あまりの洞くつ',4:'かっこの砦',5:'割合の砂漠',6:'比の塔',7:'マイナスの谷',8:'関数の峠',9:'ルートの城'};
@@ -704,16 +712,30 @@ function hpBar(n,max,cls){let o='<span class="hp '+cls+'" aria-hidden="true">';f
 function bossLabel(key){const f=foe(key);return '<span>ボス戦 <b>'+f.name+'</b>'+(rpg.won[key]?' ・ 討伐 ×'+rpg.won[key]:'')+'</span><small>'+f.sub+'</small>'}
 
 function renderHome(){
-  const lv=lvOf(rpg.xp),a=xpAt(lv),b=xpAt(lv+1),beaten=ALL.filter(t=>rpg.won[t.id]).length;
-  $('status').innerHTML='<div class="st-main"><b>Lv '+lv+'</b> '+titleOf(lv)+'</div><div class="xp"><i style="width:'+((rpg.xp-a)/(b-a)*100).toFixed(0)+'%"></i></div><div class="st-sub">次のレベルまで あと '+(b-rpg.xp)+' ・ 最大 HP '+maxHp(lv)+' ・ たおしたモンスター '+beaten+' / '+ALL.length+'</div>';
+  const R=mode==='rpg';
+  $('mode').innerHTML=[['normal','ふつう'],['rpg','RPG']].map(m=>'<button type="button" data-m="'+m[0]+'" aria-pressed="'+(m[0]===mode)+'">'+m[1]+'</button>').join('');
+  $('lead').textContent=R?'小1〜中3の単元がモンスターになりました。正解するとダメージを与え、まちがえると HP がへります。数字は毎回変わります。'
+    :'小1〜小6の算数と中1〜中3の数学を、1回10問でふり返るドリルです。数字は毎回変わります。';
+  $('status').hidden=!R;
+  if(R){
+    const lv=lvOf(rpg.xp),a=xpAt(lv),b=xpAt(lv+1),beaten=ALL.filter(t=>rpg.won[t.id]).length;
+    $('status').innerHTML='<div class="st-main"><b>Lv '+lv+'</b> '+titleOf(lv)+'</div><div class="xp"><i style="width:'+((rpg.xp-a)/(b-a)*100).toFixed(0)+'%"></i></div><div class="st-sub">次のレベルまで あと '+(b-rpg.xp)+' ・ 最大 HP '+maxHp(lv)+' ・ たおしたモンスター '+beaten+' / '+ALL.length+'</div>';
+  }
   $('grades').innerHTML=GRADES.map(g=>'<button type="button" data-g="'+g.g+'" aria-pressed="'+(g.g===grade)+'">'+GL(g.g)+'</button>').join('');
-  $('area').textContent=GL(grade)+' ・ '+AREA[grade];
-  const g=GRADES.find(x=>x.g===grade);
-  $('topics').innerHTML=g.topics.map(t=>'<li><button type="button" data-t="'+t.id+'"><img class="spr" src="'+sprite(t.id)+'" alt=""><span class="t-body"><span class="t-name">'+t.name+(t.key?'<span class="chip">中学で必須</span>':'')+'</span><span class="t-ex">'+MON[t.id]+' ・ '+t.ex+'</span></span><span class="t-best">'+(rpg.won[t.id]?'<b>討伐</b> ×'+rpg.won[t.id]:'未討伐')+'</span></button></li>').join('');
+  $('area').textContent=R?GL(grade)+' ・ '+AREA[grade]:GL(grade)+' の単元';
+  const g=GRADES.find(x=>x.g===grade),el=grade<=6;
+  $('topics').classList.toggle('plain',!R);
+  $('topics').innerHTML=g.topics.map(t=>{
+    const name='<span class="t-name">'+t.name+(t.key?'<span class="chip">中学で必須</span>':'')+'</span>';
+    return R?'<li><button type="button" data-t="'+t.id+'"><img class="spr" src="'+sprite(t.id)+'" alt=""><span class="t-body">'+name+'<span class="t-ex">'+MON[t.id]+' ・ '+t.ex+'</span></span><span class="t-best">'+(rpg.won[t.id]?'<b>討伐</b> ×'+rpg.won[t.id]:'未討伐')+'</span></button></li>'
+      :'<li><button type="button" data-t="'+t.id+'"><span class="t-body">'+name+'<span class="t-ex">'+t.ex+'</span></span><span class="t-best">'+(best[t.id]!=null?'ベスト <b>'+best[t.id]+'</b> / 10':'まだ')+'</span></button></li>'}).join('');
   $('limit').innerHTML=LIMITS.map(l=>'<button type="button" data-l="'+l[0]+'" aria-pressed="'+(l[0]===limit)+'">'+l[1]+'</button>').join('');
-  $('mixGrade').innerHTML=bossLabel('mix'+grade);
-  $('mixAll').innerHTML=bossLabel(grade<=6?'mixel':'mixjh');
+  $('mixGrade').innerHTML=R?bossLabel('mix'+grade):'<span>'+GL(grade)+' ぜんぶミックス 10問</span>';
+  $('mixAll').innerHTML=R?bossLabel(el?'mixel':'mixjh'):'<span>'+(el?'小学校':'中学校')+'ぜんぶミックス 10問</span>';
+  $('homeNote').textContent=(R?'モンスターは HP 7、ボスは HP 10 以上。こちらの HP が先に 0 になると負けです。時間切れも 1 ミスになります。'
+    :'時間切れは不正解になります。まちがえた問題は、結果画面からもう一度解けます。')+'小学校の「中学で必須」の単元は、正負の数・方程式・比例・関数でそのまま使います。';
 }
+$('mode').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;mode=b.dataset.m;store.set('sansu-mode',mode);renderHome()});
 $('grades').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;grade=+b.dataset.g;store.set('sansu-grade',grade);renderHome()});
 $('limit').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;limit=+b.dataset.l;store.set('sansu-limit',limit);renderHome()});
 $('topics').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;start(b.dataset.t,[b.dataset.t])});
@@ -736,25 +758,31 @@ function tick(){
 }
 
 /* ---------- バトル ---------- */
-function newQ(){let q,n=0;do{const id=pick(S.pool);q=G[id]();q.tid=id}while(S.seen[q.q]&&++n<30);S.seen[q.q]=1;return q}
+function newQ(id){let q,n=0;do{const t=id||pick(S.pool);q=G[t]();q.tid=t}while(S.seen[q.q]&&++n<30);S.seen[q.q]=1;return q}
 function start(key,pool,retryQs){
-  const f=foe(key),lv=lvOf(rpg.xp);
-  S={key:key,pool:pool,foe:f,retry:!!retryQs,qs:retryQs||[],i:0,res:[],judged:false,seen:{},sel:{},ehp:f.max,hp:maxHp(lv),mhp:maxHp(lv),lv:lv};
-  S.title=f.big?f.name+' とのボス戦':GL(byId[key].grade)+' '+byId[key].name;
-  if(!S.retry)S.qs.push(newQ());
-  $('dTitle').textContent=S.title+(S.retry?'(とっくん)':'');
-  $('battle').hidden=S.retry;
-  if(!S.retry){const src=sprite(key,f.big);$('bImg').hidden=!src;if(src)$('bImg').src=src;$('bName').textContent=f.name;$('bLog').textContent=f.name+' が あらわれた!'}
-  $('btnQuit').textContent=S.retry?'とっくんをやめる':'にげる';
+  const f=foe(key),lv=lvOf(rpg.xp),plain=mode==='normal';
+  S={key:key,pool:pool,foe:f,plain:plain,retry:!!retryQs,battle:!plain&&!retryQs,qs:retryQs||[],i:0,res:[],judged:false,seen:{},sel:{},ehp:f.max,hp:maxHp(lv),mhp:maxHp(lv),lv:lv};
+  S.title=f.big?(plain?f.sub:f.name+' とのボス戦'):GL(byId[key].grade)+' '+byId[key].name;
+  if(S.battle)S.qs.push(newQ());
+  else if(!S.retry){const p=shuffle(pool.slice());for(let i=0;i<10;i++)S.qs.push(newQ(pool.length>=10?p[i]:null))}
+  $('dTitle').textContent=S.title+(S.retry?(plain?'(まちがい直し)':'(とっくん)'):'');
+  $('battle').hidden=!S.battle;$('cells').hidden=S.battle;
+  if(S.battle){const src=sprite(key,f.big);$('bImg').hidden=!src;if(src)$('bImg').src=src;$('bName').textContent=f.name;$('bLog').textContent=f.name+' が あらわれた!'}
+  $('btnQuit').textContent=plain?'単元えらびにもどる':S.retry?'とっくんをやめる':'にげる';
+  $('btnCheck').textContent=S.battle?'こうげき(答え合わせ)':'答え合わせ';
   show('drill');renderBattle();renderQ();
 }
 function renderBattle(){
-  if(S.retry)return;
+  if(!S.battle)return;
   $('bEhp').innerHTML=hpBar(S.ehp,S.foe.max,'foe')+'<span>'+S.ehp+' / '+S.foe.max+'</span>';
   $('bPhp').innerHTML='<span>あなた Lv '+S.lv+'</span>'+hpBar(S.hp,S.mhp,'me')+'<span>HP '+S.hp+' / '+S.mhp+'</span>';
 }
+function renderCells(){
+  if(S.battle)return;
+  $('cells').innerHTML=S.qs.map((q,i)=>{const r=S.res[i];return '<i class="'+(r===true?'ok':r===false?'ng':i===S.i?'now':'')+'">'+(r===true?'○':r===false?'×':'')+'</i>'}).join('');
+}
 function anim(el,c){el.classList.remove(c);void el.offsetWidth;el.classList.add(c)}
-const isOver=()=>S.retry?S.i+1>=S.qs.length:(S.ehp<=0||S.hp<=0);
+const isOver=()=>S.battle?(S.ehp<=0||S.hp<=0):S.i+1>=S.qs.length;
 
 let signed=false;
 function fieldHTML(f,i){
@@ -770,7 +798,8 @@ function ansHTML(q){
 function renderQ(){
   const q=S.qs[S.i];S.judged=false;S.sel={};
   signed=byId[q.tid].grade>=7;
-  $('qMeta').textContent='第 '+(S.i+1)+' 問'+(S.retry?' / '+S.qs.length:'')+' ・ '+GL(byId[q.tid].grade)+' '+byId[q.tid].name;
+  renderCells();
+  $('qMeta').textContent='第 '+(S.i+1)+' 問'+(S.battle?'':' / '+S.qs.length)+' ・ '+GL(byId[q.tid].grade)+' '+byId[q.tid].name;
   $('qText').innerHTML=q.q+(/[?。]$|small>$/.test(q.q)||q.q.indexOf('□')>=0||q.q.replace(/<[^>]+>/g,'').indexOf('=')>=0?'':' =');
   $('qFig').innerHTML=q.fig||'';
   $('qAns').innerHTML=q.f.map(fieldHTML).join('');
@@ -824,7 +853,8 @@ function reveal(ok,timeout){
     if(f.k==='c'){$('a'+i).querySelectorAll('button').forEach((b,j)=>{b.disabled=true;if(j===f.ans)b.classList.add('right')});return}
     (f.k==='f'?['a'+i+'n','a'+i+'d']:['a'+i]).forEach(id=>{$(id).readOnly=true});
   });
-  if(!S.retry){
+  renderCells();
+  if(S.battle){
     if(ok){S.ehp--;$('bLog').textContent=S.ehp>0?S.foe.name+' に 1 ダメージ!':S.foe.name+' を たおした!';anim($('bImg'),'hit')}
     else{S.hp--;$('bLog').textContent=S.foe.name+' の こうげき! '+(S.hp>0?'HP が 1 へった。':'ちからつきた…');anim($('bPhp'),'hurt')}
     renderBattle();
@@ -839,7 +869,7 @@ function reveal(ok,timeout){
 }
 function next(){
   if(isOver()){finish();return}
-  S.i++;if(!S.retry)S.qs.push(newQ());renderQ();
+  S.i++;if(S.battle)S.qs.push(newQ());renderQ();
 }
 $('btnNext').addEventListener('click',next);
 $('btnQuit').addEventListener('click',goHome);
@@ -847,7 +877,11 @@ function goHome(){stopTimer();renderHome();show('home')}
 
 function finish(){
   const n=S.res.length,c=S.res.filter(Boolean).length;let head,sub='',comment,win=false;
-  if(S.retry){head='とっくん おわり';comment=c===n?'全部できました。もう一度たたかってみましょう。':'× の問題の解き方をもう一度読んでおきましょう。'}
+  if(S.plain){
+    head='';comment=c===n?'全問正解。この単元はもう大丈夫です。':c>=n*0.7?'あと少し。× の問題の解き方を読んでから、まちがい直しをしましょう。':'解き方を1問ずつ読んで、まちがい直しでもう一度ためしましょう。';
+    if(!S.retry&&S.pool.length===1&&(best[S.key]==null||c>best[S.key])){best[S.key]=c;store.set('sansu-best',best)}
+  }
+  else if(S.retry){head='とっくん おわり';comment=c===n?'全部できました。もう一度たたかってみましょう。':'× の問題の解き方をもう一度読んでおきましょう。'}
   else{
     win=S.ehp<=0;const gain=win?S.foe.xp+5*S.hp:c,before=lvOf(rpg.xp);
     rpg.xp+=gain;if(win)rpg.won[S.key]=(rpg.won[S.key]||0)+1;store.set('sansu-rpg',rpg);
@@ -856,7 +890,11 @@ function finish(){
     sub='けいけんち +'+gain+(after>before?' ・ レベルが '+after+' に上がった!'+(maxHp(after)>maxHp(before)?' 最大 HP が '+maxHp(after)+' になった。':''):'');
     comment=!win?'× の問題の解き方を読んで、とっくんしてからもう一度いどみましょう。':c===n?'ノーミスの完全勝利です。':'× の問題は、とっくんで確認しておきましょう。';
   }
-  $('rTitle').textContent=S.title+(S.retry?'(とっくん)':'')+' の結果';
+  $('rTitle').textContent=S.title+(S.retry?(S.plain?'(まちがい直し)':'(とっくん)'):'')+' の結果';
+  $('btnRetry').textContent=S.plain?'まちがえた問題をもう一度':'まちがえた問題で とっくん';
+  $('btnAgain').textContent=S.plain?'同じ単元でもう10問':'もう一度たたかう';
+  $('btnHome').textContent=S.plain?'単元えらびにもどる':'マップにもどる';
+  $('rHead').hidden=!head;
   $('rHead').textContent=head;$('rHead').className='r-head'+(win?' win':'');
   $('rXp').textContent=sub;$('rXp').hidden=!sub;
   $('rScore').innerHTML=c+'<small> / '+n+' 問 正解</small>';
