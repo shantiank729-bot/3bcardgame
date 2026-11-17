@@ -277,6 +277,9 @@ const MSPR={
  plant:["................",".....kkkkkk.....","...kk333333kk...","..k3333333333k..",".k333k1111k333k.",
   ".k33k1e11e1k33k.",".k33k111111k33k.","..k33k1221k33k..","...kk3kkkk3kk...",".....kk22kk.....",
   "..kk..k22k..kk..",".k22k.k22k.k22k.","..k22kk22kk22k..","...kkk2222kkk...","....kkkkkkkk....","................"],
+ dragon:["..........kk....",".........k22k...","..kk....k2222k..",".k11k..k222222k.","k1e11k.k2222222k",
+  "k1111kk1k222222k",".kww11111kk2222k","..kk11111111kkk.","....k11333311k..","...k1133333311k.",
+  "...k1133333311k.","..k111333311111k","..k11k1111k1kk1k","..k1k.k11k.k..k.","..kkk.kkkk......","................"],
  knight:["................",".....kkkkkk.....","....k111111k....","....k1kkkk1k....","....k1keek1k....",
   "....k111111k....","..kkk122221kkk..",".k11k111111k11k.",".k12k113311k21k.",".k11k113311k11k.",
   ".kk2k111111k2kk.","...kk111111kk...","....k11kk11k....","....k11kk11k....","...kk22kk22kk...","...kkkkkkkkkk..."],
@@ -337,6 +340,19 @@ function buildTiles(){
   T('q',g=>{R(g,'#7a8a72',0,0,16,16); R(g,'#626e5a',0,7,16,1); R(g,'#626e5a',0,15,16,1); R(g,'#626e5a',7,0,1,8); R(g,'#626e5a',15,8,1,8); R(g,'#5a8a4a',3,3,2,1); R(g,'#5a8a4a',11,12,2,1);});
   T('u',g=>{R(g,'#7a8a72',0,0,16,16); for(let i=0;i<4;i++) R(g,['#4e5a48','#62705a','#7a8a72','#9aaa90'][i],2,2+i*3,12,3); R(g,'#2e3a2a',1,1,1,14); R(g,'#2e3a2a',14,1,1,14);});
   T('d',g=>{R(g,'#2a2420',0,0,16,16); for(let i=0;i<4;i++) R(g,['#8a7a66','#76685a','#62564a','#4e443a'][i],2,2+i*3,12,3); R(g,'#1a1612',1,1,1,14); R(g,'#1a1612',14,1,1,14);});
+  const BR=(g,b,m,h)=>{R(g,b,0,0,16,16); for(let y=0;y<16;y+=4){R(g,m,0,y+3,16,1); for(let x=(y/4)%2?4:0;x<16;x+=8) R(g,m,x,y,1,3);} R(g,h,2,0,4,1); R(g,h,10,4,4,1);};
+  const FL=(g,b,d,l,seed)=>{R(g,b,0,0,16,16); const r=prng(seed); for(let i=0;i<8;i++){R(g,d,(r()*16)|0,(r()*16)|0); R(g,l,(r()*16)|0,(r()*16)|0);}};
+  T('J',g=>BR(g,'#3e5a72','#22344a','#6a8aa8')); T('j',(g)=>{FL(g,'#5a7088','#46596e','#7a92aa',61); R(g,'#8ac0e8',4,6,2,1); R(g,'#8ac0e8',11,12,2,1);});
+  T('E',g=>BR(g,'#4a5a40','#2a3424','#6a7a5a')); T('e',g=>{FL(g,'#6a6a5a','#52524a','#828270',62); R(g,'#3a6a5a',0,7,16,2); R(g,'#5a9a80',3,7,3,1);});
+  T('N',g=>BR(g,'#3a2e48','#1e1628','#5a4a6a')); T('n',g=>{FL(g,'#5a5260','#46404c','#6e6676',63); R(g,'#d8d0c0',4,10,3,1); R(g,'#d8d0c0',5,9,1,3);});
+  T('A',g=>BR(g,'#4a201a','#24100c','#7a3424')); T('a',g=>FL(g,'#5a4a46','#463836','#7a6660',64));
+  T('L',(g,f)=>{R(g,'#d8401a',0,0,16,16); const r=prng(f?65:66); for(let i=0;i<7;i++){R(g,'#ffb030',(r()*14)|0,(r()*14)|0,3,1); R(g,'#901a0a',(r()*14)|0,(r()*14)|0,2,2);} R(g,'#fff080',f?5:10,f?10:4,1,1);});
+  T('I',g=>{R(g,'#141432',0,0,16,16); const r=prng(67); for(let i=0;i<6;i++) R(g,'#c8c8ff',(r()*16)|0,(r()*16)|0); R(g,'#2a2a5a',0,15,16,1); R(g,'#2a2a5a',15,0,1,16);});
+  T('i',g=>{R(g,'#2a2a5a',0,0,16,16); R(g,'#3a3a72',0,7,16,1); R(g,'#3a3a72',7,0,1,16); const r=prng(68); for(let i=0;i<3;i++) R(g,'#fff0a0',(r()*16)|0,(r()*16)|0);});
+  T('O',g=>{mountain(g,false); R(g,'#3b2a1b',4,9,8,7); R(g,'#1a3a6a',5,10,6,6); R(g,'#5a90e0',6,13,4,1);});
+  T('Z',g=>{grass(g,29); for(let y=2;y<16;y++){const hw=Math.min(8,Math.floor(y*0.6)+1); for(let x=8-hw;x<8+hw;x++) R(g,x>=8?'#5a2a1a':'#7a3a24',x,y);} R(g,'#ff5020',6,2,4,2); R(g,'#ffb030',7,1,2,1); R(g,'#ff5020',7,5,2,4);});
+  T('M',g=>{grass(g,31); for(const [x,y] of [[2,4],[9,2],[5,9],[11,9]]){R(g,'#2a2a34',x,y,4,6); R(g,'#a8a8b4',x+1,y+1,2,4); R(g,'#2a2a34',x+1,y+2,2,1);}});
+  T('B',(g,f)=>{grass(g,33); R(g,'#2a1a5a',3,3,10,10); R(g,'#4a2a9a',4,4,8,8); R(g,f?'#ffe080':'#fff8d0',7,5,2,6); R(g,f?'#ffe080':'#fff8d0',5,7,6,2); R(g,'#1a1030',3,3,10,1); R(g,'#1a1030',3,12,10,1);});
   T('_',g=>{R(g,'#c8a46c',0,0,16,16); const r=prng(41); for(let i=0;i<8;i++){R(g,'#a8844c',(r()*16)|0,(r()*16)|0); R(g,'#dcc08a',(r()*16)|0,(r()*16)|0);}});
   T('W',g=>{R(g,'#a86e46',0,0,16,16); for(let y=0;y<16;y+=4){R(g,'#6e4428',0,y+3,16,1); for(let x=(y/4)%2?4:0;x<16;x+=8) R(g,'#6e4428',x,y,1,3);} R(g,'#c88a5e',0,0,16,1);});
   T('f',g=>{R(g,'#c08a52',0,0,16,16); for(let y=3;y<16;y+=4) R(g,'#94643a',0,y,16,1); R(g,'#94643a',5,0,1,3); R(g,'#94643a',11,4,1,3); R(g,'#94643a',3,8,1,3); R(g,'#94643a',13,12,1,3);});
@@ -353,8 +369,8 @@ function buildTiles(){
   T('t',g=>{TILES.r[0]&&g.drawImage(TILES.r[0],0,0); R(g,'#1a0e08',3,0,10,14); R(g,'#e0b040',4,1,8,12); R(g,'#6a2a8a',5,3,6,6); R(g,'#e0b040',3,10,10,3); R(g,'#ff4060',7,1,2,1);});
 }
 buildTiles();
-const SOLID=new Set(['^','~','Y','W','c','X','#','p','t','Q']);
-const ENC_RATE={'.':22,'T':12,':':24,',':16,'s':18,'r':18,'%':13,'q':16};
+const SOLID=new Set(['^','~','Y','W','c','X','#','p','t','Q','J','E','N','A','I']);
+const ENC_RATE={'.':22,'T':12,':':24,',':16,'s':18,'r':18,'%':13,'q':16,'j':18,'e':17,'n':15,'a':15,'L':15,'i':14};
 
 /* ---------- データ ---------- */
 const MAXLV=30;
@@ -370,6 +386,7 @@ const IT={
   smoke:{n:'けむりだま',price:20,t:'flee',d:'せんとうから かならず にげられる。'},
   key:{n:'ほしのカギ',key:1,d:'ほしの もようが きざまれた カギ。 やみのしろの とびらに つかうらしい。'},
   moon:{n:'つきのいし',key:1,d:'つきの ひかりを やどした あおい いし。 やみのしろの とびらに つかうらしい。'},
+  crown:{n:'ほしのかんむり',key:1,d:'ほしふるめいきゅうを せいはした しょうこ。 ほんものの ほしの ゆうしゃの あかし。'},
   orb:{n:'ほしのたま',key:1,d:'よぞらの ほしを やどす たま。 やさしく ひかっている。'},
   oak:{n:'かしのぼう',slot:'w',atk:2,price:10},
   knife:{n:'てつのナイフ',slot:'w',atk:6,price:60},
@@ -387,6 +404,14 @@ const IT={
   plate:{n:'はがねのよろい',slot:'a',def:16,price:800,no:['mira']},
   silver:{n:'ぎんのよろい',slot:'a',def:23,price:1600,no:['mira']},
   woodS:{n:'きのたて',slot:'s',def:3,price:50},
+  scaleS:{n:'うろこのたて',slot:'s',def:6,price:200},
+  dewstaff:{n:'しずくのつえ',slot:'w',atk:13,price:700,only:['mira']},
+  flamestaff:{n:'ほのおのつえ',slot:'w',atk:24,price:1800,only:['mira']},
+  holyaxe:{n:'せいぎのおの',slot:'w',atk:34,price:2000,no:['mira']},
+  flamemail:{n:'ほのおのよろい',slot:'a',def:28,price:2400,no:['mira']},
+  dragonaxe:{n:'りゅうのおの',slot:'w',atk:46,price:4000,no:['mira']},
+  starmail:{n:'ほしのよろい',slot:'a',def:36,price:4000,only:['hero']},
+  galaxyrobe:{n:'ぎんがのローブ',slot:'a',def:30,price:3600,only:['mira']},
   ironS:{n:'てつのたて',slot:'s',def:7,price:320,no:['mira']},
   silverS:{n:'ぎんのたて',slot:'s',def:12,price:1000},
 };
@@ -460,6 +485,35 @@ const MON={
  shadow:{n:'シャドウ',s:'ghost',p:{1:'#5a4a7a',2:'#2a1e40',e:'#ffe040'},hp:60,atk:54,def:30,agi:36,exp:62,g:52,
    sk:[{r:.25,t:'mag',pow:[20,28],m:'%sは つめたい いきを ふきかけた！'},{r:.15,t:'sleep1',m:'%sは ねむりの じゅもんを となえた！'}]},
  gargoyle:{n:'ガーゴイル',s:'bat',p:{1:'#8a8a94',2:'#5a5a66'},hp:84,atk:60,def:40,agi:30,exp:78,g:66},
+ bfrog:{n:'あおガエル',s:'frog',p:{1:'#3a8ad0',2:'#a0d8f0',3:'#2a4a9a'},hp:18,atk:14,def:8,agi:10,exp:9,g:9},
+ sbat:{n:'みずコウモリ',s:'bat',p:{1:'#3ab0b0',2:'#1a7a8a',e:'#ffffff'},hp:14,atk:13,def:6,agi:16,exp:8,g:8},
+ nushi:{n:'みずうみの ぬし',s:'frog',p:{1:'#2a6ab0',2:'#9ad0f0',3:'#f0d040'},hp:140,atk:20,def:10,agi:10,exp:120,g:100,scale:3.6,boss:1,
+   sk:[{r:.25,t:'breath',pow:[7,11],m:'%sは みずでっぽうを はきだした！'},{r:.15,t:'sleep1',m:'%sは ねむくなる うたを うたった！'}]},
+ dorat:{n:'どぶネズミ',s:'beast',p:{1:'#5a5248',2:'#3a342c',3:'#c87a8a',e:'#ff3040'},hp:24,atk:20,def:10,agi:14,exp:13,g:12,
+   sk:[{r:.25,t:'poison',m:'%sは きたない キバで かみついた！'}]},
+ sludge:{n:'ヘドロだま',s:'seed',p:{1:'#8a6aa0',2:'#5a3a70',3:'#3a5a2a'},hp:26,atk:18,def:12,agi:6,exp:12,g:12,
+   sk:[{r:.25,t:'poison',m:'%sは どくの しるを とばした！'}]},
+ ratking:{n:'ネズミの おう',s:'beast',p:{1:'#c8a040',2:'#8a6a20',3:'#ff6a8a',e:'#ff2020'},hp:220,atk:28,def:16,agi:18,exp:200,g:160,scale:3.6,boss:1,
+   sk:[{r:.3,t:'poison',m:'%sは どくの キバで かみついた！'},{r:.15,t:'breath',pow:[9,13],m:'%sは なかまの ネズミを よびよせた！ ネズミの むれが おそいかかる！'}]},
+ ghoul:{n:'ぼうれいのへい',s:'knight',p:{1:'#6a7a6a',2:'#3a4a3a',3:'#c0d0b0',e:'#80ff80'},hp:70,atk:50,def:34,agi:18,exp:55,g:48,
+   sk:[{r:.2,t:'sleep1',m:'%sは のろいの ことばを つぶやいた！'}]},
+ wisp:{n:'さまよう ひのたま',s:'ghost',p:{1:'#80d0ff',2:'#4080c0',e:'#ffffff'},hp:42,atk:40,def:22,agi:30,exp:40,g:36,
+   sk:[{r:.3,t:'mag',pow:[18,26],m:'%sは あおい ほのおを はなった！'}]},
+ boneking:{n:'ほねの おう',s:'skel',p:{w:'#f0d880',e:'#ff2020',2:'#5a4020'},hp:720,atk:58,def:36,agi:24,exp:1300,g:700,scale:4,boss:1,
+   sk:[{r:.2,t:'str',m:'%sは ほねの つるぎを ふりおろした！'},{r:.2,t:'mist',pow:[20,28],m:'%sは のろいの いきを はいた！'},{r:.12,t:'sleepAll',m:'%sは ぶきみな こえで さけんだ！'}]},
+ magman:{n:'マグマン',s:'golem',p:{1:'#c8502a',2:'#7a2a1a',e:'#ffe040'},hp:96,atk:64,def:48,agi:8,exp:80,g:66,
+   sk:[{r:.25,t:'breath',pow:[18,26],m:'%sは ようがんを ふきだした！'}]},
+ firebird:{n:'ひのとり',s:'bat',p:{1:'#ff8a2a',2:'#c8401a',e:'#ffff80'},hp:70,atk:58,def:34,agi:40,exp:70,g:60,
+   sk:[{r:.3,t:'mag',pow:[26,34],m:'%sは ほのおの はねを とばした！'}]},
+ flamelord:{n:'ほのおの まじん',s:'golem',p:{1:'#e0401a',2:'#901a0a',e:'#ffff60'},hp:820,atk:72,def:46,agi:26,exp:1800,g:1000,scale:4,boss:1,acts:1,
+   sk:[{r:.3,t:'breath',pow:[28,38],m:'%sは もえさかる ほのおを はいた！'},{r:.12,t:'charge',m:'%sは ほのおを からだに ためている…'},{r:.15,t:'str',m:'%sは ようがんの こぶしを ふりおろした！'}]},
+ dmage:{n:'やみの まどうし',s:'mage',p:{1:'#1a1a2a',2:'#0a0a14',3:'#a040ff',e:'#ff40ff'},hp:110,atk:70,def:50,agi:44,exp:150,g:90,
+   sk:[{r:.3,t:'breath',pow:[30,40],m:'%sは やみの いかずちを よんだ！'},{r:.12,t:'sleepAll',m:'%sは ねむりの じゅもんを となえた！'}]},
+ bgolem:{n:'ブラックゴーレム',s:'golem',p:{1:'#2a2a3a',2:'#14141e',e:'#ff2040'},hp:180,atk:92,def:70,agi:12,exp:180,g:110},
+ sdragon:{n:'ほしドラゴン',s:'dragon',p:{1:'#3a6ac8',2:'#2a3a8a',3:'#e8e0a0'},hp:150,atk:86,def:56,agi:30,exp:170,g:100,
+   sk:[{r:.25,t:'breath',pow:[28,38],m:'%sは ほしくずの ブレスを はいた！'}]},
+ stardragon:{n:'ほしくい りゅう',s:'dragon',p:{1:'#3a2a7a',2:'#7a4ac0',3:'#e8d080'},hp:2400,atk:112,def:62,agi:50,exp:6000,g:3000,scale:4.5,boss:1,acts:1,
+   sk:[{r:.28,t:'breath',pow:[48,62],m:'%sは ほしくずの ブレスを はいた！'},{r:.12,t:'sleepAll',m:'%sは まばゆい ひかりを はなった！'},{r:.15,t:'mist',pow:[30,40],m:'%sは やみの きりを はきだした！'},{r:.15,t:'str',m:'%sは きょだいな しっぽを ふりまわした！'}]},
  zolga:{n:'まおう ゾルガ',s:'mage',p:{1:'#3a2058',2:'#1e1032',3:'#e8c040',e:'#ff2040'},p2:{1:'#6a1030',2:'#3a0818',3:'#ffe070',e:'#ffffff'},
    hp:950,atk:78,def:45,agi:35,exp:0,g:0,scale:4,boss:1,ai:'zolga'},
 };
@@ -470,6 +524,11 @@ const ENC={
  east:[['frog'],['frog','frog'],['flower'],['flower','frog'],['msnake'],['wolf','frog','wolf'],['crow','flower'],['msnake','msnake']],
  tower:[['lampS','lampS'],['flower','flower'],['golem'],['sorc','frog'],['frog','lampS','frog'],['ghostK'],['skel','flower'],['ghostK','lampS']],
  3:[['golem','eyebat'],['skel','skel'],['eyebat','eyebat','eyebat'],['sorc','skel'],['ghostK','eyebat'],['sorc','golem'],['ghostK','sorc']],
+ lake:[['bfrog'],['bfrog','sbat'],['sbat','sbat'],['korin','bfrog'],['snake'],['bfrog','bfrog','sbat']],
+ sewer:[['dorat'],['dorat','dorat'],['sludge'],['sludge','rat'],['snake','dorat'],['shroom','sludge'],['dorat','sludge','dorat']],
+ crypt:[['skel','skel'],['ghoul'],['wisp','wisp'],['shadow','skel'],['ghoul','wisp'],['lampS','ghoul'],['skel','wisp','skel']],
+ volcano:[['magman'],['firebird','firebird'],['lizard','lizard'],['magman','firebird'],['lizard','firebird','lizard'],['dknight','lizard']],
+ abyss:[['dmage','dmage'],['bgolem'],['sdragon'],['dknight','dmage','dknight'],['bgolem','gargoyle'],['sdragon','dmage'],['shadow','shadow','dmage']],
  castle:[['dknight','dknight'],['lizard','shadow'],['shadow','shadow','shadow'],['gargoyle','dknight'],['dknight','shadow'],['lizard','gargoyle'],['sorc','sorc','dknight'],['lizard','lizard']],
 };
 
@@ -670,6 +729,98 @@ const MAPS={
 };
 const W_ICON={V:'village',G:'town',C:'cave',K:'castle1',H:'hayate',R:'tower1',S:'shrine'};
 
+/* ---------- じどうせいせい ダンジョン ----------
+   シードが きまっているので、まいかい おなじ めいろに なる（セーブの たからばこIDが ずれない）。
+   あなほり法で めいろを つくり、へやと まわりみちを たして、いちばん とおい ばしょに かいだん、
+   いきどまりに たからばこを おく。 さいごの かいは いちばん とおい いきどまりに ボスと ごほうび。 */
+function genFloor(o){
+  const r=prng(o.seed), W=o.w, H=o.h;
+  const g=[...Array(H)].map(()=>Array(W).fill(o.wall));
+  const sx=1+2*Math.floor((W-2)/4), sy=H-2;
+  g[sy][sx]=o.floor; const st=[[sx,sy]];
+  while(st.length){
+    const [x,y]=st[st.length-1];
+    const ds=[[2,0],[-2,0],[0,2],[0,-2]].filter(([dx,dy])=>{const nx=x+dx,ny=y+dy; return nx>0&&ny>0&&nx<W-1&&ny<H-1&&g[ny][nx]===o.wall;});
+    if(!ds.length){st.pop(); continue;}
+    const [dx,dy]=ds[Math.floor(r()*ds.length)]; g[y+dy/2][x+dx/2]=o.floor; g[y+dy][x+dx]=o.floor; st.push([x+dx,y+dy]);
+  }
+  for(let i=0;i<o.rooms;i++){
+    const rw=3+2*Math.floor(r()*2), rh=3+2*Math.floor(r()*2);
+    const rx=1+2*Math.floor(r()*((W-rw-1)/2)), ry=1+2*Math.floor(r()*((H-rh-3)/2));
+    for(let y=ry;y<ry+rh&&y<H-1;y++) for(let x=rx;x<rx+rw&&x<W-1;x++) g[y][x]=o.floor;
+  }
+  for(let y=1;y<H-1;y++) for(let x=1;x<W-1;x++){
+    if(g[y][x]!==o.wall||(x+y)%2!==1||r()>=o.loops) continue;
+    if((g[y][x-1]===o.floor&&g[y][x+1]===o.floor)||(g[y-1][x]===o.floor&&g[y+1][x]===o.floor)) g[y][x]=o.floor;
+  }
+  // スタートからの きょり
+  const dist=[...Array(H)].map(()=>Array(W).fill(-1)); dist[sy][sx]=0; const q=[[sx,sy]];
+  while(q.length){const [x,y]=q.shift(); for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){const nx=x+dx,ny=y+dy; if(g[ny]&&g[ny][nx]===o.floor&&dist[ny][nx]<0){dist[ny][nx]=dist[y][x]+1; q.push([nx,ny]);}}}
+  const nb=(x,y)=>[[1,0],[-1,0],[0,1],[0,-1]].map(([dx,dy])=>[x+dx,y+dy]).filter(([a,b])=>g[b]&&g[b][a]===o.floor);
+  const tiles=[]; for(let y=1;y<H-1;y++) for(let x=1;x<W-1;x++) if(dist[y][x]>0) tiles.push([x,y]);
+  const far=tiles.reduce((a,b)=>dist[b[1]][b[0]]>dist[a[1]][a[0]]?b:a);
+  const dead=tiles.filter(([x,y])=>nb(x,y).length===1).sort((a,b)=>dist[b[1]][b[0]]-dist[a[1]][a[0]]);
+  return {g,sx,sy,far,dead,nb,r};
+}
+const NEWDG=[
+ {id:'lake',name:'みずうみのどうくつ',icon:'O',world:[3,19],floors:2,w:21,h:15,wall:'J',floor:'j',rooms:2,loops:.08,zone:'lake',area:'lake',seed:101,per:3,
+  loot:['herb','antidote',{gold:120},'leather','drop','herb'],boss:'nushi',reward:'scaleS',
+  intro:['「ゴボゴボ… わしの みずうみを あらす ものは だれじゃ…」','「みずの そこへ しずめて くれようぞ！」']},
+ {id:'sewer',name:'ガルドの ちかすいどう',from:['town',21,14],floors:2,w:23,h:15,wall:'E',floor:'e',rooms:2,loops:.1,zone:'sewer',area:'sewer',seed:202,per:3,
+  loot:['antidote','herb2',{gold:250},'robe','life','antidote'],boss:'ratking',reward:'dewstaff',
+  intro:['「チューッ！ ここは わがはいの おうこくだ！」','「ガルドの まちの たべものは ぜんぶ わがはいの ものだチュー！」']},
+ {id:'crypt',name:'わすれられた はかば',icon:'M',world:[20,7],floors:3,w:25,h:17,wall:'N',floor:'n',rooms:3,loops:.06,zone:'crypt',area:'crypt',seed:303,per:3,dark:1,
+  loot:['herb2',{gold:400},'antidote','life','drop',{gold:600},'silverS','herb2','drop'],boss:'boneking',reward:'holyaxe',
+  intro:['「…ねむりを さまたげる ものよ…」','「なんぜんねんの いかりを その みに うけるが よい！」']},
+ {id:'volcano',name:'ほのおのやま',icon:'Z',world:[51,28],floors:3,w:25,h:17,wall:'A',floor:'a',rooms:3,loops:.08,lava:.07,up:1,zone:'volcano',area:'volcano',seed:404,per:3,
+  loot:['herb2','flamestaff',{gold:800},'life','drop','herb2',{gold:1000},'drop','life'],boss:'flamelord',reward:'flamemail',
+  intro:['「グオオオ… ちっぽけな にんげんが、 この やまの いただきまで くるとは。」','「ほのおの なかで ちりと なれ！」']},
+ {id:'abyss',name:'ほしふるめいきゅう',icon:'B',world:[14,27],floors:5,w:27,h:19,wall:'I',floor:'i',rooms:4,loops:.07,zone:'abyss',area:'abyss',seed:505,per:3,dark:1,lock:'zolga',
+  loot:['life','drop',{gold:1500},'herb2','life','drop','starmail','galaxyrobe',{gold:3000},'life','drop','dragonaxe','herb2',{gold:5000},'life'],boss:'stardragon',reward:'crown',
+  intro:['「…ゾルガを たおした ものか。 その ほしの ひかり、 わたしが くらって やろう。」','「わたしは ほしくい りゅう。 よぞらの ほしを たべつくす ものだ！」']},
+];
+function buildDungeons(){
+  const setW=(x,y,c)=>{WORLD[y]=WORLD[y].slice(0,x)+c+WORLD[y].slice(x+1);};
+  for(const D of NEWDG){
+    let li=0;
+    if(D.icon){setW(D.world[0],D.world[1],D.icon); W_ICON[D.icon]=D.id+'1';}
+    const fl=[];
+    for(let f=1;f<=D.floors;f++) fl.push(genFloor({w:D.w,h:D.h,seed:D.seed*31+f*7,wall:D.wall,floor:D.floor,rooms:D.rooms,loops:D.loops}));
+    fl.forEach((F,i)=>{
+      const f=i+1, id=D.id+f, last=f===D.floors, g=F.g;
+      const startN=F.nb(F.sx,F.sy)[0];
+      const fwd=D.up?'u':'d', back=D.up?'d':'u';
+      const links={};
+      g[F.sy][F.sx]=f===1?(D.from?'u':'U'):back;
+      if(f===1&&D.from) links[F.sx+','+F.sy]=[D.from[0],D.from[1],D.from[2]-1,'up'];
+      if(f>1){const P2=fl[i-1]; const n2=P2.nb(P2.far[0],P2.far[1])[0]; links[F.sx+','+F.sy]=[D.id+(f-1),n2[0],n2[1],'down'];}
+      const npcs=[], chests=[]; let dead=F.dead.slice();
+      if(!last){
+        g[F.far[1]][F.far[0]]=fwd; const N=fl[i+1]; const n3=N.nb(N.sx,N.sy)[0];
+        links[F.far[0]+','+F.far[1]]=[D.id+(f+1),n3[0],n3[1],'up'];
+        dead=dead.filter(([x,y])=>!(x===F.far[0]&&y===F.far[1]));
+      }else{
+        const bd=dead.find(([x,y])=>{const nn=F.nb(x,y)[0]; return !(nn[0]===F.sx&&nn[1]===F.sy)&&!(nn[0]===startN[0]&&nn[1]===startN[1]);});
+        const bn=F.nb(bd[0],bd[1])[0];
+        chests.push({id:D.id+'_boss',x:bd[0],y:bd[1],item:D.reward});
+        npcs.push({x:bn[0],y:bn[1],mon:D.boss,dir:'down',cond:()=>!S.flags['boss_'+D.id],talk:()=>dungeonBoss(D)});
+        dead=dead.filter(([x,y])=>!(x===bd[0]&&y===bd[1])&&!(x===bn[0]&&y===bn[1]));
+      }
+      for(const [x,y] of dead.slice(0,D.per)){
+        const L=D.loot[li++ % D.loot.length]; chests.push({id:`${D.id}${f}_${chests.length}`,x,y,...(typeof L==='string'?{item:L}:L)});
+      }
+      if(D.lava){
+        const busy=new Set([...chests,...npcs].map(o=>o.x+','+o.y).concat([startN.join(',')]));
+        for(let y=1;y<D.h-1;y++) for(let x=1;x<D.w-1;x++) if(g[y][x]===D.floor&&!busy.has(x+','+y)&&F.r()<D.lava) g[y][x]='L';
+      }
+      MAPS[id]={name:D.name+(D.floors>1?(D.up?` ${f}ごうめ`:` ちか${f}かい`):''),out:D.wall,bgm:'dungeon',world:D.world||MAPS.town.world,
+        entry:[startN[0],startN[1],'up'],enc:()=>D.zone,area:D.area,dark:D.dark,links,npcs,chests,rows:g.map(r=>r.join(''))};
+    });
+    if(D.from){const t=MAPS[D.from[0]]; const [x,y]=[D.from[1],D.from[2]]; t.rows[y]=t.rows[y].slice(0,x)+'d'+t.rows[y].slice(x+1);
+      const F=fl[0], n=F.nb(F.sx,F.sy)[0]; t.links=t.links||{}; t.links[x+','+y]=[D.id+'1',n[0],n[1],'up'];}
+  }
+}
+
 /* マップのNPC・宝箱 */
 function defineObjects(){
  MAPS.village.npcs=[
@@ -680,6 +831,7 @@ function defineObjects(){
   {x:7,y:9,pal:'woman',dir:'down',wander:1,talk:()=>lines(['「ひがしの かわを わたった さきに ガルドの まちが あるわ。」','「まほうつかいの おんなのこが なかまを さがしているって うわさよ。」'])},
   {x:4,y:12,pal:'kid',dir:'right',wander:1,talk:()=>lines(S.flags.zolga?['「みて！ ほしが いっぱい！ ほんとに きれいだね！」']:['「むらの みなみの はしを わたると ちいさな ほこらが あるんだ。」','「ほこらの おばあさんは ただで げんきに してくれるよ！」'])},
   {x:9,y:14,pal:'guard',dir:'down',talk:()=>lines(['「むらの そとには まものが でるぞ。」','「どくヘビに かまれたら『どくけしそう』を つかうんだ。 どくは あるくたびに からだを むしばむぞ。」'])},
+  {x:12,y:1,pal:'guard',dir:'down',wander:1,talk:()=>lines(['「むらの にしの やまに『みずうみのどうくつ』が あるぞ。」','「おくには みずうみの ぬしが すんでいて、 きれいな たてを まもっているそうだ。」'])},
   {x:16,y:8,pal:'sage',dir:'left',wander:1,talk:()=>lines(['「レベルが あがると あたらしい じゅもんを おぼえることが ある。」','「せんとうで ねむらされたら、 なかまの『めざめのすず』で おこして もらうのじゃ。」'])},
  ];
  MAPS.village.chests=[{id:'v1',x:16,y:11,item:'herb'}];
@@ -691,6 +843,8 @@ function defineObjects(){
   {x:11,y:7,pal:'guard',dir:'down',wander:1,talk:()=>lines(['「ひがしの おおきな はしを わたると『ハヤテのさと』が ある。」','「その きたの ぬまちには こだいのとうが たっているそうだ。 ぬまは あるくだけで からだを けずられるぞ。」'])},
   {x:6,y:10,pal:'woman',dir:'down',wander:1,talk:()=>lines(['「ゾルガは いかずちと やみの ほのおを あやつる らしいわ。」','「『まもり』の じゅもんが あれば だいぶ らくに なるはずよ。」'])},
   {x:19,y:11,pal:'mira',dir:'left',cond:()=>!S.flags.mira,talk:miraTalk},
+  {x:20,y:15,pal:'merchant',dir:'up',talk:()=>lines(['「その かいだんは まちの ちかすいどうに つづいてるんだ。」','「さいきん おおきな ネズミが すみついて こまってるんだよ… だれか たいじして くれないかなあ。」'])},
+  {x:3,y:16,pal:'kid',dir:'right',wander:1,talk:()=>lines(['「きたの もりの おくに『わすれられた はかば』が あるんだって。」','「ほねの おうさまが いるって、 おにいちゃんが いってた！ こわいよう。」'])},
  ];
  MAPS.town.chests=[{id:'t1',x:20,y:9,gold:80}];
  MAPS.hayate.npcs=[
@@ -700,6 +854,7 @@ function defineObjects(){
   {x:13,y:12,pal:'gou',dir:'down',cond:()=>!S.flags.gou,talk:gouTalk},
   {x:7,y:13,pal:'kid',dir:'down',wander:1,talk:()=>lines(['「きたの ぬまには どくガエルが いっぱい いるんだ。」','「どくけしそうを たくさん もっていくと いいよ！」'])},
   {x:18,y:11,pal:'sage',dir:'left',wander:1,talk:()=>lines(['「こだいのとうには ねむりの まじょ ネムリアが すみついておる。」','「やつの うたを きくと たちまち ねむってしまう。 ひとりで いどむのは むぼうじゃ。」'])},
+  {x:12,y:4,pal:'guard',dir:'down',wander:1,talk:()=>lines(['「さとの みなみに ある『ほのおのやま』は ようがんだらけだ。 ふむと やけどするぞ。」','「てっぺんの まじんを たおせば、 すごい よろいが てに はいるって はなしだ。」'])},
   {x:15,y:8,pal:'woman',dir:'down',wander:1,talk:()=>lines(['「やみのしろの とびらには ほしと つきの ちからが ひつようなんですって。」'])},
  ];
  MAPS.hayate.chests=[{id:'h1',x:20,y:13,item:'life'}];
@@ -1009,6 +1164,7 @@ let lastBump=0;
 function tryMove(d){
   P.dir=d; const [dx,dy]=DV[d]; const nx=P.x+dx, ny=P.y+dy;
   if(curMap().kind==='world'&&tileAt(nx,ny)==='K'&&!S.flags.opened){run(castleDoor); return;}
+  if(curMap().kind==='world'&&tileAt(nx,ny)==='B'&&!S.flags.zolga){run(()=>lines(['ふしぎな ほしの ひかりが うずまいている…','いまは まだ はいれない ようだ。 （まおうを たおすと ひらくらしい）'])); return;}
   if(!inBounds(nx,ny)&&curMap().edgeExit){run(exitToWorld); return;}
   if(blocked(nx,ny)){const n=performance.now(); if(n-lastBump>260){sfx.bump(); lastBump=n;} return;}
   trail.unshift({x:P.x,y:P.y}); trail.length=Math.min(trail.length,3);
@@ -1023,16 +1179,16 @@ function onStep(){
   // どく・ぬま
   let hurt=false;
   for(const p of aliveP()){
-    let d=0; if(p.poison) d++; if(t==='%') d++;
+    let d=0; if(p.poison) d++; if(t==='%') d++; if(t==='L') d+=3;
     if(d&&p.hp>1){p.hp=Math.max(1,p.hp-d); hurt=true;}
   }
-  if(hurt){flash(t==='%'?'rgba(150,40,200,.45)':'rgba(120,255,80,.35)',160); const a=Snd.ac; a&&tone(180,a.currentTime,.06,'square',.03);}
+  if(hurt){flash(t==='L'?'rgba(255,90,20,.5)':t==='%'?'rgba(150,40,200,.45)':'rgba(120,255,80,.35)',160); const a=Snd.ac; a&&tone(180,a.currentTime,.06,'square',.03);}
   if(m.enc){
     stepsSince++;
     const rate=ENC_RATE[t];
     if(rate&&stepsSince>4&&Math.random()<1/rate){
       const zone=m.enc(P.x,P.y); stepsSince=0;
-      const area=m.kind==='world'?(t==='T'?'forest':t===':'?'beach':t==='%'?'swamp':'field'):(S.map.startsWith('castle')?'castle':S.map.startsWith('tower')?'tower':'cave');
+      const area=m.area||(m.kind==='world'?(t==='T'?'forest':t===':'?'beach':t==='%'?'swamp':'field'):(S.map.startsWith('castle')?'castle':S.map.startsWith('tower')?'tower':'cave'));
       run(()=>battle(pickR(ENC[zone]),{area}));
     }
   }
@@ -1107,7 +1263,7 @@ function drawField(now){
   const fr=Math.floor(now/500)%2;
   const x0=Math.floor(camX/TS), y0=Math.floor(camY/TS);
   for(let ty=y0;ty<=y0+VH+1;ty++) for(let tx=x0;tx<=x0+VW+1;tx++){
-    const ch=tileAt(tx,ty); const t=TILES[ch]||TILES['.']; ctx.drawImage(t[ch==='~'||ch==='='||ch==='%'?fr:0],tx*TS-camX,ty*TS-camY);
+    const ch=tileAt(tx,ty); const t=TILES[ch]||TILES['.']; ctx.drawImage(t[ch==='~'||ch==='='||ch==='%'||ch==='L'||ch==='B'?fr:0],tx*TS-camX,ty*TS-camY);
   }
   for(const c of (m.chests||[])) ctx.drawImage(S.flags['ch_'+c.id]?chestOpen:chestClosed,c.x*TS-camX,c.y*TS-camY+1);
   const walk=Math.floor(now/260)%2;
@@ -1271,7 +1427,7 @@ async function shrineTalk(){
   await say('ふしぎな ひかりが なかまたちを つつみこんだ！ HPと MPが かいふくし、 どくも きえた！');
   if(!has('moon')) await say('「ゾルガの しろは ほしと つきの ちからで ふうじられて いるのです。 つきのいしは ひがしの こだいのとうに…」');
   else if(!S.flags.zolga) await say('「ほしと つきが そろいましたね。 ゾルガを たおし、 よぞらに ほしを とりもどして。」');
-  else await say('「よぞらに ほしが もどりました。 ほんとうに ありがとう。」');
+  else await say('「よぞらに ほしが もどりました。 この しまの『ほしふるめいきゅう』への みちも ひらかれましたよ。 さいごの しれんに いどむ ゆうきが あるなら…」');
   saveGame(); await say('（ぼうけんのしょに きろくしました）');
   msgClose();
 }
@@ -1381,6 +1537,15 @@ async function elderTalk(){
   }
   msgClose();
 }
+async function dungeonBoss(D){
+  msgClear(); for(const t of D.intro) await say(t); msgClose();
+  const r=await battle([D.boss],{boss:1,area:D.area});
+  if(r!=='win') return;
+  S.flags['boss_'+D.id]=1; loadNPCs(); msgClear();
+  await say('おくに かがやく たからばこが みえる！');
+  if(D.id==='abyss'){await say('ほしくい りゅう「みごとだ… ほしの ゆうしゃたちよ…」'); await say('めいきゅうに ほしが ふりそそぎ、 やさしい ひかりに つつまれた。');}
+  msgClose();
+}
 async function guardianTalk(){
   msgClear();
   await say('「…ここから さきへは だれも とおさぬ…」');
@@ -1417,6 +1582,11 @@ const BG={
   cave:['#120c0a','#3a2e26','#5a4a3c','#3a2e24'],
   tower:['#1a2a24','#4a6a5a','#5a6a52','#34442e'],
   castle:['#140a24','#3e2460','#4a3a5a','#2a1e38'],
+  lake:['#0e1e34','#2a4a6a','#3a5a78','#24384e'],
+  sewer:['#141a12','#34402c','#3a5a4a','#26362c'],
+  crypt:['#0a0812','#2a2038','#3a3444','#24202c'],
+  volcano:['#2a0a04','#8a2a10','#5a3a30','#3a201a'],
+  abyss:['#04041a','#1a1a50','#24245a','#141438'],
 };
 function mkEnemy(id){const d=MON[id]; return {id,d,name:d.n,hp:d.hp,mhp:d.hp,atk:d.atk,def:d.def,agi:d.agi,flashT:0,dieT:0,x:0,sleep:false};}
 function labelEnemies(en){
@@ -1664,6 +1834,11 @@ async function enemyAct(e){
   const d=e.d;
   if(d.ai==='zolga') return zolgaAct(e);
   if(d.ai==='witch') return witchAct(e);
+  await enemyMove(e);
+  if(d.acts&&aliveP().length&&e.hp>0&&Math.random()<.4) await enemyMove(e);
+}
+async function enemyMove(e){
+  const d=e.d;
   let sk=pickSkill(d); if(e.charge) sk=null;
   if(sk&&sk.t==='healAlly'){
     const tg=alive().filter(x=>x.hp<x.mhp*.6).sort((a,b)=>a.hp/a.mhp-b.hp/b.mhp)[0];
@@ -1678,6 +1853,7 @@ async function enemyAct(e){
   else if(sk.t==='poison'){const p=randAlly(); await enemyAttack(e,1,true,p); await poisonMember(p);}
   else if(sk.t==='sleep1'){flash('#c0a0ff',200); await sleepMember(randAlly(),.5);}
   else if(sk.t==='sleepAll'){flash('#ffc0e0',240); for(const p of aliveP()) await sleepMember(p,.35);}
+  else if(sk.t==='mist'){flash('rgba(120,255,80,.4)',260); for(const p of aliveP()){await hurtMember(p,rnd(...sk.pow)); await poisonMember(p,.35);}}
 }
 async function witchAct(e){
   const r=Math.random();
@@ -1840,6 +2016,7 @@ function frame(now){
   requestAnimationFrame(frame);
 }
 defineObjects();
+buildDungeons();
 requestAnimationFrame(frame);
 function start(){titleScreen();}
 const hot=window.claude&&window.claude.hot;
