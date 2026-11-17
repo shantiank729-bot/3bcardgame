@@ -1002,7 +1002,6 @@ function blocked(x,y){
   if(!inBounds(x,y)) return !curMap().edgeExit;
   if(SOLID.has(tileAt(x,y))) return true;
   if(npcAt(x,y)) return true;
-  if(chestAt(x,y)) return true;
   return false;
 }
 const DV={up:[0,-1],down:[0,1],left:[-1,0],right:[1,0]};
@@ -1061,7 +1060,7 @@ function fieldPress(b){
   if(tileAt(fx,fy)==='c'){fx+=dx; fy+=dy;}
   const n=npcAt(fx,fy);
   if(n){run(async()=>{const back={up:'down',down:'up',left:'right',right:'left'}; if(!n.mon) n.dir=back[P.dir]; await n.talk(n); msgClose();}); return;}
-  const c=chestAt(P.x+dx,P.y+dy);
+  const c=chestAt(P.x,P.y)||chestAt(P.x+dx,P.y+dy);
   if(c){run(()=>openChest(c)); return;}
   run(async()=>{msgClear(); await say(`${HN()}は あしもとを しらべた。`,{wait:'auto',ms:300}); await say('しかし なにも みつからなかった。'); msgClose();});
 }
