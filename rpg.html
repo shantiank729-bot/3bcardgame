@@ -1663,7 +1663,8 @@ function flash(color,ms=180){if(FAST) return; flashFx={color,t0:performance.now(
 async function pickMember(title,filter,style){
   const list=S.party.filter(m=>!filter||filter(m));
   if(!list.length) return null;
-  const m=new Menu({title,items:list.map(x=>({label:x.name,right:x.hp<=0?'しに':`H${x.hp}`})),style:style||{left:'34%',top:'34%',width:'40%'}});
+  const buff=x=>(x.atkUp?'こう↑':'')+(x.defUp?'しゅ↑':'');
+  const m=new Menu({title,items:list.map(x=>({label:x.name+(buff(x)?`<small>（${buff(x)}）</small>`:''),right:x.hp<=0?'しに':`H${x.hp}`})),style:style||{left:'34%',top:'34%',width:'40%'}});
   const i=await m.pick(); m.close(); return i<0?null:list[i];
 }
 
@@ -2587,6 +2588,12 @@ async function memberAct(p,cmd){
   if(cmd.t==='spell'){
     const sp=SP[cmd.k];
     if(p.mp<sp.mp){await say(`${n}は ${sp.n}を つかおうとした。 しかし MPが たりない！`,{wait:'auto'}); return null;}
+    // かさねがけは できない：もう かかっていれば MPを つかわずに おしえる
+    {const bt=S.party[cmd.target];
+     const already=sp.t==='guard'?(B.guard&&'ひかりの かべは もう はられている！'):
+       sp.t==='buffAtk'?(bt&&bt.hp>0&&bt.atkUp&&`${bt.name}の こうげきりょくは もう あがっている！`):
+       sp.t==='buffDef'?(bt&&bt.hp>0&&bt.defUp&&`${bt.name}は もう ひかりの ころもに つつまれている！`):null;
+     if(already){await say(`${n}は ${sp.n}を となえようとした。 しかし ${already} これいじょうは あがらない。`,{wait:'auto'}); await say('（MPは へらなかった）',{wait:'auto',ms:400}); return null;}}
     p.mp-=sp.mp; updStatus();
     if(sp.t==='phys'||sp.t==='roar') await say(`${n}の ${sp.n}！`,{wait:'auto',ms:350});
     else {await say(`${n}は ${sp.n}の じゅもんを となえた！`,{wait:'auto',ms:350}); sfx.magic(); await sleep(200);}
