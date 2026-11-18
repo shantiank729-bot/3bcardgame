@@ -83,6 +83,11 @@ canvas{display:block; width:100%; height:100%; image-rendering:pixelated; image-
 .stat.dead{color:var(--dead); border-color:var(--dead)}
 .stat.act{box-shadow:0 0 0 .7cqw var(--gold)}
 .stat .nm{text-align:center; border-bottom:.4cqw solid currentColor; margin-bottom:.2em}
+.chap{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:#000a; transition:opacity .45s; z-index:5}
+.chap.out{opacity:0}
+.chap .win{position:relative; text-align:center; padding:3cqw 7cqw}
+.chap .no{font-size:3.4cqw; color:var(--sub); letter-spacing:.3em}
+.chap .tt{font-size:6.4cqw; color:var(--gold); letter-spacing:.12em; margin-top:1cqw}
 .toast{left:50%; top:4%; transform:translateX(-50%); white-space:nowrap; transition:opacity .4s}
 .big{font-size:3.4cqw}
 .big .row{display:flex; justify-content:space-between; gap:3cqw; font-variant-numeric:tabular-nums}
@@ -176,14 +181,15 @@ const ui=document.getElementById('ui'), msgEl=document.getElementById('msg');
 const fadeEl=document.getElementById('fade'), screenEl=document.getElementById('screen');
 const rnd=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
 const pickR=a=>a[Math.floor(Math.random()*a.length)];
-const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+let FAST=false, AUTO=false;   // テストプレイ よう（こうそく・じどう せんとう）
+const sleep=ms=>FAST?Promise.resolve():new Promise(r=>setTimeout(r,ms));
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const reduceMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const store={
   get(k){try{return localStorage.getItem(k)}catch(e){return null}},
   set(k,v){try{localStorage.setItem(k,v);return true}catch(e){return false}},
 };
-const SAVE_KEY='hoshikage-save-v2';
+const SAVE_KEY='hoshikage-save-v2';   // なかみは migrate() で しんしよう に そろえる
 
 /* ---------- ピクセルアート ---------- */
 function art(rows,pal,flip){
@@ -373,7 +379,7 @@ const SOLID=new Set(['^','~','Y','W','c','X','#','p','t','Q','J','E','N','A','I'
 const ENC_RATE={'.':22,'T':12,':':24,',':16,'s':18,'r':18,'%':13,'q':16,'j':18,'e':17,'n':15,'a':15,'L':15,'i':14};
 
 /* ---------- データ ---------- */
-const MAXLV=30;
+const MAXLV=50;
 const expFor=lv=>lv<=1?0:Math.round(5*Math.pow(lv-1,2.2)+5*(lv-1));
 const IT={
   herb:{n:'やくそう',price:8,t:'heal',pow:[25,35],tg:'ally',d:'なかま ひとりの HPを すこし かいふくする。'},
@@ -569,14 +575,7 @@ const WORLD=[
 "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~",
 "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~",
 ];
-function worldZone(x,y){
-  if(x>=41) return 'east';
-  if(y>=25) return 1;
-  if(x>=28&&y<=8) return 3;
-  if(y<=9&&x>=16) return 3;
-  if(y>=15&&x<26) return 1;
-  return 2;
-}
+
 const MAPS={
  world:{name:'',rows:WORLD,out:'~',bgm:'field',kind:'world',enc:(x,y)=>worldZone(x,y)},
  village:{name:'ミナモむら',out:'Y',bgm:'town',edgeExit:1,world:[13,22],entry:[10,14,'up'],rows:[
@@ -781,11 +780,14 @@ const NEWDG=[
 ];
 function buildDungeons(){
   const setW=(x,y,c)=>{WORLD[y]=WORLD[y].slice(0,x)+c+WORLD[y].slice(x+1);};
+  const findIcon=c=>{const y=WORLD.findIndex(r=>r.includes(c)); return y<0?null:[WORLD[y].indexOf(c),y];};
   for(const D of NEWDG){
     let li=0;
-    if(D.icon){setW(D.world[0],D.world[1],D.icon); W_ICON[D.icon]=D.id+'1';}
+    if(D.icon){ if(D.world) setW(D.world[0],D.world[1],D.icon); else D.world=findIcon(D.icon); W_ICON[D.icon]=D.id+'1'; }
     const fl=[];
     for(let f=1;f<=D.floors;f++) fl.push(genFloor({w:D.w,h:D.h,seed:D.seed*31+f*7,wall:D.wall,floor:D.floor,rooms:D.rooms,loops:D.loops}));
+    // ちゅうボスの かいは、 いちばん とおい いきどまりに かいだんを おき、 その てまえに ボスを たたせる
+    fl.forEach((F,i)=>{ if(D.mid&&D.mid.floor===i+1&&F.dead.length){ F.far=F.dead[0]; } });
     fl.forEach((F,i)=>{
       const f=i+1, id=D.id+f, last=f===D.floors, g=F.g;
       const startN=F.nb(F.sx,F.sy)[0];
@@ -795,30 +797,37 @@ function buildDungeons(){
       if(f===1&&D.from) links[F.sx+','+F.sy]=[D.from[0],D.from[1],D.from[2]-1,'up'];
       if(f>1){const P2=fl[i-1]; const n2=P2.nb(P2.far[0],P2.far[1])[0]; links[F.sx+','+F.sy]=[D.id+(f-1),n2[0],n2[1],'down'];}
       const npcs=[], chests=[]; let dead=F.dead.slice();
+      const notStart=([x,y])=>!(x===F.sx&&y===F.sy)&&!(x===startN[0]&&y===startN[1]);
       if(!last){
         g[F.far[1]][F.far[0]]=fwd; const N=fl[i+1]; const n3=N.nb(N.sx,N.sy)[0];
         links[F.far[0]+','+F.far[1]]=[D.id+(f+1),n3[0],n3[1],'up'];
         dead=dead.filter(([x,y])=>!(x===F.far[0]&&y===F.far[1]));
+        if(D.mid&&D.mid.floor===f){
+          const bn=F.nb(F.far[0],F.far[1])[0];
+          npcs.push({x:bn[0],y:bn[1],mon:D.mid.mon,dir:'down',cond:()=>!S.flags['mid_'+D.id],talk:()=>dungeonMid(D)});
+          dead=dead.filter(([x,y])=>!(x===bn[0]&&y===bn[1]));
+        }
       }else{
-        const bd=dead.find(([x,y])=>{const nn=F.nb(x,y)[0]; return !(nn[0]===F.sx&&nn[1]===F.sy)&&!(nn[0]===startN[0]&&nn[1]===startN[1]);});
+        const bd=dead.find(([x,y])=>notStart(F.nb(x,y)[0])&&notStart([x,y]));
         const bn=F.nb(bd[0],bd[1])[0];
-        chests.push({id:D.id+'_boss',x:bd[0],y:bd[1],item:D.reward});
+        if(D.reward) chests.push({id:D.id+'_boss',x:bd[0],y:bd[1],item:D.reward});
         npcs.push({x:bn[0],y:bn[1],mon:D.boss,dir:'down',cond:()=>!S.flags['boss_'+D.id],talk:()=>dungeonBoss(D)});
         dead=dead.filter(([x,y])=>!(x===bd[0]&&y===bd[1])&&!(x===bn[0]&&y===bn[1]));
       }
-      for(const [x,y] of dead.slice(0,D.per)){
+      for(const [x,y] of dead.filter(notStart).slice(0,D.per)){
         const L=D.loot[li++ % D.loot.length]; chests.push({id:`${D.id}${f}_${chests.length}`,x,y,...(typeof L==='string'?{item:L}:L)});
       }
       if(D.lava){
         const busy=new Set([...chests,...npcs].map(o=>o.x+','+o.y).concat([startN.join(',')]));
         for(let y=1;y<D.h-1;y++) for(let x=1;x<D.w-1;x++) if(g[y][x]===D.floor&&!busy.has(x+','+y)&&F.r()<D.lava) g[y][x]='L';
       }
-      MAPS[id]={name:D.name+(D.floors>1?(D.up?` ${f}ごうめ`:` ちか${f}かい`):''),out:D.wall,bgm:'dungeon',world:D.world||MAPS.town.world,
-        entry:[startN[0],startN[1],'up'],enc:()=>D.zone,area:D.area,dark:D.dark,links,npcs,chests,rows:g.map(r=>r.join(''))};
+      MAPS[id]={name:D.name+(D.floors>1?(D.up?` ${f}かい`:` ちか${f}かい`):''),out:D.wall,bgm:last&&D.id==='noxcastle'?'boss':'dungeon',world:D.world||MAPS.town.world,
+        entry:[startN[0],startN[1],'up'],enc:()=>D.zone,area:D.area,dark:D.dark,links,npcs,chests,rows:g.map(r=>r.join('')),dg:D.id,floor:f};
     });
     if(D.from){const t=MAPS[D.from[0]]; const [x,y]=[D.from[1],D.from[2]]; t.rows[y]=t.rows[y].slice(0,x)+'d'+t.rows[y].slice(x+1);
       const F=fl[0], n=F.nb(F.sx,F.sy)[0]; t.links=t.links||{}; t.links[x+','+y]=[D.id+'1',n[0],n[1],'up'];}
   }
+  MAPS.volcano1.name='ほのおのやま 1ごうめ'; MAPS.volcano2.name='ほのおのやま 2ごうめ'; MAPS.volcano3.name='ほのおのやま 3ごうめ';
 }
 
 /* マップのNPC・宝箱 */
@@ -870,6 +879,521 @@ function defineObjects(){
  MAPS.castle2.chests=[{id:'k1',x:1,y:6,item:'star'},{id:'k2',x:17,y:6,item:'herb2'},{id:'k3',x:1,y:10,gold:500},{id:'k4',x:17,y:10,item:'drop'}];
 }
 
+/* =========================================================
+   だいがた アップデート（設計書 docs/design.md に したがう）
+   ========================================================= */
+
+/* ---------- しょくぎょう・じゅもん（Lv50まで） ---------- */
+CLS.gou.gr.mp=[1,2];
+CLS.sena={base:{hp:20,mp:14,str:6,agi:6},gr:{hp:[5,8],mp:[3,5],str:[1,3],agi:[1,2]},crit:1/40};
+Object.assign(SP,{
+  starrain:{n:'ほしくずのあめ',cls:'hero',mp:16,lv:26,t:'atk',pow:[85,110],tg:'all',battle:1,d:'ほしくずを ふらせて てき ぜんいんを こうげき。'},
+  hheal:{n:'いやしのひかり',cls:'hero',mp:18,lv:34,t:'healAll',pow:[70,90],battle:1,field:1,d:'なかま ぜんいんの HPを かいふくする。'},
+  judge:{n:'ほしのさばき',cls:'hero',mp:24,lv:42,t:'atk',pow:[230,270],tg:'one',battle:1,d:'ほしの ちからで てき 1たいに だいダメージ。'},
+  power:{n:'ちからのうた',cls:'mira',mp:6,lv:18,t:'buffAtk',tg:'ally',battle:1,d:'なかま ひとりの こうげきりょくを せんとうちゅう あげる。'},
+  storm:{n:'こおりのあらし',cls:'mira',mp:14,lv:22,t:'atk',pow:[75,95],tg:'all',battle:1,d:'ふぶきで てき ぜんいんを こうげき。'},
+  spear:{n:'いかずちのやり',cls:'mira',mp:12,lv:28,t:'atk',pow:[140,170],tg:'one',battle:1,d:'いかずちの やりで てき 1たいを つらぬく。'},
+  meteor:{n:'りゅうせいぐん',cls:'mira',mp:22,lv:34,t:'atk',pow:[120,150],tg:'all',battle:1,d:'ながれぼしを ふらせて てき ぜんいんを こうげき。'},
+  nova:{n:'ちょうしんせい',cls:'mira',mp:30,lv:42,t:'atk',pow:[185,225],tg:'all',battle:1,d:'ほしの ばくはつで てき ぜんいんを やきつくす。'},
+  smash:{n:'つよぎり',cls:'gou',mp:3,lv:12,t:'phys',mult:1.8,tg:'one',battle:1,d:'ちからを こめて てき 1たいを きる。'},
+  sweep:{n:'なぎはらい',cls:'gou',mp:6,lv:20,t:'phys',mult:.9,tg:'all',battle:1,d:'てき ぜんいんを なぎはらう。'},
+  roar:{n:'おたけび',cls:'gou',mp:5,lv:27,t:'roar',tg:'all',battle:1,d:'てきを ひるませて うごけなく する ことが ある。'},
+  burst:{n:'ばくれつぎり',cls:'gou',mp:10,lv:35,t:'phys',mult:3,tg:'one',battle:1,d:'ばくはつ するような いちげきで てき 1たいを きる。'},
+  musou:{n:'ごうりきむそう',cls:'gou',mp:16,lv:44,t:'phys',mult:1.7,tg:'all',battle:1,d:'てき ぜんいんに すさまじい れんげき。'},
+  sheal:{n:'いのりのいやし',cls:'sena',mp:4,lv:1,t:'heal',pow:[50,65],tg:'ally',field:1,battle:1,d:'なかま ひとりの HPを かいふくする。'},
+  sall:{n:'みんなのいのり',cls:'sena',mp:9,lv:12,t:'healAll',pow:[40,55],field:1,battle:1,d:'なかま ぜんいんの HPを かいふくする。'},
+  purify:{n:'じょうか',cls:'sena',mp:3,lv:15,t:'purify',tg:'ally',field:1,battle:1,d:'なかま ひとりの どくと ねむりを なおす。'},
+  bless:{n:'まもりのいのり',cls:'sena',mp:6,lv:18,t:'buffDef',tg:'ally',battle:1,d:'なかま ひとりが うける ダメージを せんとうちゅう へらす。'},
+  srevive:{n:'よみがえりのいのり',cls:'sena',mp:14,lv:24,t:'revive',full:1,tg:'dead',field:1,battle:1,d:'ちからつきた なかまを げんきな すがたで いきかえらせる。'},
+  sbig:{n:'だいいのり',cls:'sena',mp:12,lv:30,t:'heal',pow:[200,240],tg:'ally',field:1,battle:1,d:'なかま ひとりの HPを たっぷり かいふくする。'},
+  sallbig:{n:'おおいなるいのり',cls:'sena',mp:20,lv:38,t:'healAll',pow:[110,130],field:1,battle:1,d:'なかま ぜんいんの HPを おおきく かいふくする。'},
+  sholy:{n:'せいなるひかり',cls:'sena',mp:20,lv:45,t:'atk',pow:[150,180],tg:'all',battle:1,d:'せいなる ひかりで てき ぜんいんを こうげき。'},
+});
+SP.ret.d='いちど いった ことの ある まちへ いどうする。';
+
+/* ---------- どうぐ・そうび ---------- */
+const P25=v=>Math.round(v*25/10)*10;
+Object.assign(IT,{
+  letter:{n:'しょうかいじょう',key:1,d:'ミナモの ちょうろうが かいた ガルドの まちへの しょうかいじょう。'},
+  sun:{n:'たいようのいし',key:1,d:'たいようの ひかりを やどした あかい いし。'},
+  blue:{n:'あおのしずく',key:1,d:'うみの ほしの しずく。'},
+  red:{n:'あかのしずく',key:1,d:'ほのおの ほしの しずく。 こおりを とかす ちからが ある。'},
+  white:{n:'しろのしずく',key:1,d:'こおりの ほしの しずく。 まぶしく ひかる。'},
+  golddrop:{n:'きんのしずく',key:1,d:'すなの ほしの しずく。'},
+  wing:Object.assign(IT.wing,{d:'いちど いった ことの ある まちへ いっしゅんで もどる。'}),
+  mace:{n:'せいなるメイス',slot:'w',atk:16,price:400,only:['sena','hero']},
+  // 7しょう
+  seasword:{n:'さざなみのけん',slot:'w',atk:44,price:P25(44),no:['mira','sena']},
+  seastaff:{n:'うみのつえ',slot:'w',atk:26,price:P25(26),only:['mira','sena']},
+  seamail:{n:'みずのよろい',slot:'a',def:32,price:P25(32),no:['mira','sena']},
+  searobe:{n:'しおかぜのローブ',slot:'a',def:24,price:P25(24)},
+  shellS:{n:'かいがらのたて',slot:'s',def:18,price:P25(18)},
+  // 8しょう
+  firesword:{n:'ほのおのけん',slot:'w',atk:52,price:P25(52),no:['mira','sena']},
+  flamestaff:Object.assign(IT.flamestaff,{atk:32,price:P25(32),only:['mira','sena']}),
+  flamemail:Object.assign(IT.flamemail,{def:38,price:P25(38),no:['mira','sena']}),
+  firerobe:{n:'ほのおのローブ',slot:'a',def:30,price:P25(30)},
+  // 9しょう
+  iceaxe:{n:'ひょうがのおの',slot:'w',atk:62,price:P25(62),no:['mira','sena']},
+  icestaff:{n:'こおりのつえ',slot:'w',atk:38,price:P25(38),only:['mira','sena']},
+  snowmail:{n:'ゆきのよろい',slot:'a',def:44,price:P25(44),no:['mira','sena']},
+  snowrobe:{n:'ゆきのローブ',slot:'a',def:36,price:P25(36)},
+  iceS:{n:'こおりのたて',slot:'s',def:24,price:P25(24)},
+  // 10しょう
+  goldsword:{n:'おうごんのけん',slot:'w',atk:70,price:P25(70),no:['mira','sena']},
+  sunstaff:{n:'たいようのつえ',slot:'w',atk:46,price:P25(46),only:['mira','sena']},
+  goldmail:{n:'おうごんのよろい',slot:'a',def:50,price:P25(50),no:['mira','sena']},
+  sunrobe:{n:'たいようのローブ',slot:'a',def:42,price:P25(42)},
+  goldS:{n:'おうごんのたて',slot:'s',def:30,price:P25(30)},
+  // 12しょう
+  skyaxe:{n:'てんくうのおの',slot:'w',atk:84,price:P25(84),no:['mira','sena']},
+  angelstaff:{n:'てんしのつえ',slot:'w',atk:56,price:P25(56),only:['mira','sena']},
+  skymail:{n:'てんくうのよろい',slot:'a',def:60,price:P25(60),no:['mira','sena']},
+  angelrobe:{n:'てんしのローブ',slot:'a',def:50,price:P25(50)},
+  skyS:{n:'てんくうのたて',slot:'s',def:38,price:P25(38)},
+  starsword:{n:'ほしのつるぎ',slot:'w',atk:92,price:4600,only:['hero']},
+  lightS:{n:'ひかりのたて',slot:'s',def:42,price:4200},
+  // クリアご
+  dragonaxe:Object.assign(IT.dragonaxe,{atk:105,price:5200,no:['mira','sena']}),
+  starmail:Object.assign(IT.starmail,{def:72,price:5400,only:['hero']}),
+  galaxyrobe:Object.assign(IT.galaxyrobe,{def:62,price:5000}),
+  galaxystaff:{n:'ぎんがのつえ',slot:'w',atk:70,price:5000,only:['mira','sena']},
+});
+// 1〜6しょうの そうびも セナが つかえるように せいり
+for(const id of ['bronze','steel','axe','holyaxe','chain','plate','silver','ironS','flamemail']) if(IT[id].no&&!IT[id].no.includes('sena')) IT[id].no.push('sena');
+IT.staff.only=['mira','sena']; IT.magstaff.only=['mira','sena']; IT.dewstaff.only=['mira','sena'];
+
+/* ---------- てきの すうち（設計書 §4 の しき） ---------- */
+// しょうごとに かえる そうびの めやす（せんしの ぶき・よろい・たて）
+const GEAR={1:[6,5,3],2:[11,10,3],3:[18,10,7],4:[27,16,7],5:[34,23,12],6:[36,28,12],7:[44,32,18],8:[52,38,18],9:[62,44,24],10:[70,50,30],
+  11:[70,50,30],12:[84,60,38],13:[84,60,38],14:[84,60,38],15:[92,60,38],16:[105,72,44]};
+const PARTY_AT=ch=>ch<2?['hero']:ch<4?['hero','mira']:ch<7?['hero','mira','gou']:['hero','mira','gou','sena'];
+const AVG={hero:{hp:7.5,str:2.5,agi:2},mira:{hp:5,str:1.5,agi:2},gou:{hp:9.5,str:3.5,agi:1.5},sena:{hp:6.5,str:2,agi:1.5}};
+function expectParty(L,ch){
+  const g=GEAR[ch]||GEAR[16], who=PARTY_AT(ch), lv=L-1;
+  const st=c=>({hp:CLS[c].base.hp+AVG[c].hp*lv,str:CLS[c].base.str+AVG[c].str*lv,agi:CLS[c].base.agi+AVG[c].agi*lv});
+  const fighters=who.filter(c=>c==='hero'||c==='gou');
+  const fAtk=fighters.reduce((s,c)=>s+st(c).str,0)/fighters.length+g[0];
+  const hpAvg=who.reduce((s,c)=>s+st(c).hp,0)/who.length;
+  const def=who.reduce((s,c)=>s+st(c).agi/2+(c==='hero'||c==='gou'?g[1]+g[2]:g[1]*.75+g[2]*.5),0)/who.length;
+  const agi=who.reduce((s,c)=>s+st(c).agi,0)/who.length;
+  const spell=who.includes('mira')?(2.4*L+12):0;
+  return {fAtk,hpAvg,def,agi,who,spell};
+}
+const ARCH={norm:{hp:1,atk:1,def:1,agi:1},tank:{hp:1.45,atk:1.05,def:1.3,agi:.55},fast:{hp:.75,atk:.95,def:.85,agi:1.5},
+  mage:{hp:.8,atk:.85,def:.8,agi:1.05},brute:{hp:1.25,atk:1.18,def:.9,agi:.8}};
+function fstat(ML,ch,arch='norm'){
+  const E=expectParty(ML,ch), A=ARCH[arch];
+  const def=Math.round(E.fAtk*.55*A.def), per=(E.fAtk-def/2)/2;
+  const exp=Math.round((expFor(ML+1)-expFor(ML))/9*(A.hp*.5+.5));
+  return {hpRef:Math.round(E.hpAvg),hp:Math.round(per*3*A.hp),atk:Math.round((.2*E.hpAvg+E.def/2)*A.atk),def,agi:Math.round(E.agi*.9*A.agi),exp,g:Math.round(exp*1.6),ml:ML};
+}
+// ボス：よそうパーティが turns ターンで たおせる HP
+function bstat(L,ch,o={}){
+  const E=expectParty(L,ch), def=Math.round(E.fAtk*.55*(o.def||1)), per=(E.fAtk-def/2)/2;
+  let dpt=0; for(const c of E.who){ if(c==='hero') dpt+=per*(E.who.length>1?.65:1); if(c==='gou') dpt+=per*1.35; if(c==='mira') dpt+=E.spell*.85; }
+  const exp=Math.round((expFor(L+1)-expFor(L))*(o.expMul||1.2));
+  return {hp:Math.round(dpt*(o.turns||12)*(o.hp||1)),atk:Math.round((.36*E.hpAvg+E.def/2)*(o.atk||1)),def,agi:Math.round(E.agi*1.1),
+    exp,g:Math.round(exp*1.2),hpRef:Math.round(E.hpAvg),boss:1,ml:L};
+}
+function fmon(n,s,p,ML,ch,arch,sk,extra){return Object.assign({n,s,p,sk},fstat(ML,ch,arch),extra||{});}
+
+/* さいせってい：しょうに あわせて ばしょの つよさを そろえる */
+for(const [id,ML,ch,a] of [['bfrog',3,1,'norm'],['sbat',3,1,'fast'],['dorat',7,2,'norm'],['sludge',7,2,'tank'],
+  ['ghoul',17,5,'brute'],['wisp',16,5,'mage'],['magman',27,8,'tank'],['firebird',27,8,'fast'],
+  ['dmage',48,16,'mage'],['bgolem',49,16,'tank'],['sdragon',49,16,'brute']]) Object.assign(MON[id],fstat(ML,ch,a));
+MON.korin.atk=4; MON.rat.atk=6;
+// しょうボス（1〜6）
+Object.assign(MON.nushi,bstat(5,1,{turns:8,atk:.85}),{scale:3.6});
+Object.assign(MON.ratking,bstat(8,2,{turns:10}));
+Object.assign(MON.guardian,bstat(11,3,{turns:11,def:.9}));
+Object.assign(MON.witch,bstat(15,4,{turns:11}));
+Object.assign(MON.boneking,bstat(18,5,{turns:12}));
+Object.assign(MON.zolga,bstat(21,6,{turns:13}),{scale:4});
+
+/* あたらしい モンスター */
+const MS=(n,s,p,ML,ch,arch,sk,extra)=>fmon(n,s,p,ML,ch,arch,sk,extra);
+const M_=(t,r,m,o)=>Object.assign({t,r,m},o||{});
+Object.assign(MSPR,{
+ crab:["................",".kk..........kk.","k11k........k11k","k1kk........kk1k","k11k..k..k..k11k",".kk1k.w..w.k1kk.",
+  "...kk111111kk...","..k1111111111k..",".k122111111221k.",".k111111111111k.","..k1111111111k..",".k.kk1kkkk1kk.k.","k.k..k....k..k.k","................","................","................"],
+ scorp:["............kk..","...........k11k.","...........k1k..","..........k11k..","..........k1k...",".kk.......k1k...",
+  "k11k.....k11k...","k1k.kkkkk11k....",".kk1111111k.....","..k1e1e1111k....",".k111111111k....","k.k2k2k2k2k.....","................","................","................","................"],
+ lord:["....k.k.k.k.....","....k3k3k3k.....","....k33333k.....","...kwwwwwwwk....","...kwwewewwk....","...kwwwkwwwk....",
+  "..kk1kwwwk1kk...",".k2111k1k1112k..","k22111131111122k","k22111131111122k","k22111133111122k","k22111133111122k",
+  "k22111111111122k","k22121212121222k","kkkkkkkkkkkkkkkk","................"],
+});
+const SHIP_ART=art(["......k.........","......kk........","......kwk.......","......kwwk......","......kwwwk.....","......kwwwwk....",
+ "......kwwwwwk...","......kkkkkkkk..","......k.........",".kkkkkkkkkkkkkk.",".kooooooooooook.","..kooooooooook..","...kkkkkkkkkk...","................","................","................"],
+ {k:'#2a160a',w:'#f4f0e0',o:'#a8642c'});
+const WHALE_ART=art(["................","................","....kkkkkk......","..kk111111kk....",".k11111111111k..","k1we111111111k.k",
+ "k11111111111111k","k12222222221111k",".k222222221111kk","..kk2222kkk11k.k","....kkkk...kk...","................","................","................","................","................"],
+ {k:'#1a1a40',1:'#5a7ad0',2:'#e8e8f8',w:'#ffffff',e:'#000000'});
+Object.assign(MON,{
+ // 7しょう：うみと シオサイ
+ crab:MS('おおガニ','crab',{1:'#d84a2a',2:'#8a2a1a'},22,7,'tank'),
+ jelly:MS('クラゲン','seed',{1:'#f0a0d0',2:'#c070a0',3:'#80c0ff'},22,7,'mage',[M_('sleep1',.25,'%sは しびれる しょくしゅを のばした！')]),
+ umiboz:MS('うみぼうず','ghost',{1:'#6a8aa8',2:'#3a5a78',e:'#ffe040'},23,7,'norm',[M_('mag',.3,'%sは みずの たまを はなった！',{f:.12})]),
+ tobiuo:MS('トビウオン','bat',{1:'#c0d0e0',2:'#7a90a8',e:'#203040'},22,7,'fast'),
+ pirate:MS('かいぞくホネ','skel',{w:'#e8e0d0',2:'#c03030',e:'#ffe040'},23,7,'norm',[M_('str',.2,'%sは カトラスを ふりまわした！')]),
+ crab2:MS('よろいガニ','crab',{1:'#5a6a8a',2:'#2a3a5a'},25,7,'tank'),
+ capghost:MS('ゆうれいせんちょう','knight',{1:'#4a6a6a',2:'#2a4040',3:'#d0f0e0',e:'#80ffd0'},25,7,'brute',[M_('sleep1',.2,'%sは のろいの うたを うたった！')]),
+ seasnake:MS('うみヘビ','snake',{1:'#2a8aa0',2:'#1a5a70'},24,7,'fast',[M_('poison',.3,'%sは どくの キバで かみついた！')]),
+ // 8しょう：ほのおのやま
+ lavaliz:MS('ようがんトカゲ','beast',{1:'#a02a10',2:'#601a0a',3:'#ffb030',e:'#ffff60'},27,8,'brute',[M_('breath',.25,'%sは ほのおを はいた！',{f:.1})]),
+ flamewisp:MS('ほのおのせい','ghost',{1:'#ff8040',2:'#c04010',e:'#fff080'},26,8,'mage',[M_('mag',.35,'%sは ほのおを はなった！',{f:.16})]),
+ // 9しょう：こおりの くに
+ yeti:MS('イエティ','golem',{1:'#e8f0f8',2:'#a8b8c8',e:'#2040a0'},30,9,'brute',[M_('str',.2,'%sは こおりの こぶしを ふりおろした！')]),
+ iceflower:MS('こおりバナ','plant',{1:'#c0e8ff',2:'#3a8a8a',3:'#80b0ff'},29,9,'mage',[M_('sleepAll',.25,'%sは こおりの かふんを まきちらした！ からだが こおりつく！')]),
+ snowwolf:MS('ゆきおおかみ','beast',{1:'#e0e8f0',2:'#90a0b8',3:'#203040',e:'#40a0ff'},29,9,'fast',[M_('str',.2,'%sは するどい キバで かみついた！')]),
+ icespirit:MS('こおりのせい','ghost',{1:'#a0e0ff',2:'#5aa0d0',e:'#ffffff'},30,9,'mage',[M_('mag',.35,'%sは つららを とばした！',{f:.16})]),
+ frostknight:MS('こおりのきし','knight',{1:'#8ab0d0',2:'#4a70a0',3:'#e0f0ff',e:'#40e0ff'},31,9,'tank'),
+ umioni:MS('うみおに','knight',{1:'#2a7a7a',2:'#1a4a4a',3:'#c0e0d0',e:'#ff4040'},29,9,'brute'),
+ icejelly:MS('こおりクラゲ','seed',{1:'#c0e0ff',2:'#80a0d0',3:'#ffffff'},29,9,'mage',[M_('sleep1',.25,'%sは つめたい しょくしゅを のばした！')]),
+ // 10しょう：すなの おうこく
+ scorp:MS('さばくサソリ','scorp',{1:'#c8a050',2:'#8a6a30',e:'#ff2020'},32,10,'norm',[M_('poison',.3,'%sは どくばりで さした！')]),
+ cactus:MS('とげサボテン','plant',{1:'#e8e0a0',2:'#3a8a3a',3:'#5ab05a'},32,10,'tank',[M_('breath',.25,'%sは とげを とばした！',{f:.09})]),
+ mummy:MS('ほうたいおとこ','skel',{w:'#e0d8b8',2:'#8a7a5a',e:'#ff4040'},33,10,'brute',[M_('mist',.2,'%sは くさった いきを はいた！',{f:.08})]),
+ sandliz:MS('すなトカゲ','beast',{1:'#d8b870',2:'#a08040',3:'#603010',e:'#1a1a1a'},32,10,'fast'),
+ sandmage:MS('すなの まどうし','mage',{1:'#c8a050',2:'#8a6a30',3:'#40a0ff',e:'#ff2020'},34,10,'mage',[M_('sleepAll',.2,'%sは ねむりの すなを まきあげた！'),M_('mag',.25,'%sは ほのおの じゅもんを となえた！',{f:.16})]),
+ shark:MS('キバザメ','beast',{1:'#5a7aa0',2:'#3a5070',3:'#ffffff',e:'#000000'},32,10,'fast',[M_('str',.25,'%sは するどい キバで かみついた！')]),
+ deepcrab:MS('しんかいガニ','crab',{1:'#7a3aa0',2:'#4a1a6a'},32,10,'tank'),
+ // 12しょう：そら
+ thunderbird:MS('かみなりドリ','bat',{1:'#f0d040',2:'#a08010',e:'#ffffff'},38,12,'fast',[M_('mag',.3,'%sは いかずちを よんだ！',{f:.15})]),
+ cloudspirit:MS('くものせい','ghost',{1:'#ffffff',2:'#c0c8e0',e:'#4060c0'},37,12,'mage',[M_('sleepAll',.2,'%sは ねむりの きりを はなった！')]),
+ skyknight:MS('そらのきし','knight',{1:'#e8e8f0',2:'#a0a8c0',3:'#f0d040',e:'#40a0ff'},38,12,'norm',[M_('str',.25,'%sは やりで つらぬいた！')]),
+ harpy:MS('ハーピィ','bat',{1:'#f0a0c0',2:'#c06090',e:'#ffe040'},37,12,'norm',[M_('sleep1',.2,'%sは あやしい うたを うたった！')]),
+ stormdrake:MS('ストームドラゴン','dragon',{1:'#4ab080',2:'#2a7050',3:'#e0f0c0'},39,12,'brute',[M_('breath',.25,'%sは あらしの ブレスを はいた！',{f:.12})]),
+ // 13しょう：やみの しんでん
+ nightknight:MS('あんこくきし','knight',{1:'#3a2a4a',2:'#1a1028',3:'#c04060',e:'#ff2040'},42,13,'brute',[M_('str',.25,'%sは やみの つるぎを ふりおろした！')]),
+ nightmare:MS('ナイトメア','ghost',{1:'#6a3a8a',2:'#3a1a5a',e:'#ff40ff'},41,13,'mage',[M_('sleepAll',.2,'%sは わるい ゆめを みせた！'),M_('mag',.25,'%sは やみの ほのおを はなった！',{f:.16})]),
+ deathscorp:MS('デスサソリ','scorp',{1:'#3a3a3a',2:'#1a1a1a',e:'#ff2020'},42,13,'norm',[M_('poison',.35,'%sは もうどくの はりで さした！')]),
+ demoneye:MS('あくまのめだま','bat',{1:'#8a2040',2:'#4a1020',e:'#ffff40'},41,13,'fast',[M_('mag',.3,'%sは あやしい ひかりを はなった！',{f:.14})]),
+ // 14しょう：ノクスの しろ
+ maryu:MS('まりゅう','dragon',{1:'#3a1a2a',2:'#6a1a3a',3:'#c0a080'},45,14,'brute',[M_('breath',.25,'%sは やみの ブレスを はいた！',{f:.13})]),
+ voidmage:MS('こくうの まどうし','mage',{1:'#1a1a3a',2:'#0a0a1a',3:'#40ffff',e:'#ff40ff'},45,14,'mage',[M_('mag',.3,'%sは こくうの いかずちを よんだ！',{f:.17}),M_('sleepAll',.15,'%sは ねむりの じゅもんを となえた！')]),
+ blackgolem2:MS('こくようゴーレム','golem',{1:'#2a2a3a',2:'#14141e',e:'#40ffff'},46,14,'tank'),
+ hellknight:MS('じごくの きし','knight',{1:'#5a1010',2:'#300808',3:'#e0a040',e:'#ffff40'},45,14,'norm',[M_('str',.25,'%sは ほのおの つるぎを ふりおろした！')]),
+});
+// しょうボス（7〜15）。 ai:'gen' は だんかい（phases）と よこく（prep）を もつ
+const B_=(o)=>Object.assign({ai:'gen'},o);
+Object.assign(MON,{
+ jabara:B_(Object.assign({n:'おおうみへび ジャバラ',s:'snake',p:{1:'#2a6ab0',2:'#1a3a70',e:'#ffe040'},scale:4.2},bstat(25,7,{turns:12}),{
+  phases:[{moves:[M_('attack',4),M_('breath',3,'ジャバラは おおなみを よびおこした！',{f:.14}),M_('poison',2,'ジャバラは どくの キバで かみついた！')]},
+          {at:.5,acts:.5,say:'ジャバラ「シャアアッ！ うみの そこへ ひきずりこんでやる！」',moves:[M_('attack',3),M_('breath',3,'ジャバラは おおなみを よびおこした！',{f:.15}),
+            M_('prep',2,'ジャバラは ふかく いきを すいこんだ！',{next:M_('breath',0,'ジャバラは だいうずしおを まきおこした！',{f:.3})})]}]})),
+ flamelord:B_(Object.assign({n:'ほのおの まじん',s:'golem',p:{1:'#e0401a',2:'#901a0a',e:'#ffff60'},p2:{1:'#ffb030',2:'#c04010',e:'#ffffff'},scale:4},bstat(28,8,{turns:12}),{
+  phases:[{moves:[M_('attack',4),M_('breath',3,'まじんは もえさかる ほのおを はいた！',{f:.13}),M_('charge',1,'まじんは ほのおを からだに ためている…')]},
+          {at:.5,alt:1,acts:.4,say:'まじん「グオオオ！ やまごと ふきとばして くれるわ！」',moves:[M_('attack',3),M_('breath',2,'まじんは もえさかる ほのおを はいた！',{f:.14}),
+            M_('prep',3,'まじんの からだが まっかに かがやきだした！',{next:M_('breath',0,'まじんは だいふんかを おこした！',{f:.32})})]}]})),
+ setsura:B_(Object.assign({n:'こおりの じょおう セツラ',s:'mage',p:{1:'#a0d0f0',2:'#5a90c0',3:'#ffffff',e:'#2040ff'},p2:{1:'#5ac0ff',2:'#2a70c0',3:'#e0ffff',e:'#ffffff'},scale:4},bstat(31,9,{turns:12}),{
+  phases:[{moves:[M_('attack',3),M_('mag',3,'セツラは こおりの やりを はなった！',{f:.2}),M_('sleepAll',2,'セツラの こおりつく いき！ からだが こおりついていく！',{ch:.3}),M_('heal',1,'セツラは こおりの けっしょうで きずを ふさいだ！',{f:.08,max:2})]},
+          {at:.45,alt:1,acts:.4,say:'セツラ「この くにの ように、 おまえたちも えいえんに こおりつくが よい！」',moves:[M_('mag',3,'セツラは こおりの やりを はなった！',{f:.22}),M_('breath',2,'セツラは ふぶきを よんだ！',{f:.14}),
+            M_('prep',2,'セツラの まわりの くうきが はりつめていく…',{next:M_('breath',0,'セツラの ぜったいれいど！',{f:.3})})]}]})),
+ zahar:B_(Object.assign({n:'すなの まおう ザハル',s:'lord',p:{1:'#c8a050',2:'#8a6a30',3:'#40c0ff',w:'#e8d8b0',e:'#ff2020'},scale:4},bstat(34,10,{turns:12}),{
+  phases:[{moves:[M_('attack',3),M_('summon',2,'ザハルは ほうたいおとこを よびだした！',{id:'mummy'}),M_('mist',2,'ザハルは どくの すなあらしを おこした！',{f:.1}),M_('mag',2,'ザハルは のろいの ほのおを はなった！',{f:.2})]},
+          {at:.5,acts:.45,say:'ザハル「おうこくの すなと なれ！」',moves:[M_('attack',3),M_('summon',1,'ザハルは ほうたいおとこを よびだした！',{id:'mummy'}),M_('mist',2,'ザハルは どくの すなあらしを おこした！',{f:.11}),
+            M_('prep',2,'ザハルは おおきく りょうてを ひろげた！',{next:M_('breath',0,'ザハルの さばくの いかり！',{f:.3})})]}]})),
+ galva:B_(Object.assign({n:'やみの しょうぐん ガルヴァ',s:'knight',p:{1:'#2a2a3a',2:'#14141e',3:'#e0b040',e:'#ff2040'},p2:{1:'#5a1a2a',2:'#2a0a14',3:'#ffd060',e:'#ffffff'},scale:4.2},bstat(36,11,{turns:12}),{
+  phases:[{acts:.35,moves:[M_('attack',5),M_('charge',2,'ガルヴァは けんを たかく かまえた…'),M_('breath',2,'ガルヴァは やみの けんあつを はなった！',{f:.14})]},
+          {at:.5,alt:1,acts:.6,say:'ガルヴァ「ノクスさまの ために！ ここで ちれ！」',moves:[M_('attack',4),M_('charge',2,'ガルヴァは けんを たかく かまえた…'),M_('breath',3,'ガルヴァは やみの けんあつを はなった！',{f:.15})]}]})),
+ tempes:B_(Object.assign({n:'あらしの りゅう テンペス',s:'dragon',p:{1:'#3a9a6a',2:'#1a6a4a',3:'#e0f0c0'},p2:{1:'#3a6ad0',2:'#1a3a90',3:'#ffffff'},scale:4.5},bstat(40,12,{turns:13}),{
+  phases:[{moves:[M_('attack',3),M_('breath',3,'テンペスは あらしの ブレスを はいた！',{f:.14}),M_('sleepAll',1,'テンペスの かみなりの ほうこう！ からだが しびれる！',{ch:.25}),M_('poison',1,'テンペスは どくの つめで ひっかいた！')]},
+          {at:.5,alt:1,acts:.5,say:'テンペス「そらは わたしの もの！ ちに おちるが よい！」',moves:[M_('attack',3),M_('breath',2,'テンペスは あらしの ブレスを はいた！',{f:.15}),M_('summon',1,'テンペスは ストームドラゴンを よびよせた！',{id:'stormdrake'}),
+            M_('prep',2,'テンペスの まわりに あらしが うずまきはじめた！',{next:M_('breath',0,'テンペスの だいせんぷう！',{f:.32})})]}]})),
+ zero:B_(Object.assign({n:'ふたごの きし ゼロ',s:'knight',p:{1:'#e8e8f0',2:'#9090a8',3:'#f0d040',e:'#40a0ff'},scale:3.4},bstat(43,13,{turns:7,hp:.95}),{
+  phases:[{moves:[M_('attack',5),M_('charge',2,'ゼロは けんを しずかに かまえた…'),M_('breath',2,'ゼロの つばめがえし！',{f:.13})]},
+          {at:.5,acts:.5,say:'ゼロ「ネロ、 ほんきで いくぞ！」',moves:[M_('attack',5),M_('charge',2,'ゼロは けんを しずかに かまえた…'),M_('breath',2,'ゼロの つばめがえし！',{f:.14})]}]})),
+ nero:B_(Object.assign({n:'ふたごの きし ネロ',s:'knight',p:{1:'#2a2a3a',2:'#14141e',3:'#c04060',e:'#ff2040'},scale:3.4},bstat(43,13,{turns:6,hp:.85,atk:.9}),{
+  phases:[{moves:[M_('attack',3),M_('mag',3,'ネロは やみの いかずちを よんだ！',{f:.2}),M_('sleepAll',2,'ネロは ねむりの じゅもんを となえた！',{ch:.3}),M_('healAlly',2,'ネロは いやしの じゅもんを となえた！',{f:.1})]}]})),
+ zolga2:B_(Object.assign({n:'ゾルガ（よみがえり）',s:'mage',p:{1:'#3a2058',2:'#1e1032',3:'#e8c040',e:'#ff2040'},p2:{1:'#6a1030',2:'#3a0818',3:'#ffe070',e:'#ffffff'},scale:4},bstat(45,14,{turns:12}),{
+  phases:[{moves:[M_('attack',3),M_('breath',3,'ゾルガは いかずちの あらしを よびよせた！',{f:.14}),M_('mist',2,'ゾルガは やみの いきを はきだした！',{f:.1}),M_('sleepAll',1,'ゾルガは ねむりの じゅもんを となえた！',{ch:.25})]},
+          {at:.5,alt:1,acts:.5,say:'ゾルガ「ノクスさまに いただいた この ちから… こんどこそ まけぬ！」',moves:[M_('attack',3),M_('mag',3,'ゾルガは やみの ほのおを はなった！',{f:.26}),M_('breath',3,'ゾルガは いかずちの あらしを よびよせた！',{f:.15})]}]})),
+ nox:B_(Object.assign({n:'やみの そらのおう ノクス',s:'lord',p:{1:'#2a1a4a',2:'#140a28',3:'#e8c040',w:'#c8c0e0',e:'#ff2040'},
+  form2:{n:'ノクス（しんのすがた）',s:'dragon',p:{1:'#1a1030',2:'#4a2070',3:'#c0a0ff',e:'#ff2040'},scale:4.4},scale:4.2},bstat(47,15,{turns:20}),{
+  phases:[{moves:[M_('attack',3),M_('breath',3,'ノクスは やみの いかずちを ふらせた！',{f:.13}),M_('sleepAll',1,'ノクスは まどろみの ほしを ひからせた！',{ch:.25}),M_('mist',2,'ノクスは どくの きりを はなった！',{f:.09})]},
+          {at:.6,form:1,acts:.45,say:'ノクス「…よかろう。 わが しんの すがたを みせよう。 ほしを くらう やみの りゅうの すがたを！」',moves:[M_('attack',3),M_('breath',3,'ノクスは やみの ブレスを はいた！',{f:.15}),M_('summon',1,'ノクスは まりゅうを よびだした！',{id:'maryu'}),M_('charge',1,'ノクスは つめを とぎすましている…')]},
+          {at:.25,acts:.6,say:'ノクス「ほしよ、 きえよ！ すべてを やみに かえして くれる！」',moves:[M_('attack',2),M_('breath',3,'ノクスは やみの ブレスを はいた！',{f:.15}),M_('mag',2,'ノクスは ほしくらいの かみつきを はなった！',{f:.3}),
+            M_('prep',3,'ノクスは よぞらの ほしを のみこみはじめた…！',{next:M_('breath',0,'ノクスの ほしくずの おわり！',{f:.34})})]}]})),
+});
+// ほしくい りゅう（クリアご）も だんかいつきに
+MON.stardragon=B_(Object.assign({n:'ほしくい りゅう',s:'dragon',p:{1:'#3a2a7a',2:'#7a4ac0',3:'#e8d080'},p2:{1:'#7a2a7a',2:'#c04ac0',3:'#fff0a0'},scale:4.5},bstat(50,16,{turns:20,atk:1.1}),{
+  phases:[{acts:.4,moves:[M_('attack',3),M_('breath',3,'ほしくい りゅうは ほしくずの ブレスを はいた！',{f:.15}),M_('sleepAll',1,'ほしくい りゅうは まばゆい ひかりを はなった！',{ch:.3}),M_('mist',2,'ほしくい りゅうは やみの きりを はきだした！',{f:.1})]},
+          {at:.5,alt:1,acts:.6,say:'ほしくい りゅう「おもしろい！ ほんきを だそう！」',moves:[M_('attack',3),M_('breath',3,'ほしくい りゅうは ほしくずの ブレスを はいた！',{f:.16}),M_('charge',1,'ほしくい りゅうは しっぽを ふりあげた…'),
+            M_('prep',2,'ほしくい りゅうの くちに ほしの ひかりが あつまっていく…！',{next:M_('breath',0,'ほしくい りゅうの スターバースト！',{f:.36})})]}]}));
+Object.assign(MON.nushi,{ai:'gen',phases:[
+  {moves:[M_('attack',4),M_('breath',2,'%sは みずでっぽうを はきだした！',{f:.12}),M_('sleep1',2,'%sは ねむくなる うたを うたった！')]},
+  {at:.5,acts:.25,say:'ぬし「ゴボゴボ…！ ゆるさんぞ！」',moves:[M_('attack',4),M_('breath',2,'%sは みずでっぽうを はきだした！',{f:.13}),M_('sleep1',2,'%sは ねむくなる うたを うたった！'),M_('charge',1,'%sは おおきく いきを すいこんだ…')]}]});
+Object.assign(MON.ratking,{ai:'gen',phases:[
+  {moves:[M_('attack',4),M_('poison',3,'%sは どくの キバで かみついた！'),M_('breath',1,'%sは ネズミの むれを けしかけた！',{f:.1})]},
+  {at:.5,acts:.3,say:'ネズミの おう「チューッ！ けらいども、 であえ！」',moves:[M_('attack',3),M_('summon',2,'%sは どぶネズミを よびよせた！',{id:'dorat'}),M_('poison',3,'%sは どくの キバで かみついた！')]}]});
+Object.assign(MON.guardian,{ai:'gen',phases:[
+  {moves:[M_('attack',4),M_('charge',2,'%sは ちからを ためている…'),M_('breath',1,'%sは じめんを たたきつけた！',{f:.12})]},
+  {at:.5,alt:1,acts:.3,say:'ばんにん「…ゴゴゴ… かならず うちくだく…！」',moves:[M_('attack',3),M_('charge',1,'%sは ちからを ためている…'),
+    M_('prep',2,'%sは りょううでを たかく ふりあげた！',{next:M_('breath',0,'%sの だいちを くだく いちげき！',{f:.28})})]}]});
+Object.assign(MON.witch,{ai:'gen',phases:[
+  {moves:[M_('attack',2),M_('sleepAll',2,'ネムリアは ねむりの うたを うたった！',{ch:.35}),M_('mist',2,'ネムリアは どくの きりを はきだした！',{f:.08}),M_('mag',3,'ネムリアは ほのおの じゅもんを となえた！',{f:.2}),M_('heal',1,'ネムリアは いやしの うたを うたった！',{f:.1,max:2})]},
+  {at:.5,acts:.4,say:'ネムリア「…ねむりなさい。 えいえんに！」',moves:[M_('attack',2),M_('sleepAll',2,'ネムリアは ねむりの だいがっしょうを はじめた！',{ch:.4}),M_('mist',2,'ネムリアは どくの きりを はきだした！',{f:.09}),M_('mag',3,'ネムリアは ほのおの じゅもんを となえた！',{f:.22})]}]});
+Object.assign(MON.boneking,{ai:'gen',phases:[
+  {moves:[M_('attack',3),M_('summon',2,'%sは ほねのへいを よびだした！',{id:'skel'}),M_('mist',2,'%sは のろいの いきを はいた！',{f:.1}),M_('str',1,'%sは ほねの つるぎを ふりおろした！')]},
+  {at:.5,alt:1,acts:.4,say:'ほねの おう「…なんぜんねんの いかりを みよ！」',moves:[M_('attack',3),M_('sleepAll',1,'%sは ぶきみな こえで さけんだ！',{ch:.3}),M_('mist',2,'%sは のろいの いきを はいた！',{f:.11}),M_('summon',1,'%sは ほねのへいを よびだした！',{id:'skel'}),
+    M_('prep',1,'%sは ほねの つるぎに のろいを こめはじめた…',{next:M_('breath',0,'%sの のろいの おおなぎ！',{f:.28})})]}]});
+Object.assign(MON.zolga,{ai:'gen',phases:[
+  {moves:[M_('attack',3),M_('breath',3,'ゾルガは いかずちの あらしを よびよせた！',{f:.13}),M_('sleepAll',1,'ゾルガは やみの いきを はきだした！',{ch:.25}),M_('heal',1,'ゾルガは やみの ちからで きずを いやした！',{f:.07,max:2})]},
+  {at:.5,alt:1,acts:.5,say:'ゾルガ「おのれ…！ ならば しんの すがたを みせてやろう！」',moves:[M_('attack',3),M_('mag',3,'ゾルガは やみの ほのおを はなった！',{f:.28}),M_('breath',3,'ゾルガは いかずちの あらしを よびよせた！',{f:.14})]}]});
+for(const id of ['nushi','ratking','guardian','witch','boneking','zolga']) delete MON[id].sk;
+MON.skel.summonOK=1;
+MON.mummy.summoned=1;
+MON.nero.exp=Math.round(MON.nero.exp*.2); MON.nero.g=Math.round(MON.nero.g*.2); MON.stardragon.exp=8000; MON.stardragon.g=5000; MON.nox.exp=0; MON.nox.g=0; MON.zolga2.exp=Math.round(MON.zolga2.exp*.8);
+
+/* ボスの ちょうせい：せっけいしょ §6 の じどう テストプレイで きめた ばいりつ（hp=HP、dmg=こうげき） */
+/* ばしょごとの けいけんち ばいりつ：ふつうに すすめて しょうの もくひょうLvに とどくように（せっけいしょ §3） */
+const EXPMUL={"1":1.04,"2":0.5,"3":0.35,"lake":1.04,"sewer":0.5,"cave":0.96,"east":0.67,"tower":0.67,"crypt":0.35,"castle":0.43,"sea1":0.55,"seacave":0.55,"volcano":0.55,"ice":0.39,"icet":0.39,"desert":0.26,"pyr":0.26,"sea3":0.52,"sky":0.43,"sky2":0.43,"dark":0.28,"nox":0.24,"coast":0.55,"sea2":0.39,"abyss":1};
+/* ざこの つよさ：でてくる ばしょの そうていレベル（ML）から しきで きめる */
+const ZONE_ML={1:[3,1],lake:[3,1],2:[6,2],sewer:[7,2],cave:[10,3],east:[13,4],tower:[14,4],3:[17,5],crypt:[17,5],castle:[20,6],sea1:[23,7],coast:[23,7],seacave:[24,7],
+  volcano:[27,8],ice:[30,9],icet:[31,9],sea2:[30,9],desert:[33,10],pyr:[34,10],sea3:[34,10],sky:[38,12],sky2:[39,12],dark:[42,13],nox:[45,14],abyss:[49,16]};
+const ARCH_OF={golem:'tank',crab:'tank',crab2:'tank',cactus:'tank',bgolem:'tank',blackgolem2:'tank',frostknight:'tank',deepcrab:'tank',sludge:'tank',
+  bat:'fast',eyebat:'fast',tobiuo:'fast',firebird:'fast',thunderbird:'fast',demoneye:'fast',sbat:'fast',shark:'fast',sandliz:'fast',snowwolf:'fast',seasnake:'fast',rabbit:'fast',
+  sorc:'mage',lamp:'mage',lampS:'mage',jelly:'mage',icejelly:'mage',flamewisp:'mage',icespirit:'mage',sandmage:'mage',cloudspirit:'mage',nightmare:'mage',voidmage:'mage',
+  flower:'mage',iceflower:'mage',shroom:'mage',wisp:'mage',crow:'mage',dmage:'mage',
+  wolf:'brute',ghoul:'brute',lavaliz:'brute',yeti:'brute',mummy:'brute',capghost:'brute',stormdrake:'brute',nightknight:'brute',maryu:'brute',sdragon:'brute',umioni:'brute',dknight:'brute',lizard:'brute'};
+const NMUL={hp:1,atk:1};
+// なかまが すくない じょばんは よわめ、 4にん そろってからは つよめ（ざこせんで HPの 1〜2わりを けずる めやす）
+const ZONE_MUL={1:{hp:.45,atk:.55},lake:{hp:.45,atk:.55},2:{hp:.6,atk:.75},sewer:{hp:.6,atk:.7},cave:{hp:.75,atk:.8},east:{hp:.95,atk:1.05},tower:{hp:.95,atk:1.05},
+  3:{hp:.9,atk:.85},crypt:{hp:.9,atk:.85},castle:{hp:.85,atk:.8}};
+const ZM_DEFAULT={hp:1.2,atk:1.3};
+const LV_OF_CH=[0,5,8,11,15,18,21,25,28,31,34,36,40,43,46,47,50];
+const chOfLevel=L=>{const i=LV_OF_CH.findIndex(t=>t>=L); return i<1?16:i;};
+function scaledMon(id,L,ch,zone){
+  const d=MON[id], st=fstat(L,ch,ARCH_OF[id]||'norm'), zm=ZONE_MUL[zone]||ZM_DEFAULT;
+  return Object.assign({},d,{hp:Math.round(st.hp*NMUL.hp*zm.hp),atk:Math.round(st.atk*NMUL.atk*zm.atk),def:st.def,agi:st.agi,exp:st.exp,g:st.g,hpRef:st.hpRef,ml:L});
+}
+const TUNE={"nushi":{"hp":0.69,"dmg":1.3},"ratking":{"hp":0.48,"dmg":2.33},"guardian":{"hp":0.99,"dmg":2.23},"witch":{"hp":0.88,"dmg":2.5},"boneking":{"hp":0.89,"dmg":2.13},"zolga":{"hp":0.88,"dmg":2.33},"jabara":{"hp":1.17,"dmg":2.33},"flamelord":{"hp":1.47,"dmg":2.35},"setsura":{"hp":1.36,"dmg":2.7},"zahar":{"hp":1.36,"dmg":2.7},"galva":{"hp":1.29,"dmg":2.83},"tempes":{"hp":1.33,"dmg":2.44},"zero":{"hp":1.38,"dmg":3.17},"nero":{"hp":1.38,"dmg":3.17},"zolga2":{"hp":1.77,"dmg":2.83},"nox":{"hp":1.6,"dmg":1.78},"stardragon":{"hp":1.3,"dmg":1.9}};
+function applyTune(){for(const [id,t] of Object.entries(TUNE)){const m=MON[id]; if(!m) continue; m.base=m.base||{hp:m.hp,atk:m.atk};
+  m.hp=Math.round(m.base.hp*(t.hp||1)); m.atk=Math.round(m.base.atk*(t.dmg||1)); m.dmg=t.dmg||1;}}
+applyTune();
+Object.assign(ENC,{
+ lake:[['bfrog'],['bfrog','sbat'],['sbat'],['korin','bfrog'],['bfrog','bfrog']],
+ coast:[['crab','pirate'],['pirate'],['jelly','tobiuo'],['pirate','pirate'],['umiboz','crab'],['jelly','jelly','tobiuo']],
+ sea1:[['crab'],['jelly','jelly'],['umiboz'],['tobiuo','tobiuo'],['crab','jelly'],['umiboz','tobiuo']],
+ seacave:[['crab2'],['capghost'],['seasnake','seasnake'],['crab2','seasnake'],['capghost','umiboz'],['seasnake','jelly','seasnake']],
+ volcano:[['magman'],['firebird','firebird'],['lavaliz'],['magman','flamewisp'],['lavaliz','firebird'],['flamewisp','flamewisp','firebird']],
+ ice:[['yeti'],['iceflower','snowwolf'],['snowwolf','snowwolf'],['icespirit','yeti'],['iceflower','icespirit','snowwolf']],
+ icet:[['frostknight'],['yeti','icespirit'],['frostknight','iceflower'],['snowwolf','snowwolf','icespirit'],['icespirit','icespirit']],
+ sea2:[['umioni'],['icejelly','icejelly'],['umioni','icejelly'],['shark']],
+ desert:[['scorp'],['cactus','scorp'],['mummy'],['sandliz','sandliz'],['sandmage','mummy'],['scorp','scorp','sandliz']],
+ pyr:[['mummy','mummy'],['sandmage','scorp'],['mummy','sandmage'],['scorp','scorp','mummy'],['sandliz','sandmage','sandliz']],
+ sea3:[['shark'],['deepcrab'],['shark','shark'],['deepcrab','shark']],
+ sky:[['thunderbird','thunderbird'],['cloudspirit','harpy'],['skyknight'],['harpy','harpy','cloudspirit'],['skyknight','thunderbird']],
+ sky2:[['stormdrake'],['skyknight','cloudspirit'],['thunderbird','thunderbird','harpy'],['stormdrake','harpy'],['skyknight','skyknight']],
+ dark:[['nightknight'],['nightmare','demoneye'],['deathscorp','deathscorp'],['nightknight','nightmare'],['demoneye','demoneye','deathscorp']],
+ nox:[['maryu'],['voidmage','hellknight'],['blackgolem2'],['hellknight','hellknight'],['maryu','voidmage'],['voidmage','voidmage','hellknight']],
+});
+
+/* ---------- タイル（あたらしい ちけい） ---------- */
+function buildTiles2(){
+  const T=(ch,fn)=>{TILES[ch]=[mkTile(g=>fn(g,0)),mkTile(g=>fn(g,1))];};
+  const BR=(g,b,m,h)=>{R(g,b,0,0,16,16); for(let y=0;y<16;y+=4){R(g,m,0,y+3,16,1); for(let x=(y/4)%2?4:0;x<16;x+=8) R(g,m,x,y,1,3);} R(g,h,2,0,4,1); R(g,h,10,4,4,1);};
+  const FL=(g,b,d,l,seed)=>{R(g,b,0,0,16,16); const r=prng(seed); for(let i=0;i<8;i++){R(g,d,(r()*16)|0,(r()*16)|0); R(g,l,(r()*16)|0,(r()*16)|0);}};
+  const snow=g=>FL(g,'#e8eef6','#c8d4e2','#ffffff',71);
+  const tree2=art(TREE,{k:'#173f3a',G:'#2e6a5a',g:'#e8f0f8',t:'#5a4433'});
+  const palm=art(["k.kk.kk.","kGGkGGk.",".kGGGk..","kGGkGGk.","...kt...","...kt...","...kt...","..kttk.."],{k:'#1a3a10',G:'#3a9a2a',t:'#8a6a3a'});
+  T('z',snow); T('P',g=>{snow(g); g.drawImage(tree2,0,0); g.drawImage(tree2,8,3); g.drawImage(tree2,3,8);});
+  T('y',g=>{snow(g); g.drawImage(tree2,0,0); g.drawImage(tree2,8,3); g.drawImage(tree2,3,8);});
+  T('k',g=>{sand(g); g.drawImage(palm,1,2); g.drawImage(palm,8,6);});
+  T('o',g=>{FL(g,'#f4f6ff','#dce2f6','#ffffff',72); R(g,'#e0e6fa',3,5,6,2); R(g,'#e0e6fa',9,11,5,2);});
+  T('x',g=>FL(g,'#3a2a44','#2a1e34','#4e3a5a',73));
+  T('D',g=>BR(g,'#c8a868','#8a7040','#e8d098'));
+  T('g',g=>{FL(g,'#b8d8f0','#98bcd8','#e8f6ff',74); R(g,'#ffffff',3,4,4,1); R(g,'#ffffff',10,11,3,1);});
+  T('h',g=>BR(g,'#6a98c0','#3a6890','#c8e8ff'));
+  T('b',g=>{R(g,'#d8c088',0,0,16,16); R(g,'#b8a068',0,7,16,1); R(g,'#b8a068',0,15,16,1); R(g,'#b8a068',7,0,1,8); R(g,'#b8a068',15,8,1,8);});
+  T('v',g=>BR(g,'#d8dcef','#a8b0d0','#ffffff'));
+  T('w',g=>{R(g,'#eef0fa',0,0,16,16); R(g,'#c8cce4',0,7,16,1); R(g,'#c8cce4',0,15,16,1); R(g,'#c8cce4',7,0,1,8); R(g,'#c8cce4',15,8,1,8); R(g,'#f0d870',3,3,1,1);});
+  T('m',g=>BR(g,'#2a1a30','#140a18','#4a2a50'));
+  T('l',g=>{BR(g,'#1a1428','#0a0814','#3a2a58'); R(g,'#c8a0ff',7,7,2,2);});
+  const pal={k:'#2a1a14',R:'#c8463a',W:'#f2e2c2',d:'#4a2a18'};
+  T('1',g=>{sand(g); g.drawImage(art(HOUSE,Object.assign({},pal,{R:'#3a78c8'})),1,7); g.drawImage(art(HOUSE,Object.assign({},pal,{R:'#ffffff'})),8,3); R(g,'#5a3a1a',13,12,3,1);});
+  T('2',g=>{grass(g,41); g.drawImage(art(HOUSE,Object.assign({},pal,{R:'#8a2a1a'})),1,6); g.drawImage(art(HOUSE,Object.assign({},pal,{R:'#d86a2a'})),8,3);});
+  T('3',g=>{snow(g); g.drawImage(art(HOUSE,Object.assign({},pal,{R:'#f8fcff',W:'#a87a50'})),1,7); g.drawImage(art(HOUSE,Object.assign({},pal,{R:'#e8f0ff',W:'#a87a50'})),8,3);});
+  T('4',g=>{sand(g); g.drawImage(art(HOUSE,Object.assign({},pal,{R:'#e0a040',W:'#e8d0a0'})),1,7); g.drawImage(palm,8,2);});
+  T('5',g=>{TILES.o[0]&&g.drawImage(TILES.o[0],0,0); g.drawImage(art(TOWN,{k:'#4a4a6a',S:'#f0f0ff',B:'#f0c040',W:'#80c0ff',d:'#6a6a8a'}),1,5);});
+  T('6',g=>{mountain(g,false); R(g,'#3b2a1b',4,9,8,7); R(g,'#0a2a4a',5,10,6,6); R(g,'#4a90e0',5,14,6,2);});
+  T('7',g=>{snow(g); R(g,'#5a88b8',2,4,12,11); R(g,'#c8e8ff',3,5,10,9); for(const x of [4,7,10]) R(g,'#5a88b8',x,7,2,7); R(g,'#5a88b8',1,3,14,2);});
+  T('8',g=>{sand(g); for(let y=2;y<15;y++){const hw=Math.floor((y-1)*.6)+1; R(g,'#c8a048',8-hw,y,hw*2,1); R(g,'#a07830',8,y,hw,1);} R(g,'#2a1a08',7,11,2,4);});
+  T('9',g=>{TILES.o[0]&&g.drawImage(TILES.o[0],0,0); R(g,'#a8b0d0',5,1,6,15); R(g,'#eef0fa',6,2,4,13); R(g,'#5a6aa0',7,5,2,2); R(g,'#5a6aa0',7,10,2,2); R(g,'#f0d040',7,0,2,1);});
+  T('0',g=>{TILES.x[0]&&g.drawImage(TILES.x[0],0,0); R(g,'#140a18',2,3,12,12); R(g,'#4a2a50',3,4,10,10); for(const x of [4,8,11]) R(g,'#2a1a30',x,6,1,8); R(g,'#c040ff',7,1,2,2);});
+  T('!',g=>{TILES.x[0]&&g.drawImage(TILES.x[0],0,0); g.drawImage(art(CASTLE,{k:'#000000',R:'#5a0a1a',C:'#2a1a3a',d:'#ff2040'}),1,4);});
+  T('@',g=>{TILES.o[0]&&g.drawImage(TILES.o[0],0,0);});
+}
+for(const c of ['y','D','k','h','v','m','l']) SOLID.add(c);
+Object.assign(ENC_RATE,{z:20,P:12,o:18,x:15,g:16,b:16,w:16,'~':24});
+
+/* ---------- せかいちず の かくちょう（120×90） ---------- */
+const NEWICON={'1':'port','2':'kazan','3':'yukino','4':'alma','5':'lumina'};
+function buildWorld2(){
+  const W=120,H=90;
+  for(let y=0;y<WORLD.length;y++) WORLD[y]=WORLD[y]+'~'.repeat(W-WORLD[y].length);
+  while(WORLD.length<H) WORLD.push('~'.repeat(W));
+  const g=WORLD.map(r=>r.split(''));
+  const hsh=(x,y,s)=>{let h=(x*374761393+y*668265263+s*1442695041)>>>0; h=(h^(h>>>13))*1274126177>>>0; return ((h^(h>>>16))>>>0)/4294967296;};
+  const blob=(cx,cy,rx,ry,o)=>{
+    for(let y=Math.floor(cy-ry-2);y<=cy+ry+2;y++) for(let x=Math.floor(cx-rx-2);x<=cx+rx+2;x++){
+      if(y<1||x<1||y>=H-1||x>=W-1) continue;
+      const d=Math.hypot((x-cx)/rx,(y-cy)/ry)+(hsh(x,y,o.seed)-.5)*(o.wob??.18);
+      if(d>1) continue;
+      let c=o.ground;
+      if(o.ring&&d>.78) c='^';
+      else if(o.coast&&d>.82) c=o.coast;
+      else if(o.trees&&hsh(x,y,o.seed+1)<o.trees) c=o.tree;
+      else if(o.rocks&&hsh(x,y,o.seed+2)<o.rocks&&d<.7) c='^';
+      g[y][x]=c;
+    }
+  };
+  const put=(x,y,c,clear)=>{ for(const [dx,dy] of [[0,0],[1,0],[-1,0],[0,1],[0,-1]]) if(clear&&g[y+dy][x+dx]!=='~'&&g[y+dy][x+dx]!=='^') g[y+dy][x+dx]=clear; g[y][x]=c; };
+  blob(28,52,13,8,{seed:11,ground:'.',coast:':',trees:.14,tree:'T'});            // シオサイの たいりく
+  blob(92,14,15,9,{seed:12,ground:'z',trees:.16,tree:'P',rocks:.05});           // こおりの たいりく
+  blob(94,56,16,10,{seed:13,ground:':',trees:.04,tree:'k',rocks:.05});          // すなの たいりく
+  blob(62,74,9,6,{seed:14,ground:'o',ring:1,wob:.06});                          // そらの しま（やまに かこまれる）
+  blob(20,74,7,5.5,{seed:15,ground:'x',ring:1,wob:.06});                        // やみの しんでんの しま
+  blob(108,80,8,6,{seed:16,ground:'x',ring:1,wob:.06});                         // ノクスの しま
+  for(const [x,y] of [[89,57],[90,57],[89,58],[90,58]]) g[y][x]='~';            // オアシス
+  put(24,50,'1','.'); put(37,55,'6',':'); put(84,17,'3','z'); put(99,10,'7','z'); put(87,59,'4',':'); put(103,52,'8',':');
+  put(59,74,'5','o'); put(66,73,'9','o'); put(20,74,'0','x'); put(108,80,'!','x'); put(48,28,'2','.');
+  for(let y=0;y<H;y++) WORLD[y]=g[y].join('');
+  Object.assign(W_ICON,NEWICON,{'6':'seacave1','7':'icetemple1','8':'pyramid1','9':'windlab1','0':'darktemple1','!':'noxcastle1'});
+}
+// うみの つながり と ふねの とまる ばしょ
+let OCEAN=null;
+function ocean(){
+  if(OCEAN) return OCEAN; OCEAN=new Set(); const q=[[0,0]]; OCEAN.add('0,0');
+  while(q.length){const [x,y]=q.shift(); for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){const nx=x+dx,ny=y+dy,k=nx+','+ny;
+    if(OCEAN.has(k)||!WORLD[ny]||WORLD[ny][nx]!=='~') continue; OCEAN.add(k); q.push([nx,ny]);}}
+  return OCEAN;
+}
+function dockFor(x,y){
+  const oc=ocean(), seen=new Set([x+','+y]), q=[[x,y]];
+  while(q.length){const [cx,cy]=q.shift();
+    for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){const nx=cx+dx,ny=cy+dy,k=nx+','+ny; if(seen.has(k)) continue; seen.add(k);
+      if(oc.has(k)) return {x:nx,y:ny};
+      const t=WORLD[ny]&&WORLD[ny][nx]; if(t&&!SOLID.has(t)&&t!=='~') q.push([nx,ny]);}}
+  return null;
+}
+
+/* ---------- あたらしい まち（ガルドの まちを ひながたに テーマで ぬりかえる） ---------- */
+function makeTown(id,name,icon,theme){
+  const base=MAPS.town.rows.map(r=>r.replace(/d/g,'s'));
+  const sub={X:theme.wall||'X',s:theme.ground||'s','.':theme.grass||'.',Y:theme.tree||'Y','~':theme.pond||'~',F:theme.flower||'F'};
+  const rows=base.map(r=>[...r].map(c=>sub[c]??c).join(''));
+  const pos=WORLD.findIndex(r=>r.includes(icon)); const wx=WORLD[pos].indexOf(icon);
+  MAPS[id]={name,out:sub.X,bgm:'town',edgeExit:1,world:[wx,pos],entry:[11,16,'up'],rows,town:1};
+}
+const TOWNS=['village','town','hayate','port','kazan','yukino','alma','lumina'];
+function buildTowns2(){
+  makeTown('port','シオサイのみなと','1',{ground:':',grass:'.'});
+  makeTown('kazan','カザンのむら','2',{wall:'A',ground:'_'});
+  makeTown('yukino','ユキノさと','3',{ground:'z',grass:'z',tree:'y',pond:'~',flower:'z'});
+  makeTown('alma','オアシスのまち アルマ','4',{wall:'D',ground:':',tree:'k'});
+  makeTown('lumina','そらのみやこ ルミナ','5',{wall:'v',ground:'o',grass:'w',tree:'p',flower:'w'});
+  for(const id of ['village','town','hayate']) MAPS[id].town=1;
+}
+
+/* ---------- あたらしい ダンジョン ---------- */
+NEWDG.find(d=>d.id==='crypt').reward='sun';
+NEWDG.find(d=>d.id==='crypt').loot.splice(3,0,'holyaxe');
+NEWDG.find(d=>d.id==='volcano').reward='red';
+NEWDG.find(d=>d.id==='volcano').loot.splice(1,0,'flamemail');
+NEWDG.find(d=>d.id==='abyss').loot.push('galaxystaff');
+NEWDG.push(
+ {id:'seacave',name:'しおかぜの どうくつ',icon:'6',floors:3,w:23,h:15,wall:'J',floor:'j',rooms:2,loops:.08,zone:'seacave',area:'lake',seed:606,per:3,
+  loot:['herb2','seastaff',{gold:900},'searobe','life','drop',{gold:1200},'shellS'],boss:'jabara',reward:'blue',
+  intro:['「シャアア… わたしの すみかに なにを しに きた。」','「この うみは ノクスさまの もの。 ふねも にんげんも しずめて やる！」']},
+ {id:'icetemple',name:'ひょうがの しんでん',icon:'7',floors:3,w:25,h:17,wall:'h',floor:'g',rooms:3,loops:.08,zone:'icet',area:'ice',seed:707,per:3,
+  loot:['herb2','icestaff',{gold:1500},'life','snowrobe','drop',{gold:1800},'iceS','herb2'],boss:'setsura',reward:'white',
+  intro:['「あたたかい ほのおの においが する… おまえたちが ふういんを とかしたのね。」','「わたしは セツラ。 この しんでんで ほしの しずくを まもる こおりの じょおう。」']},
+ {id:'pyramid',name:'すなの ピラミッド',icon:'8',floors:4,w:25,h:17,wall:'D',floor:'b',rooms:3,loops:.07,zone:'pyr',area:'desert',seed:808,per:3,
+  loot:['herb2','sunstaff',{gold:1800},'life','drop','sunrobe',{gold:2200},'goldS','herb2','life','drop',{gold:2500}],boss:'zahar',reward:'golddrop',
+  intro:['「せんねんの ねむりを さますのは だれだ…」','「わが おうこくの たからに てを だすものは、 すなの なかで ひからびるが よい！」']},
+ {id:'windlab',name:'かぜの めいきゅう',icon:'9',floors:4,w:25,h:17,wall:'v',floor:'w',rooms:3,loops:.07,up:1,zone:'sky2',area:'sky',seed:909,per:3,
+  loot:['herb2','angelstaff',{gold:2600},'life','skyS','drop',{gold:3000},'angelrobe','herb2','life','drop',{gold:3400}],boss:'tempes',reward:'starsword',
+  intro:['「ほう… ちじょうの ものが ここまで のぼって くるとは。」','「わたしは テンペス。 ノクスさまに そらを まかされた りゅう。 あらしに のまれて きえるが よい！」']},
+ {id:'darktemple',name:'やみの しんでん',icon:'0',floors:3,w:25,h:17,wall:'m',floor:'x',rooms:3,loops:.07,zone:'dark',area:'dark',seed:1010,per:3,dark:1,
+  loot:['herb2','life',{gold:3600},'drop','herb2','life',{gold:4000},'drop'],boss:'zero',group:['zero','nero'],reward:'lightS',
+  intro:['ゼロ「…ここまで きたか、 ほしの ゆうしゃ。」','ネロ「わたしたち ふたりが いる かぎり、 ノクスさまの しろへの みちは ひらかない。」','ゼロ・ネロ「「いざ！」」']},
+ {id:'noxcastle',name:'ノクスの しろ',icon:'!',floors:5,w:27,h:19,wall:'l',floor:'i',rooms:4,loops:.07,up:1,zone:'nox',area:'nox',seed:1111,per:3,dark:1,
+  loot:['herb2','life','drop',{gold:5000},'herb2','life','drop','herb2','life','drop',{gold:6000},'life'],boss:'nox',reward:null,
+  mid:{floor:3,mon:'zolga2',intro:['「…まっていたぞ、 ほしの ゆうしゃども。」','ゾルガ「ノクスさまの ちからで よみがえった この わし… いちどめの ようには いかぬぞ！」']},
+  intro:['「…よく きた。 ほしを とりもどそうと あがく ちいさき ものたちよ。」','ノクス「わたしは やみの そらのおう ノクス。 ほしは よぞらを けがす ひかり。 すべて くらいつくして くれる。」','ノクス「さあ、 さいごの たたかいだ！」']},
+);
+
+Object.assign(PPAL,{
+  sena:{h:'#e8d070',g:'#f0f0f8',r:'#4a7ad8'},
+  miko:{h:'#1a1a1a',g:'#f0f0f0',r:'#d02030'},
+  queen:{h:'#f0c040',g:'#a02060',r:'#f0d040'},
+  king:{h:'#f0d040',g:'#3a50c0',r:'#e0e0ff'},
+  sailor:{h:'#3a2a1a',g:'#2a4a8a',r:'#ffffff',s:'#d8a070'},
+});
+function worldZone(x,y){
+  if(S&&S.veh==='ship') return x>=70&&y<35?'sea2':x>=70?'sea3':'sea1';
+  if(x>=52&&x<=72&&y>=66&&y<=82) return 'sky';
+  if(x>=11&&x<=29&&y>=67&&y<=81) return 'dark';
+  if(x>=98&&y>=72) return 'nox';
+  if(x>=74&&y<30) return 'ice';
+  if(x>=74&&y>=40) return 'desert';
+  if(y>=40) return 'coast';
+  if(x>=41) return 'east';
+  if(y>=25) return 1;
+  if(x>=28&&y<=8) return 3;
+  if(y<=9&&x>=16) return 3;
+  if(y>=15&&x<26) return 1;
+  return 2;
+}
+const ITEMSHOP_LATE=['herb2','antidote','bell','drop','life','wing','smoke'];
+function townNPCs(o){
+  return [
+    {x:4,y:3,pal:'merchant',dir:'down',talk:()=>shop(o.arms,o.armsGreet||'ぶきと ぼうぐの みせへ ようこそ！')},
+    {x:17,y:3,pal:'woman',dir:'down',talk:()=>shop(o.items||ITEMSHOP_LATE,'どうぐやです。')},
+    {x:3,y:13,pal:'inn',dir:'right',talk:()=>inn(o.inn,o.innName)},
+    ...o.extra,
+  ];
+}
+function defineObjects2(){
+  MAPS.town.npcs.push({x:11,y:2,pal:'elder',dir:'down',talk:mayorTalk});
+  MAPS.hayate.npcs.push({x:11,y:1,pal:'elder',dir:'down',talk:chiefTalk});
+  MAPS.world.npcs=[{x:38,y:18,pal:'guard',dir:'right',cond:()=>!has('key'),
+    talk:()=>lines(['ひがしの はしの へいし「ここから さきは きけんな ひがしの たいりくだ。」','「ほしのカギを もつ ゆうしゃ でなければ とおせない きまりなんだ。」'])}];
+  MAPS.port.npcs=townNPCs({arms:['seasword','seastaff','seamail','searobe','shellS','mace'],inn:10,innName:'シオサイの やどや',extra:[
+    {x:16,y:13,pal:'sena',dir:'down',cond:()=>!S.flags.sena,talk:senaTalk},
+    {x:11,y:7,pal:'sailor',dir:'down',wander:1,talk:()=>lines(S.flags.boss_seacave?['「ジャバラが いなくなって、 また ふねが だせるように なったよ！」','「きたの うみには こおりの くに、 ひがしの うみには すなの くにが あるんだ。」']:['「おおうみへび ジャバラの せいで、 ふねが ひとつも だせないんだ…」','「ジャバラは みなとの ひがしの どうくつに すんでいる らしい。」'])},
+    {x:6,y:10,pal:'kid',dir:'down',wander:1,talk:()=>lines(['「セナおねえちゃんは、 いつも みんなの けがを なおして くれるんだ！」'])},
+    {x:19,y:11,pal:'sage',dir:'left',wander:1,talk:()=>lines(['「せかいの どこかに 4つの『ほしの しずく』が ある という いいつたえが あってな。」','「うみ・ほのお・こおり・すな… それぞれの まもりてが もっている そうじゃ。」'])},
+  ]});
+  MAPS.port.chests=[{id:'p1',x:20,y:9,gold:400}];
+  MAPS.kazan.npcs=townNPCs({arms:['firesword','flamestaff','firerobe','shellS'],inn:12,innName:'カザンの やどや',extra:[
+    {x:16,y:13,pal:'miko',dir:'down',talk:priestessTalk},
+    {x:11,y:7,pal:'guard',dir:'down',wander:1,talk:()=>lines(['「ほのおのやまの ようがんは ふむだけで やけどするぞ。 HPに きを つけろ。」'])},
+    {x:6,y:10,pal:'woman',dir:'down',wander:1,talk:()=>lines(['「まじんが『からだを まっかに』したら、 すぐに みを まもるのよ。 だいふんかが くるわ！」'])},
+  ]});
+  MAPS.kazan.chests=[{id:'z1',x:20,y:9,item:'life'}];
+  MAPS.yukino.npcs=townNPCs({arms:['iceaxe','icestaff','snowmail','snowrobe','iceS'],inn:14,innName:'ユキノの やどや',extra:[
+    {x:16,y:13,pal:'elder',dir:'down',talk:yukinoTalk},
+    {x:11,y:7,pal:'kid',dir:'down',wander:1,talk:()=>lines(S.flags.boss_icetemple?['「ゆきが とけはじめたよ！ はるが くるんだね！」']:['「さむいよう… はるは いつ くるの？」'])},
+    {x:6,y:10,pal:'guard',dir:'down',wander:1,talk:()=>lines(['「セツラの こおりの いきを あびると、 からだが こおって うごけなく なる。」','「セナさんの『じょうか』なら こおりも とかせる はずだ。」'])},
+  ]});
+  MAPS.yukino.chests=[{id:'y1',x:20,y:9,gold:800}];
+  MAPS.alma.npcs=townNPCs({arms:['goldsword','sunstaff','goldmail','sunrobe','goldS'],inn:16,innName:'アルマの やどや',extra:[
+    {x:16,y:13,pal:'queen',dir:'down',talk:almaTalk},
+    {x:11,y:7,pal:'merchant',dir:'down',wander:1,talk:()=>lines(['「オアシスの みずが どんどん へって いくんだ… ザハルの のろいに ちがいない。」'])},
+    {x:6,y:10,pal:'sage',dir:'down',wander:1,talk:()=>lines(['「ザハルは てしたの ほうたいおとこを よびだす。 ぜんたいこうげきで まとめて たおすのじゃ。」'])},
+  ]});
+  MAPS.alma.chests=[{id:'a1',x:20,y:9,item:'life'}];
+  MAPS.lumina.npcs=townNPCs({arms:['skyaxe','angelstaff','skymail','angelrobe','skyS'],inn:20,innName:'ルミナの やどや',extra:[
+    {x:16,y:13,pal:'king',dir:'down',talk:skyKingTalk},
+    {x:11,y:7,pal:'woman',dir:'down',wander:1,talk:()=>lines(['「テンペスは あらしを ためてから だいわざを うつわ。 そのときは みを まもって！」'])},
+    {x:6,y:10,pal:'sage',dir:'down',wander:1,talk:()=>lines(['「ノクスは いくつもの すがたを もつ という。 さいごまで ゆだんしては ならんぞ。」'])},
+  ]});
+  MAPS.lumina.chests=[{id:'l1',x:20,y:9,gold:2000}];
+}
+
 /* ---------- 状態 ---------- */
 let S=null;           // セーブされる冒険データ
 let mode='title';     // title | field | battle | ending
@@ -877,7 +1401,7 @@ const P={x:0,y:0,dir:'down',moving:false,fx:0,fy:0,t:0};
 let trail=[], fdir=['down','down'];
 let npcs=[], stepsSince=0, scripting=false, B=null, titleUI=null, endUI=null;
 function newGame(name){
-  S={party:[mkMember('hero',name,1,{w:'oak',a:'cloth'})],gold:60,items:{herb:2},flags:{},map:'village',x:14,y:12,dir:'up'};
+  S={party:[mkMember('hero',name,1,{w:'oak',a:'cloth'})],gold:60,items:{herb:2},flags:{},map:'village',x:14,y:12,dir:'up',ch:1,visited:['village'],lastTown:'village',ship:null,whale:null,veh:null};
 }
 const hero=()=>S.party[0];
 const HN=()=>S.party[0].name;
@@ -1052,12 +1576,13 @@ const sfx={
 function win(cls,style,html){const d=document.createElement('div'); d.className='win '+(cls||''); Object.assign(d.style,style||{}); if(html!=null) d.innerHTML=html; ui.appendChild(d); return d;}
 function msgClear(){msgEl.innerHTML='';}
 function msgClose(){msgEl.hidden=true; msgClear();}
-function waitKey(){return new Promise(res=>{const h=b=>{if(b==='a'||b==='b'){popH(h); res(b);}}; pushH(h);});}
-function waitOrKey(ms){return new Promise(res=>{let done=false; const fin=()=>{if(done) return; done=true; popH(h); clearTimeout(t); res();};
+function waitKey(){if(FAST) return Promise.resolve('a'); return new Promise(res=>{const h=b=>{if(b==='a'||b==='b'){popH(h); res(b);}}; pushH(h);});}
+function waitOrKey(ms){if(FAST) return Promise.resolve(); return new Promise(res=>{let done=false; const fin=()=>{if(done) return; done=true; popH(h); clearTimeout(t); res();};
   const h=b=>{if(b==='a'||b==='b') fin();}; pushH(h); const t=setTimeout(fin,ms);});}
 async function say(text,opt={}){
   const wait=opt.wait||'key';
   msgEl.hidden=false;
+  if(FAST){const p=document.createElement('p'); p.textContent=text; msgEl.appendChild(p); while(msgEl.querySelectorAll('p').length>10) msgEl.querySelector('p').remove(); return;}
   const p=document.createElement('p'); msgEl.appendChild(p);
   while(msgEl.querySelectorAll('p').length>10) msgEl.querySelector('p').remove();
   let skip=false; const h=b=>{if(b==='a'||b==='b') skip=true;}; pushH(h);
@@ -1126,22 +1651,70 @@ function updStatus(){
 function goldWin(style){const w=win('',style||{right:'3%',top:'3%',minWidth:'26%',textAlign:'right'}); w.upd=()=>w.innerHTML=`${S.gold} G`; w.upd(); return w;}
 let toastEl=null, toastT=null;
 function toast(text){
-  if(!text) return; if(toastEl) toastEl.remove(); clearTimeout(toastT);
+  if(!text||FAST) return; if(toastEl) toastEl.remove(); clearTimeout(toastT);
   toastEl=win('toast',{},text); const el=toastEl;
   toastT=setTimeout(()=>{el.style.opacity='0'; setTimeout(()=>el.remove(),450);},1500);
 }
-function fadeOut(ms=220){fadeEl.style.transitionDuration=ms+'ms'; fadeEl.style.opacity='1'; return sleep(ms+20);}
-function fadeIn(ms=220){fadeEl.style.transitionDuration=ms+'ms'; fadeEl.style.opacity='0'; return sleep(ms+20);}
-function shake(){if(reduceMotion) return; screenEl.classList.remove('shake'); void screenEl.offsetWidth; screenEl.classList.add('shake');}
+function fadeOut(ms=220){fadeEl.style.transitionDuration=(FAST?0:ms)+'ms'; fadeEl.style.opacity='1'; return sleep(ms+20);}
+function fadeIn(ms=220){fadeEl.style.transitionDuration=(FAST?0:ms)+'ms'; fadeEl.style.opacity='0'; return sleep(ms+20);}
+function shake(){if(reduceMotion||FAST) return; screenEl.classList.remove('shake'); void screenEl.offsetWidth; screenEl.classList.add('shake');}
 let flashFx=null;
-function flash(color,ms=180){flashFx={color,t0:performance.now(),ms};}
-/* なかまを えらぶ */
+function flash(color,ms=180){if(FAST) return; flashFx={color,t0:performance.now(),ms};}
 async function pickMember(title,filter,style){
   const list=S.party.filter(m=>!filter||filter(m));
   if(!list.length) return null;
-  const m=new Menu({title,items:list.map(x=>({label:x.name,right:x.hp<=0?'しに':`H${x.hp}`})),style:style||{left:'34%',top:'30%',width:'40%'}});
+  const m=new Menu({title,items:list.map(x=>({label:x.name,right:x.hp<=0?'しに':`H${x.hp}`})),style:style||{left:'34%',top:'34%',width:'40%'}});
   const i=await m.pick(); m.close(); return i<0?null:list[i];
 }
+
+/* ---------- しょう（チャプター）と もくてき ---------- */
+const CHAPTERS=[null,'ほしの きえた よる','ちかの ネズミおう','かぜの どうくつ','どくの ぬまと まじょ','わすれられた はかば','やみの しろ',
+  'うみの むこうへ','ほのおの やま','こおりの くに','すなの おうこく','ほしの くじら','そらの みやこ','やみの しんでん','ノクスの しろ','ほしふる よぞら'];
+async function startChapter(n){
+  if((S.ch??1)>=n) return; S.ch=n; if(FAST) return;
+  const w=document.createElement('div'); w.className='chap';
+  w.innerHTML=`<div class="win"><div class="no">${n===15?'さいしゅうしょう':`だい ${n} しょう`}</div><div class="tt">${CHAPTERS[n]}</div></div>`;
+  ui.appendChild(w); jingle(['C5','G5','C6:3'],.12,'triangle',.07);
+  await sleep(2200); w.classList.add('out'); await sleep(450); w.remove();
+}
+function goal(){
+  const f=S.flags, ch=S.ch||1;
+  switch(ch){
+    case 1: return !f.intro?'ちょうろうの いえへ いこう。':!f.boss_lake?'むらの にしの やまの『みずうみのどうくつ』で、 あばれる みずうみの ぬしを しずめよう。':'ちょうろうに ほうこくしよう。';
+    case 2: return !f.mira?'ガルドのまちで なかまに なって くれる まほうつかいを さがそう。':!f.sewerOK?'ガルドの ちょうちょうに はなしを きこう。':!f.boss_sewer?'まちの ちかすいどうで ネズミの おうを たおそう。':'ガルドの ちょうちょうに ほうこくしよう。';
+    case 3: return 'きたにしの やまに ある『かぜのどうくつ』で、 ほしのカギを てに いれよう。';
+    case 4: return !f.gou?'ガルドの ひがしの はしを わたり、『ハヤテのさと』へ いこう。':'ハヤテの きたの ぬまちに ある『こだいのとう』で、 つきのいしを てに いれよう。';
+    case 5: return 'きたの もりの『わすれられた はかば』で、 たいようのいしを さがそう。';
+    case 6: return 'ほし・つき・たいようの ちからで やみのしろの とびらを ひらき、 まおう ゾルガを たおそう。';
+    case 7: return !f.sena?'ハヤテの ふなつきばの ふねで、 みなみの『シオサイのみなと』へ むかおう。':'みなとの ひがしの『しおかぜの どうくつ』で、 ジャバラを たおそう。';
+    case 8: return !f.volcOpen?'ひがしの たいりくの『カザンのむら』で、 みこに あおう。':'『ほのおのやま』の いただきで、 ほのおの まじんを たおそう。';
+    case 9: return !f.iceOpen?'ふねで きたの こおりの くにへ。『ユキノさと』の ちょうろうに あおう。':'『ひょうがの しんでん』で、 こおりの じょおう セツラを たおそう。';
+    case 10: return !f.pyrOpen?'ひがしの すなの くにの『オアシスのまち アルマ』へ いこう。':'『すなの ピラミッド』で、 すなの まおう ザハルを たおそう。';
+    case 11: return '4つの しずくを もって『ほしのほこら』へ いこう。';
+    case 12: return 'そらくじらで みなみの そらの しまへ。『ルミナ』と『かぜの めいきゅう』を めざそう。';
+    case 13: return 'みなみにしの くろい しまの『やみの しんでん』で、 ふたごの きしを たおそう。';
+    case 14: case 15: return 'ひがしの はての しま『ノクスの しろ』へ。 やみの そらのおう ノクスを たおそう。';
+    default: return 'ほしは もどった！ ほこらの しまの『ほしふるめいきゅう』で さいごの しれんに いどもう（めやす Lv50）。';
+  }
+}
+async function showGoal(){
+  const ch=S.ch||1;
+  const w=win('big',{left:'6%',right:'6%',top:'30%'},`<div class="row"><span>${ch>15?'クリアご':ch===15?'さいしゅうしょう':'だい '+ch+' しょう'}</span><span>${CHAPTERS[Math.min(ch,15)]}</span></div><p style="margin:.4em 0 0;white-space:normal">${goal()}</p>`);
+  await waitKey(); sfx.blip(); w.remove();
+}
+
+/* ---------- いきさきの せいげん（ゲーティング） ---------- */
+const ICON_GATE={
+  G:()=>has('letter')?null:['ガルドの もんばん「まものが ふえて、 まちは いま ふうさちゅうだ。」','「ミナモの ちょうろうの しょうかいじょうが あれば とおして やろう。」'],
+  C:()=>(S.ch||1)>=3?null:['どうくつの いりぐちを おおきな いわが ふさいでいる…','（ガルドの まちの ひとが なんとか して くれる かも しれない）'],
+  M:()=>(S.ch||1)>=5?null:['はかばは つよい ふういんで とざされている…'],
+  Z:()=>S.flags.volcOpen?null:['やまの いりぐちは ほのおの けっかいで ふさがれている…','（ちかくの カザンのむらで くわしい ことが わかる かも しれない）'],
+  '7':()=>S.flags.iceOpen?null:['しんでんは あつい こおりに とざされている…','（ユキノさとの ちょうろうが なにか しって いるかも しれない）'],
+  '8':()=>S.flags.pyrOpen?null:['ピラミッドの いりぐちは すなの ふういんで ふさがれている…','（アルマの じょおうが なにか しって いるかも しれない）'],
+  '!':()=>(S.ch||1)>=14?null:['くろい けっかいが しろを つつんでいる… ちかづけない。'],
+  B:()=>S.flags.nox?null:['ふしぎな ほしの ひかりが うずまいている…','いまは まだ はいれない ようだ。'],
+};
+const LINK_GATE={'town:21,14':()=>S.flags.sewerOK?null:['かいだんの とびらには かぎが かかっている…','（まちの ちょうちょうが かぎを もっている らしい）']};
 
 /* ---------- フィールド ---------- */
 function curMap(){return MAPS[S.map];}
@@ -1161,57 +1734,87 @@ function blocked(x,y){
 }
 const DV={up:[0,-1],down:[0,1],left:[-1,0],right:[1,0]};
 let lastBump=0;
+const isWorld=()=>curMap().kind==='world';
+const onShip=()=>S.veh==='ship', onWhale=()=>S.veh==='whale';
+function bump(){const n=performance.now(); if(n-lastBump>260){sfx.bump(); lastBump=n;}}
+function startMove(nx,ny){trail.unshift({x:P.x,y:P.y}); trail.length=Math.min(trail.length,4); P.fx=P.x; P.fy=P.y; P.x=nx; P.y=ny; P.t=0; P.moving=true;}
 function tryMove(d){
   P.dir=d; const [dx,dy]=DV[d]; const nx=P.x+dx, ny=P.y+dy;
-  if(curMap().kind==='world'&&tileAt(nx,ny)==='K'&&!S.flags.opened){run(castleDoor); return;}
-  if(curMap().kind==='world'&&tileAt(nx,ny)==='B'&&!S.flags.zolga){run(()=>lines(['ふしぎな ほしの ひかりが うずまいている…','いまは まだ はいれない ようだ。 （まおうを たおすと ひらくらしい）'])); return;}
+  if(isWorld()){
+    if(!inBounds(nx,ny)){bump(); return;}
+    const t=tileAt(nx,ny);
+    if(onWhale()){P.fx=P.x; P.fy=P.y; P.x=nx; P.y=ny; P.t=0; P.moving=true; return;}
+    if(onShip()){
+      if(t==='~'){P.fx=P.x; P.fy=P.y; P.x=nx; P.y=ny; P.t=0; P.moving=true; return;}
+      if(SOLID.has(t)||t==='='){bump(); return;}
+      S.ship={x:P.x,y:P.y}; S.veh=null; trail=[];
+    }
+    if(S.ship&&S.ship.x===nx&&S.ship.y===ny){S.veh='ship'; trail=[]; sfx.ok(); P.fx=P.x; P.fy=P.y; P.x=nx; P.y=ny; P.t=0; P.moving=true; return;}
+    if(S.whale&&S.whale.x===nx&&S.whale.y===ny){S.veh='whale'; S.whale=null; trail=[]; sfx.magic(); P.fx=P.x; P.fy=P.y; P.x=nx; P.y=ny; P.t=0; P.moving=true; return;}
+    if(t==='K'&&!S.flags.opened){run(castleDoor); return;}
+    const gate=ICON_GATE[t]&&ICON_GATE[t]();
+    if(gate){run(()=>lines(gate)); return;}
+  }
   if(!inBounds(nx,ny)&&curMap().edgeExit){run(exitToWorld); return;}
-  if(blocked(nx,ny)){const n=performance.now(); if(n-lastBump>260){sfx.bump(); lastBump=n;} return;}
-  trail.unshift({x:P.x,y:P.y}); trail.length=Math.min(trail.length,3);
-  P.fx=P.x; P.fy=P.y; P.x=nx; P.y=ny; P.t=0; P.moving=true;
+  if(blocked(nx,ny)){bump(); return;}
+  startMove(nx,ny);
 }
 async function run(fn){if(scripting) return; scripting=true; try{await fn();}finally{scripting=false;}}
 function onStep(){
   const m=curMap(), t=tileAt(P.x,P.y);
-  if(m.kind==='world'&&W_ICON[t]){run(()=>enterMap(W_ICON[t])); return;}
+  if(isWorld()&&onWhale()) return;
+  if(isWorld()&&!S.veh&&W_ICON[t]){run(()=>enterMap(W_ICON[t])); return;}
   if(t==='U'){run(exitToWorld); return;}
-  if((t==='u'||t==='d')&&m.links&&m.links[P.x+','+P.y]){const l=m.links[P.x+','+P.y]; run(()=>gotoMap(l[0],l[1],l[2],l[3])); return;}
-  // どく・ぬま
-  let hurt=false;
-  for(const p of aliveP()){
-    let d=0; if(p.poison) d++; if(t==='%') d++; if(t==='L') d+=3;
-    if(d&&p.hp>1){p.hp=Math.max(1,p.hp-d); hurt=true;}
+  if((t==='u'||t==='d')&&m.links&&m.links[P.x+','+P.y]){
+    const key=S.map+':'+P.x+','+P.y, gate=LINK_GATE[key]&&LINK_GATE[key]();
+    if(gate){run(async()=>{await lines(gate); const [dx,dy]=DV[P.dir]; P.x-=dx; P.y-=dy;}); return;}
+    const l=m.links[P.x+','+P.y]; run(()=>gotoMap(l[0],l[1],l[2],l[3])); return;
   }
-  if(hurt){flash(t==='L'?'rgba(255,90,20,.5)':t==='%'?'rgba(150,40,200,.45)':'rgba(120,255,80,.35)',160); const a=Snd.ac; a&&tone(180,a.currentTime,.06,'square',.03);}
+  if(!onShip()){
+    let hurt=false;
+    for(const p of aliveP()){
+      let d=0; if(p.poison) d++; if(t==='%') d++; if(t==='L') d+=3;
+      if(d&&p.hp>1){p.hp=Math.max(1,p.hp-d); hurt=true;}
+    }
+    if(hurt){flash(t==='L'?'rgba(255,90,20,.5)':t==='%'?'rgba(150,40,200,.45)':'rgba(120,255,80,.35)',160); const a=Snd.ac; a&&tone(180,a.currentTime,.06,'square',.03);}
+  }
   if(m.enc){
     stepsSince++;
     const rate=ENC_RATE[t];
     if(rate&&stepsSince>4&&Math.random()<1/rate){
       const zone=m.enc(P.x,P.y); stepsSince=0;
-      const area=m.area||(m.kind==='world'?(t==='T'?'forest':t===':'?'beach':t==='%'?'swamp':'field'):(S.map.startsWith('castle')?'castle':S.map.startsWith('tower')?'tower':'cave'));
-      run(()=>battle(pickR(ENC[zone]),{area}));
+      const area=onShip()?'sea':m.area||(m.kind==='world'?areaOfZone(zone,t):'cave');
+      if(ENC[zone]) run(()=>battle(pickR(ENC[zone]),{area,zone}));
     }
   }
 }
+function areaOfZone(zone,t){
+  return {ice:'ice',desert:'desert',sky:'sky',dark:'dark',nox:'nox',coast:t==='T'?'forest':'beach'}[zone]||(t==='T'?'forest':t===':'?'beach':t==='%'?'swamp':'field');
+}
 async function gotoMap(id,x,y,dir){
   sfx.stairs(); await fadeOut();
+  if(id!=='world') S.veh=null;
   S.map=id; P.x=x; P.y=y; P.dir=dir; P.moving=false; trail=[]; stepsSince=0; loadNPCs(); playBgm(curMap().bgm);
+  if(curMap().town){S.visited=S.visited||[]; if(!S.visited.includes(id)) S.visited.push(id); S.lastTown=id;}
   await fadeIn(); toast(curMap().name);
+  if(id==='noxcastle5'&&(S.ch||1)<15) await startChapter(15);
 }
 async function enterMap(id){const m=MAPS[id]; await gotoMap(id,m.entry[0],m.entry[1],m.entry[2]);}
 async function exitToWorld(){const m=curMap(); await gotoMap('world',m.world[0],m.world[1],'down');}
 async function castleDoor(){
   msgClear();
   if(!has('key')){await say('おおきな とびらは ふしぎな ちからで かたく とざされている…'); msgClose(); return;}
-  if(!has('moon')){await say(`${HN()}は ほしのカギを さしこんだ。`); await say('カギは ほのかに ひかったが、 とびらは ひらかない… つきの ちからが たりないようだ。'); msgClose(); return;}
-  await say(`${HN()}は ほしのカギと つきのいしを かかげた！`);
+  if(!has('moon')||!has('sun')){await say(`${HN()}は ほしのカギを さしこんだ。`); await say(`カギは ほのかに ひかったが、 とびらは ひらかない… ${!has('moon')?'つき':'たいよう'}の ちからが たりないようだ。`); msgClose(); return;}
+  await say(`${HN()}は ほしのカギ、 つきのいし、 たいようのいしを かかげた！`);
   sfx.chest(); flash('#ffffff',300);
-  await say('ほしと つきの ひかりが まざりあい、 とびらが ゆっくりと ひらいていく…');
+  await say('ほしと つきと たいようの ひかりが まざりあい、 とびらが ゆっくりと ひらいていく…');
   S.flags.opened=1; msgClose(); await enterMap('castle1');
 }
 function fieldPress(b){
   if(b==='menu'||b==='b'){run(fieldMenu); return;}
   if(b!=='a'||P.moving) return;
+  if(isWorld()&&onWhale()){run(landWhale); return;}
+  if(isWorld()&&onShip()){run(()=>lines(['うみの うえだ。 りくちに ちかづくと ふねから おりられる。'])); return;}
   const [dx,dy]=DV[P.dir]; let fx=P.x+dx, fy=P.y+dy;
   if(tileAt(fx,fy)==='c'){fx+=dx; fy+=dy;}
   const n=npcAt(fx,fy);
@@ -1220,6 +1823,12 @@ function fieldPress(b){
   if(c){run(()=>openChest(c)); return;}
   run(async()=>{msgClear(); await say(`${HN()}は あしもとを しらべた。`,{wait:'auto',ms:300}); await say('しかし なにも みつからなかった。'); msgClose();});
 }
+async function landWhale(){
+  const t=tileAt(P.x,P.y);
+  if(t==='~'||SOLID.has(t)||W_ICON[t]||t==='='){await lines(['ここには おりられない。 ひらけた ちめんの うえで おりよう。']); return;}
+  S.whale={x:P.x,y:P.y}; S.veh=null; trail=[]; sfx.ok();
+}
+const CHAPTER_ITEM={key:4,moon:5,sun:6,blue:8,red:9,white:10,golddrop:11};
 async function openChest(c){
   msgClear();
   if(S.flags['ch_'+c.id]){await say('たからばこは からっぽだ。'); msgClose(); return;}
@@ -1228,9 +1837,20 @@ async function openChest(c){
   if(c.gold){S.gold+=c.gold; await say(`${c.gold}ゴールドを てにいれた！`);}
   else{addItem(c.item); await say(`${IT[c.item].n}を てにいれた！`); if(IT[c.item].key) await say(IT[c.item].d);}
   msgClose();
+  await afterKeyItem(c.item);
+}
+async function afterKeyItem(id){
+  const to=CHAPTER_ITEM[id]; if(!to||(S.ch||1)>=to) return;
+  const lead={key:['とおくで ひがしの はしの へいしが みちを あける おとが した…'],moon:['つきのいしが ひかると、 きたの もりの ほうから ふういんの とける おとが きこえた…'],
+    sun:['ほし・つき・たいよう… みっつの ひかりが そろった。 やみのしろの とびらが ひらける はずだ！'],
+    blue:['あおのしずくが ほのかに ひかり、 ひがしの たいりくを さしている…'],red:['あかのしずくは あたたかい。 こおりを とかす ちからが ありそうだ。'],
+    white:['しろのしずくの まぶしい ひかり。 すなの ふういんも とかせそうだ。'],golddrop:['4つの しずくが そろった！ ほしのほこらへ もっていこう。']}[id];
+  if(lead){msgClear(); for(const t of lead) await say(t); msgClose();}
+  await startChapter(to);
 }
 function followerSpots(){
   const out=[]; const k=P.moving?P.t:1;
+  if(S.veh) return out;
   let prevTo={x:P.x,y:P.y}, prevFrom=P.moving?{x:P.fx,y:P.fy}:{x:P.x,y:P.y};
   for(let i=0;i<S.party.length-1;i++){
     const to=trail[i]||prevTo; const from=P.moving?(trail[i+1]||prevFrom):to;
@@ -1241,7 +1861,7 @@ function followerSpots(){
   return out;
 }
 function updateField(dt){
-  if(P.moving){P.t+=dt/170; if(P.t>=1){P.t=1; P.moving=false; onStep();}}
+  if(P.moving){P.t+=dt/(onWhale()?95:onShip()?140:170); if(P.t>=1){P.t=1; P.moving=false; onStep();}}
   if(!P.moving&&!scripting&&!handlers.length&&mode==='field'){
     const d=held[held.length-1]; if(d) tryMove(d);
   }
@@ -1251,7 +1871,7 @@ function updateField(dt){
     else if(n.wander&&!scripting){
       n.wt-=dt; if(n.wt<=0){n.wt=1200+Math.random()*2200;
         const d=pickR(['up','down','left','right']); const [dx,dy]=DV[d]; const nx=n.x+dx, ny=n.y+dy; n.dir=d;
-        if(Math.abs(nx-n.ox)<=2&&Math.abs(ny-n.oy)<=2&&inBounds(nx,ny)&&!SOLID.has(tileAt(nx,ny))&&!npcAt(nx,ny)&&!chestAt(nx,ny)&&tileAt(nx,ny)!=='+'
+        if(Math.abs(nx-n.ox)<=2&&Math.abs(ny-n.oy)<=2&&inBounds(nx,ny)&&!SOLID.has(tileAt(nx,ny))&&!npcAt(nx,ny)&&!chestAt(nx,ny)&&tileAt(nx,ny)!=='+'&&tileAt(nx,ny)!=='d'&&tileAt(nx,ny)!=='u'
           &&!(nx===P.x&&ny===P.y)&&!(P.moving&&nx===P.fx&&ny===P.fy)&&!fol.some(f=>f.tx===nx&&f.ty===ny)){n.fx=n.x; n.fy=n.y; n.x=nx; n.y=ny; n.t=0; n.moving=true;}}
     }
   }
@@ -1266,6 +1886,10 @@ function drawField(now){
     const ch=tileAt(tx,ty); const t=TILES[ch]||TILES['.']; ctx.drawImage(t[ch==='~'||ch==='='||ch==='%'||ch==='L'||ch==='B'?fr:0],tx*TS-camX,ty*TS-camY);
   }
   for(const c of (m.chests||[])) ctx.drawImage(S.flags['ch_'+c.id]?chestOpen:chestClosed,c.x*TS-camX,c.y*TS-camY+1);
+  if(m.kind==='world'){
+    if(S.ship&&!onShip()) ctx.drawImage(SHIP_ART,S.ship.x*TS-camX,S.ship.y*TS-camY+(fr?1:0));
+    if(S.whale&&!onWhale()) ctx.drawImage(WHALE_ART,S.whale.x*TS-camX,S.whale.y*TS-camY-2+(fr?1:0));
+  }
   const walk=Math.floor(now/260)%2;
   const actors=npcs.map(n=>{const kk=n.moving?n.t:1; return {y:n.fy+(n.y-n.fy)*kk,x:n.fx+(n.x-n.fx)*kk,n,z:0};});
   followerSpots().forEach((f,i)=>actors.push({x:f.x,y:f.y,f,z:-1-i}));
@@ -1273,7 +1897,11 @@ function drawField(now){
   actors.sort((a,b)=>a.y-b.y||a.z-b.z);
   for(const a of actors){
     const sx=Math.round(a.x*TS-camX), sy=Math.round(a.y*TS-camY);
-    if(a.hero) ctx.drawImage(hero().hp>0?personSprite('hero',P.dir,walk):graveArt,sx,sy-2);
+    if(a.hero){
+      if(m.kind==='world'&&onShip()) ctx.drawImage(SHIP_ART,sx,sy+(fr?1:0));
+      else if(m.kind==='world'&&onWhale()){ctx.fillStyle='rgba(0,0,0,.25)'; ctx.fillRect(sx+3,sy+12,10,3); ctx.drawImage(WHALE_ART,sx,sy-6+(fr?1:0));}
+      else ctx.drawImage(hero().hp>0?personSprite('hero',P.dir,walk):graveArt,sx,sy-2);
+    }
     else if(a.f) ctx.drawImage(a.f.m.hp>0?personSprite(a.f.m.cls,a.f.dir,walk):graveArt,sx,sy-2);
     else if(a.n.mon){const sp=monSprite(a.n.mon); ctx.drawImage(sp,sx,sy-2+(walk?0:-1));}
     else ctx.drawImage(personSprite(a.n.pal,a.n.dir,a.n.wander||a.n.moving?walk:0),sx,sy-2);
@@ -1286,27 +1914,28 @@ function drawField(now){
 
 /* ---------- メニュー ---------- */
 async function fieldMenu(){
-  showStatus({right:'3%',top:'3%'});
-  const m=new Menu({items:['つよさ','どうぐ','じゅもん','そうび','セーブ'],style:{left:'3%',top:'3%',width:'27%'}});
+  showStatus({left:'3%',top:'2.5%'});
+  const m=new Menu({items:['もくてき','つよさ','どうぐ','じゅもん','そうび','セーブ'],cols:2,style:{left:'3%',top:'31%',width:'46%'}});
   try{
     while(true){
       const c=await m.pick(); if(c<0) break;
       let r=null;
-      if(c===0){const p=S.party.length>1?await pickMember('だれの？'):hero(); if(p) await showStats(p);}
-      if(c===1) r=await bagMenu();
-      if(c===2) r=await spellMenuField();
-      if(c===3){const p=S.party.length>1?await pickMember('だれの？'):hero(); if(p) await equipMenu(p);}
-      if(c===4){msgClear(); if(saveGame()){sfx.ok(); await say('ぼうけんのしょに きろくしました。');} else await say('この ブラウザでは きろくできませんでした。'); msgClose();}
+      if(c===0) await showGoal();
+      if(c===1){const p=S.party.length>1?await pickMember('だれの？'):hero(); if(p) await showStats(p);}
+      if(c===2) r=await bagMenu();
+      if(c===3) r=await spellMenuField();
+      if(c===4){const p=S.party.length>1?await pickMember('だれの？'):hero(); if(p) await equipMenu(p);}
+      if(c===5){msgClear(); if(saveGame()){sfx.ok(); await say('ぼうけんのしょに きろくしました。');} else await say('この ブラウザでは きろくできませんでした。'); msgClose();}
       updStatus(); if(r==='warp') break;
     }
   } finally {m.close(); hideStatus(); msgClose();}
 }
+const JOB={hero:'ゆうしゃ',mira:'まほうつかい',gou:'せんし',sena:'そうりょ'};
 async function showStats(p){
   const nx=p.lv>=MAXLV?'-':expFor(p.lv+1)-p.exp;
   const eqn=s=>p.eq[s]?IT[p.eq[s]].n:'なし';
-  const job={hero:'ゆうしゃ',mira:'まほうつかい',gou:'せんし'}[p.cls];
   const w=win('big',{left:'8%',right:'8%',top:'5%'},
-   `<div class="row"><span>${p.name}（${job}）</span><span>レベル ${p.lv}</span></div>
+   `<div class="row"><span>${p.name}（${JOB[p.cls]}）</span><span>レベル ${p.lv}</span></div>
     <div class="row"><span>HP ${p.hp}/${p.mhp}</span><span>MP ${p.mp}/${p.mmp}</span></div>
     <div class="row"><span>ちから ${p.str}</span><span>すばやさ ${p.agi}</span></div>
     <div class="row"><span>こうげき ${atkOf(p)}</span><span>しゅび ${defOf(p)}</span></div>
@@ -1318,11 +1947,11 @@ async function showStats(p){
     <div class="row"><span>たて</span><span>${eqn('s')}</span></div>`);
   await waitKey(); sfx.blip(); w.remove();
 }
-function bagList(filter){return Object.keys(S.items).filter(id=>!filter||filter(IT[id])).map(id=>({id,label:IT[id].n,right:IT[id].key?'':'×'+S.items[id]}));}
+function bagList(filter){return Object.keys(S.items).filter(id=>IT[id]&&(!filter||filter(IT[id]))).map(id=>({id,label:IT[id].n,right:IT[id].key?'':'×'+S.items[id]}));}
 async function bagMenu(){
   let list=bagList(it=>!it.slot);
   if(!list.length){msgClear(); await say('どうぐを なにも もっていない。'); msgClose(); return;}
-  const m=new Menu({items:list,style:{left:'14%',top:'24%',width:'56%'},title:'どうぐ',desc:i=>IT[list[i].id].d});
+  const m=new Menu({items:list,style:{left:'14%',top:'34%',width:'60%'},title:'どうぐ',desc:i=>IT[list[i].id].d});
   try{
     while(true){
       const i=await m.pick(); if(i<0) return;
@@ -1332,20 +1961,22 @@ async function bagMenu(){
     }
   } finally {m.close();}
 }
-/* なかま ひとりへの こうか（どうぐ・じゅもん きょうつう）。 せいこうしたら メッセージを かえす */
-function applyTo(t,eff,pow,tgt){
+/* なかま ひとりへの こうか（どうぐ・じゅもん きょうつう） */
+function applyTo(src,eff,pow,tgt){
   if(eff==='heal'){if(tgt.hp<=0) return null; if(tgt.hp>=tgt.mhp) return 'full'; const v=Math.min(rnd(...pow),tgt.mhp-tgt.hp); tgt.hp+=v; sfx.heal(); return `${tgt.name}の HPが ${v}ポイント かいふくした！`;}
   if(eff==='mp'){if(tgt.hp<=0) return null; if(tgt.mp>=tgt.mmp) return 'full'; const v=Math.min(rnd(...pow),tgt.mmp-tgt.mp); tgt.mp+=v; sfx.heal(); return `${tgt.name}の MPが ${v}ポイント かいふくした！`;}
   if(eff==='cure'){if(tgt.hp<=0||!tgt.poison) return 'none'; tgt.poison=false; sfx.heal(); return `${tgt.name}の からだから どくが きえた！`;}
+  if(eff==='purify'){if(tgt.hp<=0||(!tgt.poison&&!tgt.sleep)) return 'none'; tgt.poison=false; tgt.sleep=false; sfx.heal(); return `${tgt.name}の からだが きよめられた！`;}
   if(eff==='wake'){if(tgt.hp<=0||!tgt.sleep) return 'none'; tgt.sleep=false; sfx.ok(); return `${tgt.name}は めを さました！`;}
-  if(eff==='revive'){if(tgt.hp>0) return 'none'; tgt.hp=Math.ceil(tgt.mhp/2); tgt.poison=false; tgt.sleep=false; sfx.heal(); flash('#fff8c0',300); return `${tgt.name}は いきかえった！`;}
+  if(eff==='revive'){if(tgt.hp>0) return 'none'; tgt.hp=src.full?tgt.mhp:Math.ceil(tgt.mhp/2); tgt.poison=false; tgt.sleep=false; sfx.heal(); flash('#fff8c0',300); return `${tgt.name}は いきかえった！`;}
   return null;
 }
+function healAll(pow){const out=[]; for(const p of aliveP()){const v=Math.min(rnd(...pow),p.mhp-p.hp); p.hp+=v; out.push(`${p.name}${v}`);} sfx.heal(); return 'みんなの HPが かいふくした！';}
 const FULLMSG={full:'その なかまは もう げんきいっぱいだ。',none:'しかし なにも おこらなかった。'};
 async function useItemField(id){
   const it=IT[id]; msgClear();
   if(it.key){await say(it.d); msgClose(); return;}
-  if(it.t==='return'){delItem(id); await say(`${HN()}は もどりのはねを そらに なげた！`,{wait:'auto'}); msgClose(); await warpHome(); return 'warp';}
+  if(it.t==='return'){const r=await townWarp(it.n+'で どこへ いく？'); if(!r) return; delItem(id); return 'warp';}
   if(it.t==='wake'||it.t==='flee'){await say('いまは つかえない。'); msgClose(); return;}
   const tgt=S.party.length>1?await pickMember('だれに つかう？',it.t==='revive'?m=>m.hp<=0:null):hero();
   if(!tgt){msgClose(); return;}
@@ -1354,9 +1985,18 @@ async function useItemField(id){
   delItem(id); updStatus();
   await say(`${HN()}は ${it.n}を つかった！`,{wait:'auto',ms:350}); await say(r); msgClose();
 }
-async function warpHome(){
-  sfx.magic(); flash('#ffffff',250); await sleep(200);
-  await gotoMap('world',MAPS.village.world[0],MAPS.village.world[1]+1,'up');
+// いちど いった まちへ いどう（かえりみち・もどりのはね）
+async function townWarp(title){
+  const list=(S.visited||['village']).filter(id=>MAPS[id]);
+  const m=new Menu({title,items:list.map(id=>MAPS[id].name),style:{left:'14%',top:'30%',width:'62%'}});
+  const i=await m.pick(); m.close(); if(i<0) return false;
+  const id=list[i], [wx,wy]=MAPS[id].world;
+  msgClose(); sfx.magic(); flash('#ffffff',250); await sleep(200);
+  S.veh=null;
+  if(S.ship){const d=dockFor(wx,wy); if(d) S.ship=d;}
+  if(S.whale!=null||S.flags.whale){const nb=[[0,1],[1,0],[-1,0],[0,-1]].map(([dx,dy])=>[wx+dx,wy+dy]).find(([x,y])=>{const t=WORLD[y]&&WORLD[y][x]; return t&&!SOLID.has(t)&&t!=='~'&&!W_ICON[t];}); if(nb) S.whale={x:nb[0],y:nb[1]};}
+  await gotoMap('world',wx,wy,'down');
+  return true;
 }
 async function spellMenuField(){
   const casters=S.party.filter(m=>m.hp>0&&learned(m).length);
@@ -1364,14 +2004,15 @@ async function spellMenuField(){
   const c=casters.length>1?await pickMember('だれが となえる？',m=>m.hp>0&&learned(m).length>0):casters[0];
   if(!c) return;
   const ks=learned(c);
-  const m=new Menu({items:ks.map(k=>({label:SP[k].n,right:SP[k].mp,disabled:!SP[k].field})),style:{left:'14%',top:'24%',width:'60%'},title:`${c.name}の じゅもん（MP ${c.mp}）`,desc:i=>SP[ks[i]].d});
+  const m=new Menu({items:ks.map(k=>({label:SP[k].n,right:SP[k].mp,disabled:!SP[k].field})),style:{left:'12%',top:'31%',width:'64%'},title:`${c.name}の じゅもん（MP ${c.mp}）`,desc:i=>SP[ks[i]].d});
   try{
     while(true){
       const i=await m.pick(); if(i<0) return;
       const k=ks[i], sp=SP[k]; msgClear();
       if(!sp.field){await say('その じゅもんは せんとうで つかう じゅもんだ。'); msgClose(); continue;}
       if(c.mp<sp.mp){await say('MPが たりない！'); msgClose(); continue;}
-      if(sp.t==='return'){c.mp-=sp.mp; await say(`${c.name}は ${sp.n}の じゅもんを となえた！`,{wait:'auto',ms:350}); msgClose(); await warpHome(); return 'warp';}
+      if(sp.t==='return'){const ok=await townWarp('どこへ いく？'); if(!ok) continue; c.mp-=sp.mp; return 'warp';}
+      if(sp.t==='healAll'){c.mp-=sp.mp; await say(`${c.name}は ${sp.n}の じゅもんを となえた！`,{wait:'auto',ms:350}); await say(healAll(sp.pow)); updStatus(); msgClose(); continue;}
       const tgt=S.party.length>1?await pickMember('だれに？',sp.t==='revive'?x=>x.hp<=0:null):hero();
       if(!tgt) continue;
       const r=applyTo(sp,sp.t,sp.pow,tgt);
@@ -1384,13 +2025,13 @@ async function spellMenuField(){
 async function equipMenu(p){
   const slots=['w','a','s'];
   const lab=()=>slots.map(s=>({label:SLOTN[s],right:p.eq[s]?IT[p.eq[s]].n:'なし'}));
-  const m=new Menu({items:lab(),style:{left:'10%',top:'24%',width:'76%'},title:`${p.name}の そうび`,desc:()=>`こうげき ${atkOf(p)}　しゅび ${defOf(p)}`});
+  const m=new Menu({items:lab(),style:{left:'10%',top:'31%',width:'76%'},title:`${p.name}の そうび`,desc:()=>`こうげき ${atkOf(p)}　しゅび ${defOf(p)}`});
   try{
     while(true){
       const i=await m.pick(); if(i<0) return;
-      const s=slots[i]; const own=Object.keys(S.items).filter(id=>IT[id].slot===s&&canEquip(p,id));
+      const s=slots[i]; const own=Object.keys(S.items).filter(id=>IT[id]&&IT[id].slot===s&&canEquip(p,id));
       const opts=[...own.map(id=>({id,label:IT[id].n,right:s==='w'?'こう+'+IT[id].atk:'しゅ+'+IT[id].def})),{id:null,label:'はずす',right:''}];
-      const sub=new Menu({items:opts,style:{left:'20%',top:'44%',width:'66%'},title:SLOTN[s]+'を えらぶ'});
+      const sub=new Menu({items:opts,style:{left:'20%',top:'46%',width:'66%'},title:SLOTN[s]+'を えらぶ'});
       const j=await sub.pick(); sub.close();
       if(j>=0){equip(p,opts[j].id,s); sfx.ok();}
       m.setItems(lab());
@@ -1402,8 +2043,8 @@ function equip(p,id,slot){
   if(p.eq[slot]) addItem(p.eq[slot]);
   p.eq[slot]=id||null; if(id) delItem(id);
 }
-
 /* ---------- 町の人・店・宿 ---------- */
+const INN_SPOT={village:[3,5],town:[5,13],hayate:[6,10]};
 async function inn(per,name){
   msgClear(); const price=per*S.party.length;
   await say(`${name}へ ようこそ。 ひとり ${per}ゴールド、 みなさんで ${price}ゴールドですが おとまりに なりますか？`,{wait:'none'});
@@ -1420,17 +2061,6 @@ async function inn(per,name){
   await say('（ぼうけんのしょに きろくしました）'); msgClose();
 }
 function restoreAll(){for(const p of S.party){p.hp=p.mhp; p.mp=p.mmp; p.poison=false; p.sleep=false;}}
-async function shrineTalk(){
-  msgClear();
-  await say('「ようこそ ほしのほこらへ。 ほしの かみさまの ちからで あなたたちを いやして あげましょう。」');
-  sfx.magic(); flash('#fff4b0',500); restoreAll(); await sleep(300); sfx.heal();
-  await say('ふしぎな ひかりが なかまたちを つつみこんだ！ HPと MPが かいふくし、 どくも きえた！');
-  if(!has('moon')) await say('「ゾルガの しろは ほしと つきの ちからで ふうじられて いるのです。 つきのいしは ひがしの こだいのとうに…」');
-  else if(!S.flags.zolga) await say('「ほしと つきが そろいましたね。 ゾルガを たおし、 よぞらに ほしを とりもどして。」');
-  else await say('「よぞらに ほしが もどりました。 この しまの『ほしふるめいきゅう』への みちも ひらかれましたよ。 さいごの しれんに いどむ ゆうきが あるなら…」');
-  saveGame(); await say('（ぼうけんのしょに きろくしました）');
-  msgClose();
-}
 async function shop(goods,greet){
   msgClear(); await say(greet+' なにを なさいますか？',{wait:'none'});
   const g=goldWin({left:'3%',top:'33%',width:'27%',textAlign:'right'});
@@ -1445,7 +2075,7 @@ async function shop(goods,greet){
   msgClear(); await say('ありがとうございました！'); msgClose();
 }
 function eqInfo(id){const it=IT[id]; if(!it.slot) return it.d||'';
-  const who=S.party.filter(m=>canEquip(m,id)).map(m=>m.name).join('・')||'だれも そうびできない';
+  const who=S.party.filter(m=>canEquip(m,id)).map(m=>m.name).join('・')||'いまの なかまは そうびできない';
   return `${SLOTN[it.slot]} ${it.slot==='w'?'こうげき':'しゅび'}+${it.slot==='w'?it.atk:it.def}　そうび：${who}`;}
 async function shopBuy(goods,g){
   const m=new Menu({items:goods.map(id=>({label:IT[id].n,right:IT[id].price+'G'})),style:{left:'32%',top:'3%',right:'3%'},desc:i=>eqInfo(goods[i])});
@@ -1484,6 +2114,8 @@ async function shopSell(g){
     }
   } finally {m.close();}
 }
+
+/* ---------- なかま ---------- */
 async function joinParty(cls,name,minLv,eq){
   const lv=Math.max(minLv,hero().lv-1);
   const m=mkMember(cls,name,lv,eq); S.party.push(m); S.flags[cls]=1; loadNPCs(); trail=[];
@@ -1494,7 +2126,8 @@ async function miraTalk(){
   await say('「あなたが ほしを とりもどす たびを している ひと？」');
   await say('「わたしは ミラ。 まほうの しゅぎょうを しているの。 ほしの ない よぞらなんて、 まほうも げんきが でないわ。」');
   await say('「ねえ、 わたしも いっしょに つれていって くれない？」',{wait:'none'});
-  if(await yesNo()){msgClear(); await say('「ありがとう！ ひのこと ねむりのうたなら まかせて！」'); await joinParty('mira','ミラ',3,{w:'oak',a:'cloth'});}
+  if(await yesNo()){msgClear(); await say('「ありがとう！ ひのこと ねむりのうたなら まかせて！」'); await joinParty('mira','ミラ',3,{w:'oak',a:'cloth'});
+    await say('ミラ「まちの ちょうちょうさんが こまっている みたい。 はなしを ききに いきましょ！」');}
   else{msgClear(); await say('「そう… きが かわったら こえを かけてね。」');}
   msgClose();
 }
@@ -1507,44 +2140,106 @@ async function gouTalk(){
   else{msgClear(); await say('「そうか… いつでも まってるぜ。」');}
   msgClose();
 }
+async function senaTalk(){
+  msgClear();
+  if((S.ch||1)<7){await say('「ほしの ひかりが すこし もどりましたね… でも まだ たりない きが するのです。」'); msgClose(); return;}
+  await say('「あなたたちが ゾルガを たおした ほしの ゆうしゃですね。 わたしは セナ。 この みなとの きょうかいの そうりょです。」');
+  await say('「うみの まもの ジャバラが あらわれてから、 ふねは でられず、 けがにんも ふえる ばかり…」');
+  await say('「わたしの いのりの ちからで、 みなさんを ささえさせて ください。」',{wait:'none'});
+  if(await yesNo()){msgClear(); await say('「ありがとう ございます。 みなさんの きずは わたしが いやします！」'); await joinParty('sena','セナ',20,{w:'mace',a:'searobe'});
+    await say('セナ「ジャバラの すみかは みなとの ひがしの『しおかぜの どうくつ』です。」');}
+  else{msgClear(); await say('「わかりました… こころが きまったら また きてください。」');}
+  msgClose();
+}
+
+/* ---------- ものがたりの ひとびと ---------- */
 async function elderTalk(){
   msgClear();
-  const n=HN();
-  if(S.flags.zolga){
-    await say(`「おお ${n}よ！ よぞらに ほしが もどったぞ！」`);
-    await say('「むらの みなが おまえたちの ことを ほこりに おもっておる。 ほんとうに ありがとう。」');
-  }else if(has('key')&&has('moon')){
-    await say('「ほしと つきの ちからが そろったか！ これで やみのしろの とびらが ひらく。」');
-    await say('「しろは きたの しま。 ガルドのまちの きた、 すなはまから のびる はしを わたるのじゃ。 きを つけてな。」');
-  }else if(has('key')){
-    await say(`「なんと！ それは ほしのカギ！ ${n}よ、 よくぞ やりとげた！」`);
-    await say('「だが いいつたえでは、 やみのしろの とびらには ほしと つき、 ふたつの ちからが いるという。」');
-    await say('「ひがしの たいりくの『こだいのとう』に『つきのいし』が まつられて いたはずじゃ。 ガルドの ひがしの はしを わたるのじゃ。」');
-  }else if(!S.flags.intro){
+  const n=HN(), ch=S.ch||1;
+  if(!S.flags.intro){
     await say(`「おお ${n}、 よく きてくれた。」`);
-    await say('「みての とおり、 このところ よぞらから ほしが すべて きえてしまった。」');
-    await say('「まおう ゾルガが ほしの ちからを やどす『ほしのたま』を うばい、 きたの しまの しろに こもったのじゃ。」');
-    await say('「しろの とびらを ひらく『ほしのカギ』は、 きたにしの やまに ある『かぜのどうくつ』に ねむると いう。」');
-    await say('「ひとりでは こころぼそかろう。 ガルドの まちで たよれる なかまを さがすと よい。」');
+    await say('「みての とおり、 このところ よぞらから ほしが すべて きえてしまった。 それだけでは ない…」');
+    await say('「むらの にしの やまの『みずうみのどうくつ』で、 みずうみの ぬしが あばれだし、 いどの みずまで にごって しまったのじゃ。」');
+    await say('「ほしが きえて、 まものたちが きょうぼうに なって おる。 ぬしを しずめて きては くれんか。」');
     await say('「これは わしからの せんべつじゃ。」');
     S.gold+=50; addItem('herb',2); sfx.chest();
     await say(`${n}は 50ゴールドと やくそう 2こを うけとった！`);
     await say('「むらの みせで ぶきや たてを かって おくと よいぞ。 つかれたら やどやで やすむのじゃ。」');
     S.flags.intro=1;
+  }else if(ch===1&&S.flags.boss_lake){
+    await say(`「なんと、 ぬしを しずめて くれたか！ ${n}、 おまえは たいした ものじゃ。」`);
+    await say('「ほしが きえた わけを しる には、 ひがしの『ガルドのまち』で しらべるのが いちばんじゃ。」');
+    await say('「いまは まちに はいるのも むずかしい。 これを もっていけ。」');
+    addItem('letter'); sfx.chest(); await say(`${n}は しょうかいじょうを うけとった！`);
+    msgClose(); await startChapter(2); return;
+  }else if(ch===1){
+    await say('「みずうみのどうくつは むらを でて にし、 やまの ふもとじゃ。 くれぐれも きを つけてな。」');
+  }else if(ch<=6){
+    await say(`「${n}、 たびは じゅんちょうか？」`); await say('「こまった ときは メニューの『もくてき』を みると よい。 いま やるべき ことが わかるはずじゃ。」');
+  }else if(!S.flags.nox){
+    await say('「ゾルガの うしろに まだ わるい やつが おったとは… ほしは まだ ぜんぶは もどって おらん。」');
+    await say('「おまえたちなら きっと やれる。 むらの みなが しんじて おるぞ。」');
   }else{
-    await say('「かぜのどうくつは きたにしの やまの なかじゃ。 むらから きたへ むかい、 かわの はしを わたると よい。」');
-    if(!S.flags.mira) await say('「ガルドの まちに まほうつかいの むすめが おるそうじゃ。 なかまに なって くれるかも しれん。」');
+    await say(`「おお ${n}よ！ よぞらに ほしが ぜんぶ もどったぞ！」`);
+    await say('「むらの みなが おまえたちの ことを ほこりに おもっておる。 ほんとうに ありがとう。」');
   }
   msgClose();
 }
-async function dungeonBoss(D){
-  msgClear(); for(const t of D.intro) await say(t); msgClose();
-  const r=await battle([D.boss],{boss:1,area:D.area});
-  if(r!=='win') return;
-  S.flags['boss_'+D.id]=1; loadNPCs(); msgClear();
-  await say('おくに かがやく たからばこが みえる！');
-  if(D.id==='abyss'){await say('ほしくい りゅう「みごとだ… ほしの ゆうしゃたちよ…」'); await say('めいきゅうに ほしが ふりそそぎ、 やさしい ひかりに つつまれた。');}
+async function mayorTalk(){
+  msgClear(); const ch=S.ch||1;
+  if(ch===2&&!S.flags.sewerOK){
+    await say('「おお、 ミナモの ちょうろうの しょうかいで きた わかものか。 わしが この まちの ちょうちょうじゃ。」');
+    await say('「ほしが きえてから、 まちの ちかすいどうに おおきな ネズミの おうが すみつき、 まちの たべものを ぬすんで いくのじゃ。」');
+    if(!S.flags.mira) await say('「ひとりでは あぶない。 ひろばに いる まほうつかいの むすめに こえを かけて みると よい。」');
+    await say('「たのむ、 ネズミの おうを たいじして くれ。 これが ちかすいどうの かぎじゃ。 まちの みなみ ひがしの かいだんから はいれる。」');
+    S.flags.sewerOK=1; sfx.chest(); await say(`${HN()}は ちかすいどうの かぎを あずかった！`);
+  }else if(ch===2&&S.flags.boss_sewer){
+    await say('「なんと、 ネズミの おうを たおしたか！ これで まちも すくわれる！」');
+    await say('「おれいに、 まちの ちからじまんたちに『かぜのどうくつ』の いわを どけさせた。」');
+    await say('「いいつたえでは、 あの どうくつの おくに『ほしのカギ』が ねむって いるそうじゃ。」');
+    S.gold+=300; sfx.chest(); await say(`${HN()}は 300ゴールドを うけとった！`);
+    msgClose(); await startChapter(3); return;
+  }else if(ch===2){
+    await say('「ちかすいどうの かいだんは まちの みなみ ひがしじゃ。 たのんだぞ。」');
+  }else{
+    await say('「おまえたちの おかげで まちは にぎやかさを とりもどした。 たびの ぶじを いのって おるぞ。」');
+  }
   msgClose();
+}
+async function shrineTalk(){
+  msgClear(); const ch=S.ch||1;
+  if(ch===11&&has('blue')&&has('red')&&has('white')&&has('golddrop')){ msgClose(); await ritual(); return; }
+  await say('「ようこそ ほしのほこらへ。 ほしの かみさまの ちからで あなたたちを いやして あげましょう。」');
+  sfx.magic(); flash('#fff4b0',500); restoreAll(); await sleep(300); sfx.heal();
+  await say('ふしぎな ひかりが なかまたちを つつみこんだ！ HPと MPが かいふくし、 どくも きえた！');
+  if(ch<6) await say('「ゾルガの しろは ほし・つき・たいようの ちからで ふうじられて いるのです。」');
+  else if(ch<=10) await say('「4つの ほしの しずくが そろえば、 この うみの そこに ねむる そらくじらが めを さますでしょう。」');
+  else if(!S.flags.nox) await say('「ノクスの いる くろい しまへは そらからしか いけません。 ほしの ゆうしゃたちよ、 たのみましたよ。」');
+  else await say('「よぞらに ほしが もどりました。 この しまの『ほしふるめいきゅう』への みちも ひらかれましたよ。 さいごの しれんに いどむ ゆうきが あるなら…」');
+  saveGame(); await say('（ぼうけんのしょに きろくしました）');
+  msgClose();
+}
+async function ritual(){
+  msgClear();
+  await say('「…4つの ほしの しずくが そろったのですね。」');
+  await say('「さあ、 しずくを ささげて。 うみの そこに ねむる そらくじらを よびさましましょう。」');
+  sfx.magic(); flash('#a0e0ff',500); await sleep(300);
+  await say('あお・あか・しろ・きん… 4つの しずくが そらへ のぼり、 ひとつの ひかりに なった！');
+  shake(); flash('#ff2040',300);
+  await say('そのとき、 ほこらの いりぐちから くろい よろいの きしが あらわれた！');
+  await say('「そうは させん！ ノクスさまの めいれいだ。 そらくじらと ともに ここで きえろ！」');
+  msgClose();
+  const r=await battle(['galva'],{boss:1,area:'castle'});
+  if(r!=='win') return;
+  msgClear();
+  await say('ガルヴァ「ば… ばかな… ノクスさま… おゆるし…を…」');
+  for(const id of ['blue','red','white','golddrop']) delItem(id);
+  sfx.lvl(); flash('#ffffff',600);
+  await say('うみが ひかり、 おおきな くじらが ほしぞらへ うかびあがった！');
+  await say('「そらくじらが めを さましました！ これで そらの しまへも、 くろい しまへも いけます。」');
+  await say('「くじらには ひらけた ちめんで Aボタンを おすと おりられますよ。」');
+  S.flags.whale=1; S.whale={x:11,y:27};
+  msgClose(); await startChapter(12);
 }
 async function guardianTalk(){
   msgClear();
@@ -1570,34 +2265,141 @@ async function zolgaTalk(){
   await say('「おろかな にんげんども。 ほしと ともに きえるが よい！」');
   msgClose();
   const r=await battle(['zolga'],{boss:1,area:'castle'});
-  if(r==='win') await ending();
+  if(r==='win') await twist();
 }
-
+async function twist(){
+  msgClear();
+  await say('ゾルガ「ぐ… ぐふっ… みごとだ… だが…」');
+  await say('ゾルガ「わしは… やみの そらのおう『ノクス』さまの… しもべに すぎぬ…」');
+  await say('ゾルガ「ノクスさまは… この よの ほしを… すべて くらいつくす おつもりだ… くっくっ…」');
+  flash('#ffffff',600); shake();
+  await say('ゾルガは くろい きりと なって きえていった…');
+  S.flags.zolga=1; addItem('orb'); loadNPCs(); sfx.chest();
+  await say(`${HN()}たちは ほしのたまを とりもどした！ よぞらに すこしだけ ほしが もどった。`);
+  msgClose(); await fadeOut(700); await sleep(300); await fadeIn(700);
+  msgClear();
+  await say('……どこからか、 ほしのほこらの おばばの こえが きこえる……');
+  await say('「ほしの ゆうしゃたちよ… ノクスは うみの むこう、 そらの かなたに いる…」');
+  await say('「ハヤテのさとの さとおさに、 ふねを よういさせました。 ハヤテの ふなつきばへ むかいなさい…」');
+  const [hx,hy]=MAPS.hayate.world; S.ship=dockFor(hx,hy)||{x:hx+3,y:hy};
+  msgClose(); await startChapter(7);
+}
+async function chiefTalk(){
+  msgClear(); const ch=S.ch||1;
+  if(ch>=7){
+    await say('「ふねは さとの そばの ふなつきばに つないで ある。 あるいて ちかづけば のれるぞ。」');
+    await say('「りくちに ちかづけば ふねから おりられる。 みなみの うみの むこうに『シオサイのみなと』が ある。」');
+  }else{
+    await say('「わしは ハヤテの さとおさじゃ。 ゴウの やつは、 この さとで いちばんの うでききじゃよ。」');
+  }
+  msgClose();
+}
+async function priestessTalk(){
+  msgClear(); const ch=S.ch||1;
+  if(ch<8){await say('「ほのおのやまには ふるくから けっかいが はられて います。 いまは だれも はいれません。」'); msgClose(); return;}
+  if(!S.flags.volcOpen){
+    await say('「その あおい しずく… うみの ほしの ちからを かんじます。」');
+    await say('「やまの いただきに いすわる ほのおの まじんが、 もう ひとつの しずく『あかのしずく』を うばったのです。」');
+    await say('「けっかいを ときましょう。 どうか まじんを しずめて ください！」');
+    S.flags.volcOpen=1; sfx.magic(); flash('#ff8040',400); await say('やまの けっかいが とけた！');
+  }else if(!has('red')){
+    await say('「まじんは やまの いただき、 3ごうめに います。 ようがんを ふむと やけどしますよ。」');
+  }else{
+    await say('「あかのしずくは こおりを とかす ちから。 きたの こおりの くにの ひとびとが きっと まっています。」');
+  }
+  msgClose();
+}
+async function yukinoTalk(){
+  msgClear();
+  if(!S.flags.iceOpen&&has('red')){
+    await say('「おお、 その あかい しずくの ぬくもり… しんでんの こおりを とかせるかも しれん！」');
+    await say('「こおりの じょおう セツラが しんでんに こもり、 この くには ふゆの まま なのじゃ。」');
+    S.flags.iceOpen=1; sfx.magic(); flash('#ff8040',400);
+    await say('あかのしずくが かがやき、 とおくで こおりの とける おとが した！ ひょうがの しんでんへ むかおう。');
+  }else if(!S.flags.iceOpen){
+    await say('「きたの しんでんは あつい こおりに とざされて おる。 ほのおの ちからでも なければ はいれんよ。」');
+  }else await say('「しんでんは さとの ひがし きたじゃ。 ふぶきに きを つけるのじゃぞ。」');
+  msgClose();
+}
+async function almaTalk(){
+  msgClear();
+  if(!S.flags.pyrOpen&&has('white')){
+    await say('「その まぶしい しろい しずく… いにしえの すなの ふういんを とく ひかりです。」');
+    await say('「ピラミッドに ねむる すなの まおう ザハルが めざめ、 この くにの みずを かれさせて いるのです。」');
+    S.flags.pyrOpen=1; sfx.magic(); flash('#ffffff',400);
+    await say('しろのしずくが ひかり、 すなの ふういんが ほどけた！ ピラミッドは まちの ひがし きただ。');
+  }else if(!S.flags.pyrOpen){
+    await say('「わたしは アルマの じょおう。 ピラミッドは すなの ふういんで とざされて います。 つよい ひかりが あれば…」');
+  }else await say('「どうか ザハルを たおし、 この くにに みずを とりもどして ください。」');
+  msgClose();
+}
+async function skyKingTalk(){
+  msgClear();
+  if(!S.flags.boss_windlab){
+    await say('「ちじょうの ものが ルミナに くるとは… そらくじらに のって きたのか。」');
+    await say('「あらしの りゅう テンペスが『かぜの めいきゅう』に いすわり、 そらの みやこを ふさいで おる。」');
+    await say('「テンペスを たおせば、 いにしえの『ほしのつるぎ』も とりもどせよう。 めいきゅうは みやこの ひがしじゃ。」');
+  }else{
+    await say('「ノクスの しろへの みちは、 みなみにしの くろい しまの『やみの しんでん』が ふうじて おる。」');
+    await say('「しんでんを まもる ふたごの きしを たおすのじゃ。 そらくじらで いける はずじゃ。」');
+  }
+  msgClose();
+}
+async function dungeonMid(D){
+  msgClear(); for(const t of D.mid.intro) await say(t); msgClose();
+  const r=await battle([D.mid.mon],{boss:1,area:D.area});
+  if(r!=='win') return;
+  S.flags['mid_'+D.id]=1; loadNPCs(); msgClear();
+  await say('ゾルガ「ノクスさま… わしは… さいごまで…」'); await say('ゾルガは こんどこそ きえていった。 うえへの かいだんが みえる。'); msgClose();
+}
+async function dungeonBoss(D){
+  msgClear(); for(const t of D.intro) await say(t); msgClose();
+  const r=await battle(D.group||[D.boss],{boss:1,area:D.area});
+  if(r!=='win') return;
+  S.flags['boss_'+D.id]=1; loadNPCs(); msgClear();
+  if(D.id==='noxcastle'){msgClose(); await ending(); return;}
+  if(D.reward) await say('おくに かがやく たからばこが みえる！');
+  const after={lake:['みずうみの ぬしは おとなしく なり、 みずうみの そこへ かえっていった。','ちょうろうに ほうこくしよう。'],
+    sewer:['ネズミの おうは にげだしていった！','ガルドの ちょうちょうに ほうこくしよう。'],
+    windlab:['テンペス「…ちじょうの ものに まけるとは… ノクスさまの しろは… やみの しんでんが まもって おる…」'],
+    darktemple:['ゼロ「…みごとだ。 ノクスさまの しろへの けっかいは… これで とける…」','ネロ「ゼロ… わたしたちの まけね…」'],
+    abyss:['ほしくい りゅう「みごとだ… ほしの ゆうしゃたちよ…」','めいきゅうに ほしが ふりそそぎ、 やさしい ひかりに つつまれた。']}[D.id];
+  if(after) for(const t of after) await say(t);
+  msgClose();
+  if(D.id==='windlab') await startChapter(13);
+  if(D.id==='darktemple') await startChapter(14);
+}
 /* ---------- 戦闘 ---------- */
 const BG={
-  field:['#3a6ad0','#9ac8f0','#4a9a3c','#2e6a26'],
-  forest:['#2a5a6a','#7ab0a0','#2e6a2a','#1a4a1c'],
-  beach:['#3a7ae0','#bfe4f8','#e0c886','#b89a5a'],
-  swamp:['#3a2a5a','#8a7aa8','#5a3a6a','#3a2448'],
-  cave:['#120c0a','#3a2e26','#5a4a3c','#3a2e24'],
-  tower:['#1a2a24','#4a6a5a','#5a6a52','#34442e'],
-  castle:['#140a24','#3e2460','#4a3a5a','#2a1e38'],
-  lake:['#0e1e34','#2a4a6a','#3a5a78','#24384e'],
-  sewer:['#141a12','#34402c','#3a5a4a','#26362c'],
-  crypt:['#0a0812','#2a2038','#3a3444','#24202c'],
-  volcano:['#2a0a04','#8a2a10','#5a3a30','#3a201a'],
-  abyss:['#04041a','#1a1a50','#24245a','#141438'],
+  field:['#3a6ad0','#9ac8f0','#4a9a3c','#2e6a26'], forest:['#2a5a6a','#7ab0a0','#2e6a2a','#1a4a1c'],
+  beach:['#3a7ae0','#bfe4f8','#e0c886','#b89a5a'], swamp:['#3a2a5a','#8a7aa8','#5a3a6a','#3a2448'],
+  cave:['#120c0a','#3a2e26','#5a4a3c','#3a2e24'], tower:['#1a2a24','#4a6a5a','#5a6a52','#34442e'],
+  castle:['#140a24','#3e2460','#4a3a5a','#2a1e38'], lake:['#0e1e34','#2a4a6a','#3a5a78','#24384e'],
+  sewer:['#141a12','#34402c','#3a5a4a','#26362c'], crypt:['#0a0812','#2a2038','#3a3444','#24202c'],
+  volcano:['#2a0a04','#8a2a10','#5a3a30','#3a201a'], abyss:['#04041a','#1a1a50','#24245a','#141438'],
+  sea:['#2a5ab0','#9ad0f0','#2a62c4','#1a4490'], ice:['#5a8ac0','#d8ecfa','#e0eef8','#a8c0d8'],
+  desert:['#d88a3a','#f8d890','#e0c070','#b89848'], sky:['#4a8ae0','#e0f0ff','#f4f6ff','#c8d0f0'],
+  dark:['#08040e','#2a1438','#2a1e34','#140a1c'], nox:['#000000','#1a0a2a','#1a1430','#0a0814'],
 };
-function mkEnemy(id){const d=MON[id]; return {id,d,name:d.n,hp:d.hp,mhp:d.hp,atk:d.atk,def:d.def,agi:d.agi,flashT:0,dieT:0,x:0,sleep:false};}
+function mkEnemy(id,zone,ml){
+  let d=MON[id];
+  if(!d.boss){const z=zone&&ZONE_ML[zone]; const L=ml||(z&&z[0]); if(L) d=scaledMon(id,L,ml?chOfLevel(ml):z[1],zone);}
+  return {id,d,name:d.n,hp:d.hp,mhp:d.hp,atk:d.atk,def:d.def,agi:d.agi,flashT:0,dieT:0,x:0,sleep:false};}
 function labelEnemies(en){
   const cnt={}; en.forEach(e=>cnt[e.id]=(cnt[e.id]||0)+1); const seen={};
-  en.forEach(e=>{if(cnt[e.id]>1){seen[e.id]=(seen[e.id]||0)+1; e.label=e.name+' '+'ABC'[seen[e.id]-1];} else e.label=e.name;});
+  en.forEach(e=>{if(cnt[e.id]>1){seen[e.id]=(seen[e.id]||0)+1; e.label=e.name+' '+'ABCDEF'[seen[e.id]-1];} else e.label=e.name;});
 }
+const escale=e=>e.form&&e.d.form2?e.d.form2.scale:(e.d.scale||3);
 function layoutEnemies(){
-  const sc=e=>e.d.scale||3; const gap=8; const total=B.en.reduce((s,e)=>s+16*sc(e),0)+gap*(B.en.length-1);
-  let x=SW/2-total/2; for(const e of B.en){e.x=x+8*sc(e); x+=16*sc(e)+gap;}
+  const vis=B.en.filter(e=>!(e.dieT&&performance.now()-e.dieT>420));
+  const gap=8; const total=vis.reduce((s,e)=>s+16*escale(e),0)+gap*(vis.length-1);
+  let x=SW/2-total/2; for(const e of vis){e.x=x+8*escale(e); x+=16*escale(e)+gap;}
 }
 const alive=()=>B.en.filter(e=>e.hp>0);
+function enemySprite(e){
+  if(e.form&&e.d.form2){const k=e.id+'#form'; if(!monCache[k]){const f=e.d.form2; monCache[k]=art(MSPR[f.s],Object.assign({k:'#140c18',w:'#f4f2ea',e:'#ff3040'},f.p));} return monCache[k];}
+  return monSprite(e.id,e.alt);
+}
 function drawBattle(now){
   ctx.fillStyle='#000'; ctx.fillRect(0,0,SW,SH);
   const c=BG[B.area]||BG.field; const bx=10,by=50,bw=SW-20,bh=68;
@@ -1605,10 +2407,11 @@ function drawBattle(now){
   ctx.fillStyle=g; ctx.fillRect(bx,by,bw,bh*.62);
   g=ctx.createLinearGradient(0,by+bh*.62,0,by+bh); g.addColorStop(0,c[2]); g.addColorStop(1,c[3]);
   ctx.fillStyle=g; ctx.fillRect(bx,by+bh*.62,bw,bh*.38);
-  if(B.area==='castle'||B.area==='cave'||B.area==='tower'){ctx.fillStyle='rgba(255,255,255,.06)'; for(let i=0;i<6;i++) ctx.fillRect(bx+12+i*38,by+6,10,bh*.56);}
+  if(['castle','cave','tower','crypt','sewer','dark','nox','lake'].includes(B.area)){ctx.fillStyle='rgba(255,255,255,.06)'; for(let i=0;i<6;i++) ctx.fillRect(bx+12+i*38,by+6,10,bh*.56);}
+  if(B.area==='nox'||B.area==='abyss'||B.area==='sky'){ctx.fillStyle='rgba(255,250,220,.7)'; for(let i=0;i<14;i++){const sx=(i*53+17)%bw, sy=(i*29)%(bh*.5); ctx.fillRect(bx+sx,by+4+sy,1,1);}}
   ctx.strokeStyle='#fff'; ctx.lineWidth=1; ctx.strokeRect(bx+.5,by+.5,bw-1,bh-1);
   for(let i=0;i<B.en.length;i++){
-    const e=B.en[i]; const sp=monSprite(e.id,e.alt); const sc=e.d.scale||3;
+    const e=B.en[i]; const sp=enemySprite(e); const sc=escale(e);
     if(e.dieT&&now-e.dieT>420) continue;
     if(e.flashT&&now-e.flashT<360&&Math.floor((now-e.flashT)/60)%2===0) continue;
     const w=16*sc, h=(sp.bot+1)*sc; const bob=e.d.boss||e.sleep?0:Math.sin(now/300+i)*1.2;
@@ -1617,29 +2420,31 @@ function drawBattle(now){
     if(e.dieT){const k=(now-e.dieT)/420; ctx.globalAlpha=1-k; ctx.drawImage(sp,0,0,16,sp.height,x,y+k*10,w,sp.height*sc*(1-k*.4));}
     else ctx.drawImage(sp,0,0,16,sp.height,x,y,w,sp.height*sc);
     ctx.restore();
+    if(e.prep&&e.hp>0&&Math.floor(now/200)%2===0){ctx.strokeStyle='#ffe060'; ctx.strokeRect(x-1,y-1,w+2,h+2);}
     if(e.sleep&&e.hp>0){ctx.fillStyle='#fff'; ctx.font='8px monospace'; const z=Math.floor(now/400)%3; ctx.fillText('z'.repeat(z+1),x+w-6,y+4-z*2);}
     if(B.hi===i&&e.hp>0&&Math.floor(now/250)%2===0){ctx.fillStyle='#fff'; const tx=Math.round(e.x); ctx.beginPath(); ctx.moveTo(tx-4,y-8); ctx.lineTo(tx+4,y-8); ctx.lineTo(tx,y-3); ctx.fill();}
   }
 }
 async function encounterFx(boss){
-  sfx.enc(); stopBgm();
+  sfx.enc(); stopBgm(); if(FAST) return;
   for(let i=0;i<(boss?2:3);i++){fadeEl.style.transitionDuration='0ms'; fadeEl.style.background='#fff'; fadeEl.style.opacity='.85'; await sleep(55); fadeEl.style.opacity='0'; await sleep(55);}
   fadeEl.style.background='#000'; await fadeOut(180);
 }
+function clearBuffs(){for(const p of S.party){p.sleep=false; p.defend=false; p.atkUp=false; p.defUp=false;}}
 async function battle(ids,opt={}){
   await encounterFx(opt.boss);
-  B={en:ids.map(mkEnemy),area:opt.area||'field',boss:!!opt.boss,guard:false,hi:-1,act:-1,lastCmd:[]};
-  labelEnemies(B.en); layoutEnemies();
-  for(const p of S.party){p.sleep=false; p.defend=false;}
+  B={en:ids.map(id=>mkEnemy(id,opt.zone)),area:opt.area||'field',zone:opt.zone,boss:!!opt.boss,guard:false,hi:-1,act:-1,lastCmd:[],turn:0};
+  labelEnemies(B.en); layoutEnemies(); clearBuffs();
   mode='battle'; playBgm(opt.boss?'boss':'battle'); msgClear();
   showStatus({left:'3%',top:'2.5%'});
   await fadeIn(160);
   if(B.en.length===1) await say(`${B.en[0].name}が あらわれた！`,{wait:'auto'});
   else if(new Set(ids).size===1) await say(`${B.en[0].name}が ${B.en.length}ひき あらわれた！`,{wait:'auto'});
-  else await say('まものの むれが あらわれた！',{wait:'auto'});
+  else await say(opt.boss?`${B.en.map(e=>e.name).join('と ')}が あらわれた！`:'まものの むれが あらわれた！',{wait:'auto'});
   let res=null;
   const check=()=>!alive().length?'win':!aliveP().length?'lose':null;
   while(!res){
+    B.turn++;
     const cmds=await partyCommands();
     msgClear(); msgEl.hidden=false;
     S.party.forEach((p,i)=>{p.defend=!!(cmds[i]&&cmds[i].t==='defend');});
@@ -1659,9 +2464,11 @@ async function battle(ids,opt={}){
       res=check();
     }
     S.party.forEach(p=>p.defend=false);
+    if(B.turn>200&&!res) res='lose';
   }
+  window.__lastTurns=B.turn;
   if(res==='win') await victory();
-  for(const p of S.party){p.sleep=false; p.defend=false;}
+  clearBuffs();
   if(res==='lose'){await defeat(); return 'lose';}
   await fadeOut(220); hideStatus(); msgClose(); B=null; mode='field'; playBgm(curMap().bgm); await fadeIn(220);
   return res;
@@ -1671,7 +2478,7 @@ async function partyCommands(){
   let k=0;
   while(k<idx.length){
     const i=idx[k]; B.act=i; updStatus();
-    const c=await memberCommand(S.party[i],i,k>0);
+    const c=AUTO?autoCmd(S.party[i]):await memberCommand(S.party[i],i,k>0);
     if(c==='back'){k--; continue;}
     cmds[i]=c; k++;
   }
@@ -1680,7 +2487,7 @@ async function partyCommands(){
 async function memberCommand(p,i,canBack){
   msgClear(); msgEl.hidden=true;
   const enList=win('',{right:'3%',bottom:'3%',width:'47%',height:'30%'});
-  const updList=()=>{enList.innerHTML=alive().map(e=>`<div>${e.label}${e.sleep?'（ねむり）':''}</div>`).join('');};
+  const updList=()=>{enList.innerHTML=alive().map(e=>`<div>${e.label}${e.sleep?'（ねむり）':''}${e.prep?'（！）':''}</div>`).join('');};
   updList();
   const flash2=async t=>{enList.textContent=t; sfx.bump(); await sleep(750); updList();};
   const cm=new Menu({title:p.name,items:['たたかう','じゅもん','どうぐ','ぼうぎょ','にげる'],cols:2,cancel:canBack,start:B.lastCmd[i]||0,style:{left:'3%',bottom:'3%',width:'48%'}});
@@ -1690,8 +2497,8 @@ async function memberCommand(p,i,canBack){
       if(c===0){const t=await pickTarget(); if(t>=0) return {t:'attack',target:t}; continue;}
       if(c===1){
         const ks=learned(p).filter(k=>SP[k].battle);
-        if(!ks.length){await flash2('じゅもんを おぼえていない'); continue;}
-        const sm=new Menu({items:ks.map(k=>({label:SP[k].n,right:SP[k].mp,disabled:p.mp<SP[k].mp})),title:`じゅもん（MP ${p.mp}）`,style:{left:'26%',bottom:'3%',right:'3%'},desc:j=>SP[ks[j]].d});
+        if(!ks.length){await flash2(p.cls==='gou'?'まだ わざを おぼえていない':'じゅもんを おぼえていない'); continue;}
+        const sm=new Menu({items:ks.map(k=>({label:SP[k].n,right:SP[k].mp,disabled:p.mp<SP[k].mp})),title:`${p.cls==='gou'?'わざ':'じゅもん'}（MP ${p.mp}）`,style:{left:'26%',bottom:'3%',right:'3%'},desc:j=>SP[ks[j]].d});
         const j=await sm.pick(); sm.close(); if(j<0) continue;
         const sp=SP[ks[j]];
         if(p.mp<sp.mp){await flash2('MPが たりない！'); continue;}
@@ -1711,7 +2518,6 @@ async function memberCommand(p,i,canBack){
     }
   } finally {cm.close(); enList.remove(); B.hi=-1;}
 }
-// たいしょうを えらぶ。 キャンセルなら undefined
 async function pickFor(tg){
   if(tg==='one'){const t=await pickTarget(); return t<0?undefined:t;}
   if(tg==='ally'){if(S.party.length===1) return 0; const m=await pickMember('だれに？',x=>x.hp>0,{right:'3%',bottom:'3%',width:'47%'}); return m?S.party.indexOf(m):undefined;}
@@ -1723,14 +2529,44 @@ async function pickTarget(){
   const m=new Menu({items:al.map(e=>e.label),style:{right:'3%',bottom:'3%',width:'47%'},onMove:i=>{B.hi=B.en.indexOf(al[i]);}});
   const i=await m.pick(); m.close(); B.hi=-1; return i<0?-1:B.en.indexOf(al[i]);
 }
+
+/* テストプレイ用の じどう せんとう（そこそこ うまい プレイヤーの まね） */
+const OFFENSE={hero:['judge','starrain','holy'],mira:['nova','meteor','spear','storm','blaze','ice','bolt','fire'],gou:['musou','burst','sweep','smash'],sena:['sholy']};
+function autoCmd(p){
+  const al=aliveP(), dead=S.party.filter(m=>m.hp<=0), en=alive(), idx=m=>S.party.indexOf(m);
+  const ks=learned(p).filter(k=>SP[k].battle&&p.mp>=SP[k].mp), can=k=>ks.includes(k);
+  const low=al.filter(m=>m.hp<m.mhp*.5).sort((a,b)=>a.hp/a.mhp-b.hp/b.mhp);
+  const healer=p.cls==='sena'||(p.cls==='hero'&&!S.party.some(m=>m.cls==='sena'&&m.hp>0&&!m.sleep));
+  if(dead.length){const k=['srevive','revive'].find(can); if(k) return {t:'spell',k,target:idx(dead[0])}; if(has('life')&&(healer||p.cls==='gou')) return {t:'item',id:'life',target:idx(dead[0])};}
+  if(low.length>=2){const k=['sallbig','hheal','sall'].find(can); if(k) return {t:'spell',k};}
+  if(low.length&&(healer||low[0].hp<low[0].mhp*.3)){const k=['sbig','heal2','sheal','heal'].find(can); if(k) return {t:'spell',k,target:idx(low[0])};
+    if(low[0].hp<low[0].mhp*.3){if(has('herb2')) return {t:'item',id:'herb2',target:idx(low[0])}; if(has('herb')) return {t:'item',id:'herb',target:idx(low[0])};}}
+  const sleeper=al.find(m=>m.sleep); if(sleeper&&can('purify')) return {t:'spell',k:'purify',target:idx(sleeper)};
+  if(B.boss&&can('guard')&&!B.guard) return {t:'spell',k:'guard'};
+  if(!B.boss&&AUTO==='trash'){const tgt=en.slice().sort((a,b)=>a.hp-b.hp)[0]; return {t:'attack',target:B.en.indexOf(tgt)};}
+  if(B.boss&&can('power')){const t=al.find(m=>(m.cls==='gou'||m.cls==='hero')&&!m.atkUp); if(t) return {t:'spell',k:'power',target:idx(t)};}
+  if(en.some(e=>e.prep)&&(p.cls==='mira'||p.cls==='sena')&&p.hp<p.mhp*.6) return {t:'defend'};
+  const reserve=p.cls==='hero'?.45:p.cls==='sena'?.6:0;
+  if(p.mp>p.mmp*reserve){
+    const off=OFFENSE[p.cls].filter(can);
+    const allK=off.find(k=>SP[k].tg==='all'), oneK=off.find(k=>SP[k].tg==='one');
+    const k=en.length>=2&&allK?allK:(oneK||allK);
+    if(k){const tgt=en.slice().sort((a,b)=>a.hp-b.hp)[0]; return {t:'spell',k,target:SP[k].tg==='one'?B.en.indexOf(tgt):null};}
+  }
+  const tgt=en.slice().sort((a,b)=>a.hp-b.hp)[0];
+  return {t:'attack',target:B.en.indexOf(tgt)};
+}
+
 function physDmg(atk,def){const base=(atk-def/2)/2; if(base<1) return rnd(0,1); return Math.max(1,Math.floor(base*(.85+Math.random()*.3)));}
+const battleAtk=p=>Math.round(atkOf(p)*(p.atkUp?1.4:1));
 function a_kill(){const a=Snd.ac; a&&tone(880,a.currentTime,.12,'square',.04);}
 async function hitEnemy(e,dmg){
   e.hp=Math.max(0,e.hp-dmg); e.flashT=performance.now();
   await say(dmg>0?`${e.label}に ${dmg}ポイントの ダメージ！`:`${e.label}に ダメージを あたえられない！`,{wait:'auto',ms:520});
-  if(e.hp<=0){e.dieT=performance.now(); a_kill(); await say(`${e.label}を やっつけた！`,{wait:'auto',ms:480}); return;}
+  if(e.hp<=0){e.dieT=performance.now(); e.prep=null; a_kill(); await say(`${e.label}を やっつけた！`,{wait:'auto',ms:480}); return;}
   if(e.sleep&&dmg>0&&Math.random()<.3){e.sleep=false; await say(`${e.label}は めを さました！`,{wait:'auto',ms:400});}
 }
+const pickAliveEnemy=t=>{const e=B.en[t]; return e&&e.hp>0?e:alive()[0];};
 async function memberAct(p,cmd){
   const n=p.name;
   if(p.sleep){
@@ -1741,35 +2577,49 @@ async function memberAct(p,cmd){
   if(!cmd) return null;
   if(cmd.t==='defend'){await say(`${n}は みを まもっている。`,{wait:'auto',ms:400}); return null;}
   if(cmd.t==='attack'){
-    let e=B.en[cmd.target]; if(!e||e.hp<=0) e=alive()[0]; if(!e) return null;
+    const e=pickAliveEnemy(cmd.target); if(!e) return null;
     await say(`${n}の こうげき！`,{wait:'auto',ms:300});
     if(Math.random()<1/32){sfx.miss(); await say(`ミス！ ${e.label}は ひらりと みをかわした！`,{wait:'auto'}); return null;}
     if(Math.random()<CLS[p.cls].crit){sfx.crit(); flash('#ffffff',160); shake(); await say('かいしんの いちげき！',{wait:'auto',ms:350});
-      await hitEnemy(e,Math.floor(atkOf(p)*(.85+Math.random()*.15))); return null;}
-    sfx.hit(); await hitEnemy(e,physDmg(atkOf(p),e.def)); return null;
+      await hitEnemy(e,Math.floor(battleAtk(p)*(.85+Math.random()*.15))); return null;}
+    sfx.hit(); await hitEnemy(e,physDmg(battleAtk(p),e.def)); return null;
   }
   if(cmd.t==='spell'){
     const sp=SP[cmd.k];
-    if(p.mp<sp.mp){await say(`${n}は じゅもんを となえようとした。 しかし MPが たりない！`,{wait:'auto'}); return null;}
+    if(p.mp<sp.mp){await say(`${n}は ${sp.n}を つかおうとした。 しかし MPが たりない！`,{wait:'auto'}); return null;}
     p.mp-=sp.mp; updStatus();
-    await say(`${n}は ${sp.n}の じゅもんを となえた！`,{wait:'auto',ms:350}); sfx.magic(); await sleep(200);
+    if(sp.t==='phys'||sp.t==='roar') await say(`${n}の ${sp.n}！`,{wait:'auto',ms:350});
+    else {await say(`${n}は ${sp.n}の じゅもんを となえた！`,{wait:'auto',ms:350}); sfx.magic(); await sleep(200);}
     if(sp.t==='guard'){B.guard=true; flash('#a0c8ff',260); await say('ひかりの かべが なかまたちを つつみこんだ！',{wait:'auto'}); return null;}
-    if(sp.t==='sleep'){
-      flash('#c0a0ff',260);
+    if(sp.t==='sleep'||sp.t==='roar'){
+      flash(sp.t==='roar'?'#ffffff':'#c0a0ff',260); if(sp.t==='roar') shake();
       for(const e of alive()){
         if(e.d.boss) await say(`${e.label}には ききめが なかった！`,{wait:'auto',ms:450});
-        else if(!e.sleep&&Math.random()<.6){e.sleep=true; await say(`${e.label}は ねむってしまった！`,{wait:'auto',ms:450});}
-        else await say(`${e.label}は ねむらなかった！`,{wait:'auto',ms:400});
+        else if(!e.sleep&&Math.random()<(sp.t==='roar'?.5:.6)){e.sleep=true; await say(sp.t==='roar'?`${e.label}は ひるんで うごけなく なった！`:`${e.label}は ねむってしまった！`,{wait:'auto',ms:450});}
+        else await say(`${e.label}には きかなかった！`,{wait:'auto',ms:400});
       }
       return null;
     }
+    if(sp.t==='phys'){
+      sfx.crit(); shake();
+      const targets=sp.tg==='all'?alive():[pickAliveEnemy(cmd.target)];
+      for(const e of targets) if(e&&e.hp>0) await hitEnemy(e,Math.round(physDmg(battleAtk(p),e.def)*sp.mult));
+      return null;
+    }
     if(sp.t==='atk'){
-      if(cmd.k==='bolt'){sfx.bolt(); flash('#ffffff',300); shake();}
-      else if(cmd.k==='holy'){sfx.bolt(); flash('#fff4b0',380);}
+      if(['bolt','spear','storm'].includes(cmd.k)){sfx.bolt(); flash('#ffffff',300); shake();}
+      else if(['holy','starrain','judge','sholy','nova','meteor'].includes(cmd.k)){sfx.bolt(); flash('#fff4b0',380);}
       else if(cmd.k==='ice'){sfx.bolt(); flash('#a0e8ff',300);}
       else {sfx.fire(); flash('#ff8a3a',260);}
-      const targets=sp.tg==='all'?alive():[B.en[cmd.target]&&B.en[cmd.target].hp>0?B.en[cmd.target]:alive()[0]];
+      const targets=sp.tg==='all'?alive():[pickAliveEnemy(cmd.target)];
       for(const e of targets) if(e&&e.hp>0) await hitEnemy(e,rnd(...sp.pow));
+      return null;
+    }
+    if(sp.t==='healAll'){flash('#7dffb0',260); await say(healAll(sp.pow),{wait:'auto'}); updStatus(); return null;}
+    if(sp.t==='buffAtk'||sp.t==='buffDef'){
+      const tgt=S.party[cmd.target]; if(!tgt||tgt.hp<=0){await say('しかし こうかが なかった！',{wait:'auto'}); return null;}
+      if(sp.t==='buffAtk'){tgt.atkUp=true; flash('#ff8080',200); await say(`${tgt.name}の ちからが みなぎってきた！`,{wait:'auto'});}
+      else {tgt.defUp=true; flash('#a0c8ff',200); await say(`${tgt.name}は ひかりの ころもに つつまれた！`,{wait:'auto'});}
       return null;
     }
     const tgt=S.party[cmd.target]; const r=tgt&&applyTo(sp,sp.t,sp.pow,tgt);
@@ -1796,21 +2646,22 @@ async function memberAct(p,cmd){
   return null;
 }
 async function hurtMember(p,dmg,o={}){
-  if(!o.raw){if(B.guard) dmg=Math.ceil(dmg/2); if(p.defend) dmg=Math.ceil(dmg/2);}
+  if(!p) return;
+  if(!o.raw){if(B.guard) dmg=Math.ceil(dmg/2); if(p.defend) dmg=Math.ceil(dmg/2); if(p.defUp) dmg=Math.ceil(dmg*.6);}
   p.hp=Math.max(0,p.hp-dmg); updStatus();
   if(dmg>0){sfx.hurt(); shake(); flash('rgba(255,40,40,.5)',140);}
   await say(dmg>0?`${p.name}は ${dmg}ポイントの ダメージを うけた！`:`${p.name}は ダメージを うけなかった！`,{wait:'auto',ms:520});
-  if(p.hp<=0){p.poison=false; p.sleep=false; updStatus(); await say(`${p.name}は ちからつきた…`,{wait:'auto',ms:600});}
+  if(p.hp<=0){p.poison=false; p.sleep=false; p.atkUp=false; p.defUp=false; updStatus(); await say(`${p.name}は ちからつきた…`,{wait:'auto',ms:600});}
   else if(p.sleep&&dmg>0&&!o.raw&&Math.random()<.3){p.sleep=false; updStatus(); await say(`${p.name}は いたみで めを さました！`,{wait:'auto',ms:400});}
 }
 async function poisonMember(p,ch=.6){
-  if(p.hp<=0||p.poison) return; if(Math.random()>=ch) return;
+  if(!p||p.hp<=0||p.poison) return; if(Math.random()>=ch) return;
   p.poison=true; updStatus(); await say(`${p.name}は どくに おかされた！`,{wait:'auto',ms:450});
 }
 async function sleepMember(p,ch){
-  if(p.hp<=0||p.sleep) return;
-  if(Math.random()<ch){p.sleep=true; updStatus(); await say(`${p.name}は ねむってしまった！`,{wait:'auto',ms:450});}
-  else await say(`${p.name}は ねむらなかった！`,{wait:'auto',ms:380});
+  if(!p||p.hp<=0||p.sleep) return;
+  if(Math.random()<ch){p.sleep=true; updStatus(); await say(`${p.name}は うごけなく なった！`,{wait:'auto',ms:450});}
+  else await say(`${p.name}は もちこたえた！`,{wait:'auto',ms:380});
 }
 const randAlly=()=>pickR(aliveP());
 async function enemyAttack(e,mult=1,silent,tgt){
@@ -1828,32 +2679,70 @@ function pickSkill(d){if(!d.sk) return null; let r=Math.random(); for(const s of
 async function enemyAct(e){
   if(e.sleep){
     if(Math.random()<.35){e.sleep=false; await say(`${e.label}は めを さました！`,{wait:'auto',ms:420});}
-    else await say(`${e.label}は ねむっている。`,{wait:'auto',ms:380});
+    else await say(`${e.label}は うごけない。`,{wait:'auto',ms:380});
     return;
   }
   const d=e.d;
   if(d.ai==='zolga') return zolgaAct(e);
   if(d.ai==='witch') return witchAct(e);
+  if(d.ai==='gen') return genAct(e);
   await enemyMove(e);
   if(d.acts&&aliveP().length&&e.hp>0&&Math.random()<.4) await enemyMove(e);
 }
 async function enemyMove(e){
-  const d=e.d;
-  let sk=pickSkill(d); if(e.charge) sk=null;
-  if(sk&&sk.t==='healAlly'){
-    const tg=alive().filter(x=>x.hp<x.mhp*.6).sort((a,b)=>a.hp/a.mhp-b.hp/b.mhp)[0];
-    if(!tg) sk=null; else{await say(sk.m.replace('%s',e.label),{wait:'auto',ms:350}); const v=Math.min(rnd(...sk.pow),tg.mhp-tg.hp); tg.hp+=v; await say(`${tg.label}の きずが ${v}ポイント かいふくした！`,{wait:'auto'}); return;}
-  }
+  let sk=pickSkill(e.d); if(e.charge) sk=null;
   if(!sk) return enemyAttack(e);
-  await say(sk.m.replace('%s',e.label),{wait:'auto',ms:380});
-  if(sk.t==='mag'){sfx.fire(); flash('#ff8a3a',200); await hurtMember(randAlly(),rnd(...sk.pow));}
-  else if(sk.t==='breath'){sfx.fire(); flash('#ff8a3a',220); await hitAll(...sk.pow);}
-  else if(sk.t==='str') await enemyAttack(e,1.5,true);
-  else if(sk.t==='charge') e.charge=true;
-  else if(sk.t==='poison'){const p=randAlly(); await enemyAttack(e,1,true,p); await poisonMember(p);}
-  else if(sk.t==='sleep1'){flash('#c0a0ff',200); await sleepMember(randAlly(),.5);}
-  else if(sk.t==='sleepAll'){flash('#ffc0e0',240); for(const p of aliveP()) await sleepMember(p,.35);}
-  else if(sk.t==='mist'){flash('rgba(120,255,80,.4)',260); for(const p of aliveP()){await hurtMember(p,rnd(...sk.pow)); await poisonMember(p,.35);}}
+  return doMove(e,sk);
+}
+// だんかいつき ボスの こうどう
+async function genAct(e){
+  const d=e.d; let ph=e.ph||0;
+  while(d.phases[ph+1]&&e.hp<=e.mhp*d.phases[ph+1].at){
+    ph++; e.ph=ph; const P=d.phases[ph];
+    if(P.alt) e.alt=true;
+    if(P.form){e.form=true; e.name=d.form2.n; e.label=e.name; layoutEnemies();}
+    flash('#ff2050',400); shake();
+    if(P.say) await say(P.say,{wait:FAST?'auto':'key'});
+  }
+  const P=d.phases[ph];
+  await genMove(e,P);
+  if(P.acts&&Math.random()<P.acts&&aliveP().length&&e.hp>0) await genMove(e,P);
+}
+async function genMove(e,P){
+  if(e.prep){const mv=e.prep; e.prep=null; return doMove(e,mv);}
+  const tot=P.moves.reduce((s,m)=>s+m.r,0); let r=Math.random()*tot, mv=P.moves[0];
+  for(const m of P.moves){if(r<m.r){mv=m; break;} r-=m.r;}
+  return doMove(e,mv);
+}
+async function doMove(e,mv){
+  const msg=mv.m?mv.m.replace('%s',e.label):'';
+  const ref=e.d.hpRef||60;
+  const dm=()=>Math.round((mv.f?ref*mv.f*(.9+Math.random()*.2):rnd(...mv.pow))*(e.d.dmg||1));
+  switch(mv.t){
+    case 'attack': return enemyAttack(e);
+    case 'str': await say(msg,{wait:'auto',ms:380}); return enemyAttack(e,1.5,true);
+    case 'charge': await say(msg,{wait:'auto',ms:420}); e.charge=true; return;
+    case 'prep': await say(msg,{wait:'auto',ms:600}); e.prep=mv.next; sfx.magic(); return;
+    case 'mag': await say(msg,{wait:'auto',ms:380}); sfx.fire(); flash('#ff8a3a',200); return hurtMember(randAlly(),dm());
+    case 'breath': await say(msg,{wait:'auto',ms:380}); sfx.fire(); flash(mv.f>.25?'#ffffff':'#ff8a3a',mv.f>.25?400:220); if(mv.f>.25) shake(); for(const p of aliveP()) await hurtMember(p,dm()); return;
+    case 'poison': {const p=randAlly(); await say(msg,{wait:'auto',ms:380}); await enemyAttack(e,1,true,p); return poisonMember(p);}
+    case 'sleep1': await say(msg,{wait:'auto',ms:380}); flash('#c0a0ff',200); return sleepMember(randAlly(),.5);
+    case 'sleepAll': await say(msg,{wait:'auto',ms:380}); flash('#ffc0e0',240); for(const p of aliveP()) await sleepMember(p,mv.ch||.35); return;
+    case 'mist': await say(msg,{wait:'auto',ms:380}); flash('rgba(120,255,80,.4)',260); for(const p of aliveP()){await hurtMember(p,dm()); await poisonMember(p,.35);} return;
+    case 'summon': {
+      if(alive().length>=3) return enemyAttack(e);
+      await say(msg,{wait:'auto',ms:420}); const n=mkEnemy(mv.id,null,e.d.ml||30); n.noexp=1; B.en.push(n); labelEnemies(B.en); layoutEnemies(); return;
+    }
+    case 'heal': {
+      e.heals=e.heals||0; if(e.heals>=(mv.max||2)||e.hp>e.mhp*.7) return enemyAttack(e);
+      e.heals++; await say(msg,{wait:'auto',ms:380}); const v=Math.min(Math.round(e.mhp*(mv.f||.1)),e.mhp-e.hp); e.hp+=v; return say(`${e.label}の きずが ${v}ポイント かいふくした！`,{wait:'auto'});
+    }
+    case 'healAlly': {
+      const tg=alive().filter(x=>x.hp<x.mhp*.7).sort((a,b)=>a.hp/a.mhp-b.hp/b.mhp)[0]; if(!tg) return enemyAttack(e);
+      await say(msg,{wait:'auto',ms:350}); const v=Math.min(mv.f?Math.round(tg.mhp*mv.f):rnd(...mv.pow),tg.mhp-tg.hp); tg.hp+=v; return say(`${tg.label}の きずが ${v}ポイント かいふくした！`,{wait:'auto'});
+    }
+  }
+  return enemyAttack(e);
 }
 async function witchAct(e){
   const r=Math.random();
@@ -1867,7 +2756,7 @@ async function witchAct(e){
 async function zolgaAct(e){
   if(!e.p2&&e.hp<e.mhp*.5){
     e.p2=true; e.alt=true; flash('#ff2050',400); shake();
-    await say('ゾルガ「おのれ…！ ならば しんの すがたを みせてやろう！」',{wait:'key'});
+    await say('ゾルガ「おのれ…！ ならば しんの すがたを みせてやろう！」',{wait:FAST?'auto':'key'});
     await say('ゾルガの からだから まがまがしい ひかりが あふれだした！',{wait:'auto'});
   }
   const acts=e.p2?2:1;
@@ -1890,37 +2779,38 @@ async function zolgaAct(e){
   }
 }
 async function victory(){
-  const exp=B.en.reduce((s,e)=>s+e.d.exp,0), gold=B.en.reduce((s,e)=>s+e.d.g,0);
+  const km=B.boss?1:(EXPMUL[B.zone]??1);
+  const exp=Math.round(B.en.filter(e=>!e.noexp).reduce((s,e)=>s+e.d.exp,0)*km), gold=Math.round(B.en.filter(e=>!e.noexp).reduce((s,e)=>s+e.d.g,0)*(km+1)/2);
   stopBgm(); const ms=sfx.win();
   await say(B.en.length>1?'まものたちを やっつけた！':`${B.en[0].name}を たおした！`,{wait:'auto',ms:Math.max(500,(ms||0)-200)});
   if(exp){aliveP().forEach(p=>p.exp+=exp); await say(S.party.length>1?`みんなは けいけんち ${exp}ポイントを かくとく！`:`けいけんち ${exp}ポイントを かくとく！`,{wait:'auto'});}
   if(gold){S.gold+=gold; await say(`${gold}ゴールドを てにいれた！`,{wait:'auto'});}
-  if(!B.boss&&Math.random()<.1){const it=pickR(['herb','herb','antidote']); addItem(it); await say(`まものは ${IT[it].n}を おとしていった！`,{wait:'auto'});}
+  if(!B.boss&&Math.random()<.1){const it=pickR(['herb','herb2','antidote']); addItem(it); await say(`まものは ${IT[it].n}を おとしていった！`,{wait:'auto'});}
   for(const p of aliveP()){
     while(p.lv<MAXLV&&p.exp>=expFor(p.lv+1)){
       const before=learned(p); const d=growth(p); p.hp+=d.hp; p.mp+=d.mp; updStatus();
       const lms=sfx.lvl();
       await say(`${p.name}は レベル ${p.lv}に あがった！`,{wait:'auto',ms:Math.max(700,lms||0)});
       await say(`ちから+${d.str} すばやさ+${d.agi} さいだいHP+${d.hp}`+(d.mp?` さいだいMP+${d.mp}`:''),{wait:'auto',ms:800});
-      for(const k of learned(p)) if(!before.includes(k)) await say(`${p.name}は ${SP[k].n}の じゅもんを おぼえた！`,{wait:'auto',ms:900});
+      for(const k of learned(p)) if(!before.includes(k)) await say(`${p.name}は ${SP[k].n}を おぼえた！`,{wait:'auto',ms:900});
     }
   }
-  {const m=document.createElement('span'); m.className='more'; m.textContent='▼'; msgEl.appendChild(m); await waitKey(); m.remove();}
+  if(!FAST){const m=document.createElement('span'); m.className='more'; m.textContent='▼'; msgEl.appendChild(m); await waitKey(); m.remove();}
 }
 async function defeat(){
   stopBgm(); const ms=sfx.lose();
   await say(S.party.length>1?'ぜんめつ してしまった…':`${HN()}は ちからつきた…`,{wait:'auto',ms:Math.max(1200,ms||0)});
-  {const m=document.createElement('span'); m.className='more'; m.textContent='▼'; msgEl.appendChild(m); await waitKey(); m.remove();}
+  if(!FAST){const m=document.createElement('span'); m.className='more'; m.textContent='▼'; msgEl.appendChild(m); await waitKey(); m.remove();}
   await fadeOut(700); hideStatus(); msgClose(); B=null; mode='field';
   restoreAll(); S.gold=Math.floor(S.gold/2);
-  S.map='village'; P.x=3; P.y=5; P.dir='up'; P.moving=false; trail=[]; stepsSince=0; loadNPCs(); playBgm('town');
+  const t=S.lastTown&&MAPS[S.lastTown]?S.lastTown:'village', sp=INN_SPOT[t]||[5,13];
+  S.map=t; S.veh=null; P.x=sp[0]; P.y=sp[1]; P.dir='up'; P.moving=false; trail=[]; stepsSince=0; loadNPCs(); playBgm('town');
   await sleep(400); await fadeIn(600);
   msgClear();
-  await say('…きがつくと そこは ミナモむらの やどやだった。');
-  await say('「たおれていた あなたたちを むらの ひとが はこんで きたのよ。 むりは しないでね。」');
+  await say(`…きがつくと そこは ${MAPS[t].name}の やどやだった。`);
+  await say('「たおれていた あなたたちを まちの ひとが はこんで きたのよ。 むりは しないでね。」');
   await say('（もっていた ゴールドが はんぶんに なってしまった）'); msgClose();
 }
-
 /* ---------- エンディング ---------- */
 const stars=[...Array(90)].map(()=>({x:Math.random()*SW,y:Math.random()*SH*.8,p:Math.random()*6,s:Math.random()<.15?2:1}));
 let endStars=0;
@@ -1932,28 +2822,50 @@ function drawSky(now,count){
 }
 async function ending(){
   msgClear();
-  await say('ゾルガ「ば… ばかな… この わしが… にんげん ごときに…」');
-  flash('#ffffff',600); shake();
-  await say('ゾルガは くろい きりと なって きえていった…');
-  S.flags.zolga=1; addItem('orb'); loadNPCs(); sfx.chest();
-  await say(`${HN()}たちは ほしのたまを とりもどした！`);
+  await say('ノクス「ばかな… ちいさき ものたちの ひかりが… これほど とは…」');
+  flash('#ffffff',800); shake();
+  await say('ノクスの からだから、 くらわれた ほしの ひかりが あふれだした！');
+  S.flags.nox=1; S.ch=16; loadNPCs(); sfx.chest();
   msgClose(); await fadeOut(900);
   mode='ending'; endStars=0; playBgm('town'); await fadeIn(900);
-  const grow=setInterval(()=>{endStars=Math.min(stars.length,endStars+2);},90);
+  const grow=setInterval(()=>{endStars=Math.min(stars.length,endStars+1);},140);
   msgClear();
-  await say('ほしのたまが まばゆい ひかりを はなち、 よぞらへ のぼっていく…');
-  await say('ひとつ、 またひとつ。 そらに ほしが もどってきた。');
-  const names=S.party.map(p=>p.name).join('と ');
+  await say('ひとつ、 またひとつ。 よぞらに ほしが もどっていく。');
+  await say('ミナモむらの いどは すみ、 ガルドの まちには わらいごえが もどった。');
+  await say('ハヤテの さとの ひとびとは ひさしぶりに ぐっすり ねむり、 うみには また ふねが ゆきかう。');
+  await say('こおりの くには はるを むかえ、 すなの くにの オアシスには みずが あふれた。');
+  await say('そして そらの みやこ ルミナから、 ほしの ふる よぞらを みおろす くじらが いっぴき。');
+  const names=S.party.map(p=>p.name).join('、 ');
   await say(`ひとびとは ほしぞらを みあげ、 ${names}の なまえを いつまでも たたえたという。`);
   msgClose(); clearInterval(grow); endStars=stars.length;
   endUI=document.createElement('div'); endUI.className='end';
-  endUI.innerHTML=`<div class="logo">おわり</div><p>あそんでくれて ありがとう！</p><p style="font-size:2.8cqw;color:var(--sub)">${S.party.map(p=>p.name+' Lv'+p.lv).join('　')}</p>`;
+  endUI.innerHTML=`<div class="logo">ほしかげの剣</div><p>― おわり ―</p><p>あそんでくれて ありがとう！</p><p style="font-size:2.6cqw;color:var(--sub)">${S.party.map(p=>p.name+' Lv'+p.lv).join('　')}</p><p style="font-size:2.6cqw;color:var(--sub)">クリアご：ほこらの しまに『ほしふるめいきゅう』が ひらいた</p>`;
   ui.appendChild(endUI);
-  const m=new Menu({items:['ぼうけんを つづける'],cancel:false,style:{left:'50%',bottom:'6%',transform:'translateX(-50%)'}});
-  await m.pick(); m.close(); endUI.remove(); endUI=null;
+  const m=new Menu({items:['ぼうけんを つづける'],cancel:false,style:{left:'50%',bottom:'4%',transform:'translateX(-50%)'}});
+  if(AUTO){m.close();} else {await m.pick(); m.close();}
+  endUI.remove(); endUI=null;
   await fadeOut(500);
-  mode='field'; S.map='village'; P.x=14; P.y=12; P.dir='up'; P.moving=false; trail=[]; loadNPCs(); playBgm('town'); saveGame();
+  mode='field'; S.map='village'; S.veh=null; P.x=14; P.y=12; P.dir='up'; P.moving=false; trail=[]; loadNPCs(); playBgm('town'); saveGame();
   await fadeIn(500); toast('ミナモむら');
+}
+
+/* ---------- セーブの いこう（むかしの ぼうけんのしょも つづきから あそべる） ---------- */
+function migrate(s){
+  s.flags=s.flags||{}; const f=s.flags, h=id=>(s.items[id]||0)>0;
+  if(!MAPS[s.map]) s.map='village';
+  s.visited=s.visited||['village']; s.lastTown=s.lastTown||'village';
+  if(f.mira&&!s.visited.includes('town')) s.visited.push('town');
+  if(f.gou&&!s.visited.includes('hayate')) s.visited.push('hayate');
+  for(const m of s.party) {m.poison=!!m.poison; if(m.cls==='gou'&&m.mmp===0&&m.lv>1) m.mmp=m.mp=Math.round((m.lv-1)*1.5);}
+  if(!s.ch){
+    if(f.boss_crypt&&!h('sun')) s.items.sun=1;
+    if((f.mira||f.boss_sewer||f.guardian||h('key'))&&!h('letter')) s.items.letter=1;
+    if(f.mira||f.boss_sewer) f.sewerOK=1;
+    s.ch=f.zolga?7:h('sun')&&h('moon')&&h('key')?6:h('moon')?5:h('key')?4:(f.boss_sewer||f.guardian)?3:h('letter')?2:1;
+    if(f.zolga&&!s.ship){const [hx,hy]=MAPS.hayate.world; s.ship=dockFor(hx,hy);}
+    if(s.ch>1) f.intro=1;
+  }
+  return s;
 }
 
 /* ---------- タイトル ---------- */
@@ -1970,8 +2882,7 @@ async function titleScreen(){
   if(c===1){
     titleUI.remove(); titleUI=null;
     await fadeOut(300);
-    S=sv; S.flags=S.flags||{}; if(!MAPS[S.map]) S.map='village';
-    P.x=S.x; P.y=S.y; P.dir=S.dir||'down'; P.moving=false; trail=[]; mode='field'; loadNPCs(); playBgm(curMap().bgm);
+    S=migrate(sv); P.x=S.x; P.y=S.y; P.dir=S.dir||'down'; P.moving=false; trail=[]; mode='field'; loadNPCs(); playBgm(curMap().bgm);
     await fadeIn(300); toast(curMap().name||'フィールド');
     return;
   }
@@ -1981,13 +2892,15 @@ async function titleScreen(){
   mode='ending'; endStars=0; stopBgm(); await fadeIn(400);
   msgClear();
   await say('ある よる、 そらから すべての ほしが きえた。');
-  await say('まおう ゾルガが ほしの ちからを やどす『ほしのたま』を うばったのだ。');
+  await say('ほしの ひかりを うしなった まものたちは きょうぼうに なり、 せかいは しずかに やみへ しずみはじめた。');
   await say(`ちいさな ミナモむらで くらす わかもの ${HN()}は、 むらの ちょうろうに よばれた…`);
   msgClose(); await fadeOut(500);
   scripting=true;
   try{
     mode='field'; P.x=S.x; P.y=S.y; P.dir=S.dir; P.moving=false; trail=[]; loadNPCs(); playBgm('town');
-    await fadeIn(500); toast('ミナモむら');
+    await fadeIn(500);
+    S.ch=0; await startChapter(1);
+    toast('ミナモむら');
     await elderTalk();
   } finally {scripting=false;}
 }
@@ -2015,12 +2928,19 @@ function frame(now){
   if(flashFx){const k=(now-flashFx.t0)/flashFx.ms; if(k>=1) flashFx=null; else{ctx.save(); ctx.globalAlpha=(1-k)*.8; ctx.fillStyle=flashFx.color; ctx.fillRect(0,0,SW,SH); ctx.restore();}}
   requestAnimationFrame(frame);
 }
+buildTiles2();
+buildWorld2();
+buildTowns2();
 defineObjects();
 buildDungeons();
+defineObjects2();
 requestAnimationFrame(frame);
 function start(){titleScreen();}
 const hot=window.claude&&window.claude.hot;
 if(hot&&hot.snapshot) try{hot.snapshot(()=>({}));}catch(e){}
 if(hot&&hot.ready) hot.ready(start); else start();
-window.__rpg={get busy(){return scripting||handlers.length>0}, get S(){return S}, get B(){return B}, P, MAPS, battle, gotoMap, press, get mode(){return mode}, expFor, MON, MSPR, PERSON, mkMember, joinParty};
+// テストプレイ・バランス ちょうせい よう
+window.__rpg={get busy(){return scripting||handlers.length>0}, get S(){return S}, set S(v){S=v;}, get B(){return B}, P, MAPS, MON, MSPR, PERSON, IT, SP, ENC, WORLD, NEWDG,
+  battle, gotoMap, press, get mode(){return mode}, expFor, mkMember, joinParty, startChapter, migrate, dockFor, fstat, bstat, expectParty, loadNPCs,
+  setFast(v){FAST=!!v;}, setAuto(v){AUTO=v===true?true:v||false;}, newGame, TUNE, applyTune, EXPMUL, NMUL};
 </script>
