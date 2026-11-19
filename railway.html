@@ -566,10 +566,14 @@ function renderLines(){
       ${lineTip(l)}
       <div class="row" style="margin-top:6px">${avail.map(k=>`<button data-buy="${k}" ${S.money<trainPrice(k)||l.trains.length>=maxTrains(l)?"disabled":""}>＋${TRAINS[k].name} ${yen(trainPrice(k))}<br><span class="muted">維持費 月${yen(trainUpkeep(k))}</span></button>`).join("")}</div>
       <div class="row" style="margin-top:6px"><button data-ext="start">◀ ${S.cities[l.stops[0]].name}側を延伸</button><button data-ext="end">${S.cities[l.stops[l.stops.length-1]].name}側を延伸 ▶</button></div>
-      <div class="row" style="margin-top:6px"><button data-sell ${l.trains.length<=1?"disabled":""}>列車を1編成売却</button><button data-del>廃線</button><button data-focus>地図で見る</button></div>`;
+      <div class="row" style="margin-top:6px">${Object.keys(counts).map(k=>`<button data-sell="${k}" ${l.trains.length<=1?"disabled":""}>${TRAINS[k].name}を売る +${yen(Math.round(TRAINS[k].cost*0.4))}</button>`).join("")}</div>
+      <div class="row" style="margin-top:6px"><button data-del>廃線</button><button data-focus>地図で見る</button></div>`;
     d.querySelectorAll("[data-buy]").forEach(b=>b.addEventListener("click",()=>{ if(addTrain(l,b.dataset.buy)){ SFX.build(); pulses.push({x:S.cities[l.stops[0]].x,y:S.cities[l.stops[0]].y,life:.6,color:l.color}); renderSide(); } }));
     d.querySelectorAll("[data-ext]").forEach(b=>b.addEventListener("click",()=>startExtend(l,b.dataset.ext)));
-    d.querySelector("[data-sell]").addEventListener("click",()=>{ if(l.trains.length<=1) return; const t=l.trains.pop(); const v=Math.round(TRAINS[t.type].cost*0.4); S.money+=v; S.m.other+=v; news(`${TRAINS[t.type].name}列車を売却（+${yen(v)}）`); renderSide(); });
+    // 種類を選んで売る（買値の40%が戻る）。乗っている客はそのまま降ろす扱い
+    d.querySelectorAll("[data-sell]").forEach(btn=>btn.addEventListener("click",()=>{ if(l.trains.length<=1) return;
+      const type=btn.dataset.sell; let i=-1; for(let j=l.trains.length-1;j>=0;j--) if(l.trains[j].type===type){ i=j; break; } if(i<0) return;
+      l.trains.splice(i,1); const v=Math.round(TRAINS[type].cost*0.4); S.money+=v; S.m.other+=v; news(`${TRAINS[type].name}列車を売却（+${yen(v)}）`); SFX.click(); renderSide(); }));
     d.querySelector("[data-del]").addEventListener("click",()=>askConfirm(`${l.name}を廃線にしますか？`,"建設費の20%と列車の売却額が戻ります。","廃線にする",()=>{
       if(!S.lines.includes(l)) return; const v=Math.round(l.cost*0.2+l.trains.reduce((a,t)=>a+TRAINS[t.type].cost*0.4,0));
       S.money+=v; S.m.other+=v; S.lines=S.lines.filter(x=>x!==l); geomCache.delete(l.id); news(`${l.name}を廃線にしました（+${yen(v)}）`); renderSide(); }));
