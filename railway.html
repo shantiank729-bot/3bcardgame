@@ -161,12 +161,12 @@ a{color:var(--accent)}
     <p>小さな鉄道会社の社長になって、町と町を線路でつなぎ、乗客を運んで稼ぎましょう。</p>
     <ol>
       <li><b>路線をつくる</b>：「新しい路線をつくる」→ 駅を順番にタップ →「開業する」。普通列車が1編成つきます。</li>
-      <li><b>稼ぐ</b>：運賃は乗った距離で決まります。人口の多い町どうしを、山や川を避けて長くつなぐのがコツ。</li>
+      <li><b>稼ぐ</b>：運賃は乗った距離で決まります。列車の値段は何台買っても同じですが、<b>維持費がとても高い</b>ので、ガラガラの列車はすぐ赤字になります。人口の多い町どうしを、山や川を避けて長くつなぐのがコツ。</li>
       <li><b>見きわめる</b>：「路線」タブで路線ごとの利益と乗車率がわかります。満員続きなら列車を追加、ガラガラなら減らしましょう。</li>
       <li><b>町が育つ</b>：駅の待ち客（青い輪）をさばけていると人口が増えます。輪が赤い駅は混雑しています。</li>
       <li><b>広げる</b>：路線は両端から延伸できます。駅を改良すると乗客が増えます。</li>
     </ol>
-    <p class="muted">操作：ドラッグで移動／ピンチ・ホイールで拡大／左下のミニマップでジャンプ。キー：Space=一時停止、N=新路線、Esc=取消、+/-=拡大縮小。<br>資金がマイナスのまま3か月続くと倒産。ゲームを閉じている間も、最大6か月分まで半分の効率で稼ぎます。</p>
+    <p class="muted">操作：ドラッグで移動／ピンチ・ホイールで拡大／左下のミニマップでジャンプ。キー：Space=一時停止、N=新路線、Esc=取消、+/-=拡大縮小。<br><b>難易度：高</b>　列車・線路の維持費は高く、毎年8%ずつ上がります（運賃は4%）。1本の路線に走らせられる列車の数には上限があります。<b>10年以内に借金ゼロで資金100億円</b>でクリア。資金がマイナスのまま3か月続くと倒産。ゲームを閉じている間も、最大6か月分まで半分の効率で稼ぎます。</p>
     <div class="row" style="justify-content:flex-end"><button class="primary" id="helpClose">OK</button></div>
   </div>
 </div>
@@ -195,19 +195,22 @@ const CFG = {
   trackCostPerPx: 15_000,
   tunnelMul: 2.5, bridgeMul: 4, seaMul: 8,
   stationFee: 3_000_000,
-  trackUpkeepPerPx: 400,
+  trackUpkeepPerPx: 2_000,                   // 線路の保守費（月額・1pxあたり）
+  inflationPerYear: 0.08,                    // 維持費・保守費は毎年8%ずつ上がる
+  fareRisePerYear: 0.04,                     // 運賃は毎年4%しか上がらない → 年々効率化が必要
   fareBase: 500, farePerPx: 7,
-  genPerPop: 1/120, waitCapPerPop: 1/25, growthPerDay: 0.0025,
-  trainCostGrowth: 1.12,                     // 列車は買うほど値上がり（指数コスト）
+  genPerPop: 1/120, waitCapPerPop: 1/25, growthPerDay: 0.0012, popCapMul: 3,  // 人口は最初の3倍まで
+  pxPerTrain: 60,                            // 路線の長さ60pxごとに1編成まで走らせられる
   stationUpgradeBase: 8_000_000,
   loanUnit: 20_000_000, loanMax: 300_000_000, loanRate: 0.01,
   offlineEff: 0.5, offlineMaxMonths: 6,      // 留守中の収入：効率50%、上限6か月
   maxZoom: 6,
+  deadlineYears: 10,                         // この年数以内に最終目標を達成するとクリア
 };
 const TRAINS = {
-  local:   {name:"普通", cap:60,  speed:55,  cost:8_000_000,  upkeep:300_000,  dwell:0.9, cars:2, color:"#EDEDED"},
-  rapid:   {name:"快速", cap:100, speed:85,  cost:22_000_000, upkeep:700_000,  dwell:0.7, cars:3, color:"#F2C14E", unlock:"rapid"},
-  express: {name:"特急", cap:160, speed:130, cost:60_000_000, upkeep:1_600_000,dwell:0.6, cars:4, color:"#E0533D", unlock:"express"},
+  local:   {name:"普通", cap:60,  speed:55,  cost:8_000_000,  upkeep:1_200_000,dwell:0.9, cars:2, color:"#EDEDED"},
+  rapid:   {name:"快速", cap:100, speed:85,  cost:22_000_000, upkeep:3_300_000,dwell:0.7, cars:3, color:"#F2C14E", unlock:"rapid"},
+  express: {name:"特急", cap:160, speed:130, cost:60_000_000, upkeep:8_500_000,dwell:0.6, cars:4, color:"#E0533D", unlock:"express"},
 };
 const RANKS = [[0,"町の鉄道"],[2e8,"地方鉄道"],[1e9,"中堅私鉄"],[5e9,"大手私鉄"],[2e10,"鉄道王"]];
 const LINE_COLORS = ["#2A7FDB","#E0533D","#2BA36B","#9B59B6","#F39C12","#16A5A5","#D64F9A","#7F8C3A","#5D6DBE","#B5651D","#C0392B","#1ABC9C"];
@@ -272,7 +275,7 @@ function newGame(){
     if(terrainAt(x,y)!=="flat") continue;
     if(cities.some(c=>Math.hypot(c.x-x,c.y-y)<CFG.cityMinDist)) continue;
     const i=cities.length, pop = i<3? 110000+r()*90000 : i<10? 40000+r()*40000 : 8000+r()*28000;
-    cities.push({id:i,name:CITY_NAMES[i],x,y,pop:Math.round(pop),waiting:0,level:1,boost:0});
+    cities.push({id:i,name:CITY_NAMES[i],x,y,pop:Math.round(pop),pop0:Math.round(pop),waiting:0,level:1,boost:0});
   }
   S={v:2,seed,money:CFG.startMoney,day:0,riders:0,earned:0,cities,lines:[],trainsBought:0,loan:0,negMonths:0,
      goalsDone:[],unlocks:[],over:false,cleared:false,rank:0,
@@ -283,10 +286,14 @@ function geom(line){ let g=geomCache.get(line.id); if(!g){ const pts=line.stops.
   for(let i=1;i<pts.length;i++) cum.push(cum[i-1]+Math.hypot(pts[i].x-pts[i-1].x,pts[i].y-pts[i-1].y));
   g={pts,cum,total:cum[cum.length-1]}; geomCache.set(line.id,g);} return g; }
 function connected(cid){ return S.lines.some(l=>l.stops.includes(cid)); }
-function trainPrice(type){ return Math.round(TRAINS[type].cost*Math.pow(CFG.trainCostGrowth,S.trainsBought)/10000)*10000; }
+function trainPrice(type){ return TRAINS[type].cost; }   // 何台買っても値段は同じ
+function inflation(){ return 1+CFG.inflationPerYear*Math.floor(S.day/360); }
+function fareMul(){ return 1+CFG.fareRisePerYear*Math.floor(S.day/360); }
+function trainUpkeep(type){ return Math.round(TRAINS[type].upkeep*inflation()/10000)*10000; }
+function trackUpkeep(len){ return Math.round(len*CFG.trackUpkeepPerPx*inflation()); }
 function totalTrains(){ return S.lines.reduce((a,l)=>a+l.trains.length,0); }
 function trackLen(){ let s=0; for(const l of S.lines) s+=geom(l).total; return s; }
-function lineUpkeep(l){ return l.trains.reduce((a,t)=>a+TRAINS[t.type].upkeep,0)+Math.round(geom(l).total*CFG.trackUpkeepPerPx); }
+function lineUpkeep(l){ return l.trains.reduce((a,t)=>a+trainUpkeep(t.type),0)+trackUpkeep(geom(l).total); }
 function connCount(){ return S.cities.filter(c=>connected(c.id)).length; }
 function connPop(){ return S.cities.filter(c=>connected(c.id)).reduce((a,c)=>a+c.pop,0); }
 function lastProfit(){ const h=S.history[S.history.length-1]; return h? h.profit : null; }
@@ -307,7 +314,7 @@ const GOALS = [
   {id:"lines6", text:"路線を6本もつ", reward:1e8, prog:()=>S.lines.length/6},
   {id:"st20", text:"20の駅を接続する", reward:2e8, prog:()=>connCount()/20},
   {id:"all", text:"すべての町を接続する", reward:5e8, prog:()=>connCount()/S.cities.length},
-  {id:"rich", text:"借金ゼロで資金 100億円", reward:0, final:true, prog:()=>S.loan>0?Math.min(.99,S.money/1e10):S.money/1e10},
+  {id:"rich", text:"10年以内に、借金ゼロで資金 100億円", reward:0, final:true, prog:()=>(S.loan>0||S.timeUp)?Math.min(.99,S.money/1e10):S.money/1e10},
 ];
 
 // ============================================================
@@ -344,7 +351,9 @@ function bumpMoney(){ const m=$("money"); m.classList.add("bump"); clearTimeout(
 // ============================================================
 // シミュレーション
 // ============================================================
+function maxTrains(line){ return Math.max(2,Math.floor(geom(line).total/CFG.pxPerTrain)); }
 function addTrain(line,type,free=false){
+  if(line.trains.length>=maxTrains(line)) return false;
   const price=trainPrice(type);
   if(!free){ if(S.money<price) return false; S.money-=price; S.m.invest+=price; S.trainsBought++; }
   const g=geom(line), n=line.trains.length;
@@ -354,7 +363,7 @@ function addTrain(line,type,free=false){
 function arrive(line,t,si){
   const g=geom(line), city=S.cities[line.stops[si]], spec=TRAINS[t.type];
   let income=0, off=0;
-  t.load=t.load.filter(p=>{ if(p.dest===si){ income+=p.n*(CFG.fareBase+Math.abs(g.cum[si]-g.cum[p.from])*CFG.farePerPx); off+=p.n; return false;} return true; });
+  t.load=t.load.filter(p=>{ if(p.dest===si){ income+=p.n*(CFG.fareBase+Math.abs(g.cum[si]-g.cum[p.from])*CFG.farePerPx)*fareMul(); off+=p.n; return false;} return true; });
   if(off>0){ income=Math.round(income); S.money+=income; S.m.fare+=income; S.earned+=income; S.riders+=off;
     line.st.rev+=income; line.st.riders+=off;
     floaters.push({x:city.x,y:city.y,text:"+"+yen(income),life:1.6});
@@ -380,7 +389,7 @@ function simulate(dtReal){
     const cap=waitCap(c), mul=c.level*(c.boost>0?2:1);
     c.waiting=Math.min(cap,c.waiting+c.pop*CFG.genPerPop*mul*days);
     const ratio=c.waiting/cap;
-    if(ratio<0.8) c.pop*=1+CFG.growthPerDay*days*(1-ratio)*(c.level*0.5+0.5);
+    if(ratio<0.8) c.pop=Math.min(c.pop0*CFG.popCapMul*(0.5+c.level*0.5), c.pop*(1+CFG.growthPerDay*days*(1-ratio)*(c.level*0.5+0.5)));
     if(c.boost>0) c.boost-=days;
   }
   for(const line of S.lines){ const g=geom(line);
@@ -411,14 +420,14 @@ function checkGoals(){
     if(gl.unlock) S.unlocks.push(gl.unlock);
     banner("🏆 目標達成！", `${gl.text}${gl.reward?"　+"+yen(gl.reward):""}${gl.unlock?"　【"+gl.unlockText+"】解禁":""}`);
     confetti(); SFX.goal(); bumpMoney();
-    if(gl.final && !S.cleared){ S.cleared=true; showEnd("🎉 クリア！", `${dateStr(S.day)}、借金ゼロで資金100億円を達成！ あなたは立派な路線王です。累計乗客 ${Math.round(S.riders).toLocaleString()}人。このまま続けて全国制覇もできます。`); }
+    if(gl.final && !S.cleared){ S.cleared=true; showEnd("🎉 クリア！", `${dateStr(S.day)}、期限内に借金ゼロで資金100億円を達成！ あなたは立派な路線王です。累計乗客 ${Math.round(S.riders).toLocaleString()}人。このまま続けて全国制覇もできます。`); }
     renderSide(); }
   const rk=RANKS.reduce((a,r,i)=>S.earned>=r[0]?i:a,0);
   if(rk>S.rank){ S.rank=rk; banner("⬆️ ランクアップ！", `「${RANKS[rk][1]}」になりました`); confetti(); SFX.goal(); }
 }
 function monthEnd(){
-  let up=0; for(const l of S.lines) for(const t of l.trains) up+=TRAINS[t.type].upkeep;
-  const track=Math.round(trackLen()*CFG.trackUpkeepPerPx), interest=Math.round(S.loan*CFG.loanRate);
+  let up=0; for(const l of S.lines) for(const t of l.trains) up+=trainUpkeep(t.type);
+  const track=trackUpkeep(trackLen()), interest=Math.round(S.loan*CFG.loanRate);
   S.money-=up+track+interest; S.m.upkeep+=up; S.m.track+=track; S.m.interest+=interest;
   const m=S.m, profit=m.fare+m.other-m.upkeep-m.track-m.interest;
   S.history.push({...m,profit,money:S.money,invest:m.invest}); if(S.history.length>24) S.history.shift();
@@ -428,11 +437,13 @@ function monthEnd(){
   if(S.money<0){ S.negMonths++; news(`⚠️ 資金がマイナスです（${S.negMonths}/3か月）`); SFX.bad();
     if(S.negMonths>=3){ S.over=true; showEnd("💸 倒産…","資金不足が3か月続き、会社は倒産しました。財務タブで路線ごとの利益を確かめ、赤字路線を整理するのがコツです。"); } }
   else S.negMonths=0;
+  if(!S.over && !S.cleared && !S.timeUp && S.day>=CFG.deadlineYears*360){ S.timeUp=true;
+    showEnd("⌛ タイムアップ", `${CFG.deadlineYears}年以内に資金100億円には届きませんでした（資金 ${yen(S.money)}）。このまま自由に経営を続けることもできます。次は、赤字路線を早めに整理して、儲かる路線に列車を集中させてみよう。`); }
   const conn=S.cities.filter(c=>connected(c.id));
   if(conn.length && Math.random()<0.6){ const c=conn[Math.floor(Math.random()*conn.length)], r=Math.random();
     if(r<0.45){ c.boost=5; news(`🎆 ${c.name}でお祭り！5日間 乗客が2倍`); }
     else if(r<0.8){ const g=Math.round(c.pop*0.08); c.pop+=g; news(`🏘️ ${c.name}に新しい団地（人口+${g.toLocaleString()}）`); }
-    else { const cost=Math.round(trackLen()*CFG.trackUpkeepPerPx*0.5); S.money-=cost; S.m.other-=cost; news(`🌧️ 大雨で線路を補修（${yen(cost)}）`); } }
+    else { const cost=Math.round(trackUpkeep(trackLen())*0.5); S.money-=cost; S.m.other-=cost; news(`🌧️ 大雨で線路を補修（${yen(cost)}）`); } }
   save(); renderSide();
 }
 
@@ -534,6 +545,7 @@ function renderSide(){
 function lineTip(l){
   if(!l.last) return `<div class="tip muted">⏳ 月末に成績が出ます</div>`;
   const ld=l.last.load, waitFull=l.stops.some(id=>S.cities[id].waiting>=waitCap(S.cities[id])*0.8);
+  if((ld>0.85||waitFull) && l.trains.length>=maxTrains(l)) return `<div class="tip">🚦 満線で満員。<b>延伸</b>するか、普通を売って<b>大きな車両</b>に入れ替えよう</div>`;
   if(ld>0.85||waitFull) return `<div class="tip">🔥 満員・待ち客あふれ気味。<b>列車を増やすと儲かります</b></div>`;
   if(ld<0.3 && l.trains.length>1) return `<div class="tip">💤 空席が多め。列車を減らすと経費が浮きます</div>`;
   if(l.last.rev-l.last.upkeep<0) return `<div class="tip">📉 赤字。人口の多い町へ延伸すると改善するかも</div>`;
@@ -549,10 +561,10 @@ function renderLines(){
     const L=l.last, prof=L? L.rev-L.upkeep : null;
     d.innerHTML=`<div class="row between"><b><span class="swatch" style="background:${l.color}"></span> ${l.name}</b><span class="muted">${Math.round(geom(l).total)}km・${l.stops.length}駅</span></div>
       <div class="muted">${l.stops.map(i=>S.cities[i].name).join("→")}</div>
-      <div class="muted">列車：${Object.entries(counts).map(([k,v])=>TRAINS[k].name+"×"+v).join("、")||"なし"}</div>
+      <div class="muted">列車：${Object.entries(counts).map(([k,v])=>TRAINS[k].name+"×"+v).join("、")||"なし"}（${l.trains.length}/${maxTrains(l)}編成）${l.trains.length>=maxTrains(l)?' <span class="neg">満線：延伸すると増やせます</span>':""}</div>
       ${L?`<div class="kv" style="margin-top:6px"><span>先月の運賃収入</span><span>${yen(L.rev)}</span><span>経費（列車＋線路）</span><span>-${yen(L.upkeep)}</span><span><b>路線の利益</b></span><span class="${prof>=0?"pos":"neg"}"><b>${prof>=0?"+":""}${yen(prof)}</b></span><span>乗車率</span><span>${Math.round(L.load*100)}%</span></div><div class="bar"><i style="width:${Math.min(100,L.load*100)}%;background:${L.load>0.85?"var(--bad)":"var(--accent)"}"></i></div>`:""}
       ${lineTip(l)}
-      <div class="row" style="margin-top:6px">${avail.map(k=>`<button data-buy="${k}" ${S.money<trainPrice(k)?"disabled":""}>＋${TRAINS[k].name} ${yen(trainPrice(k))}</button>`).join("")}</div>
+      <div class="row" style="margin-top:6px">${avail.map(k=>`<button data-buy="${k}" ${S.money<trainPrice(k)||l.trains.length>=maxTrains(l)?"disabled":""}>＋${TRAINS[k].name} ${yen(trainPrice(k))}<br><span class="muted">維持費 月${yen(trainUpkeep(k))}</span></button>`).join("")}</div>
       <div class="row" style="margin-top:6px"><button data-ext="start">◀ ${S.cities[l.stops[0]].name}側を延伸</button><button data-ext="end">${S.cities[l.stops[l.stops.length-1]].name}側を延伸 ▶</button></div>
       <div class="row" style="margin-top:6px"><button data-sell ${l.trains.length<=1?"disabled":""}>列車を1編成売却</button><button data-del>廃線</button><button data-focus>地図で見る</button></div>`;
     d.querySelectorAll("[data-buy]").forEach(b=>b.addEventListener("click",()=>{ if(addTrain(l,b.dataset.buy)){ SFX.build(); pulses.push({x:S.cities[l.stops[0]].x,y:S.cities[l.stops[0]].y,life:.6,color:l.color}); renderSide(); } }));
@@ -632,7 +644,7 @@ let dispShown=null;
 function renderTop(){
   const m=$("money"); m.textContent=yen(dispMoney); m.classList.toggle("neg",S.money<0);
   const lp=lastProfit(), p=$("profit"); p.textContent=lp==null?"-":(lp>=0?"+":"")+yen(lp); p.className=lp==null?"":lp>=0?"pos":"neg";
-  $("date").textContent=dateStr(S.day); $("riders").textContent=Math.round(S.riders).toLocaleString()+"人"; $("rank").textContent=RANKS[S.rank][1];
+  $("date").textContent=dateStr(S.day)+(S.cleared||S.timeUp?"":`（残り${Math.max(0,CFG.deadlineYears-Math.floor(S.day/360))}年）`); $("riders").textContent=Math.round(S.riders).toLocaleString()+"人"; $("rank").textContent=RANKS[S.rank][1];
 }
 
 // ============================================================
@@ -661,7 +673,7 @@ const TUT=[
   ()=>`次に <b>${S.cities[tutB].name}</b> をタップ。山・川・海を通ると建設費が高くなります`,
   ()=>"上のバーで費用を確認して <b>「開業する」</b>！",
   ()=>"列車が走り出した！乗客を降ろすとお金が入ります。<b>▶▶▶</b>で早送りしてみよう",
-  ()=>"駅の<b>青い輪</b>は待ち客。赤くなったら混雑です。「路線」タブで<b>列車を追加</b>しよう",
+  ()=>"⚠️ 維持費は高く、<b>1編成だけでは赤字</b>になりがち。「路線」タブで<b>列車を追加</b>して乗客をさばこう",
   ()=>"完璧です！あとは「目標」タブを目指して路線を広げよう。地図はドラッグ／ピンチで動かせます",
 ];
 let lastTut=-1;
@@ -910,6 +922,7 @@ function offlineEarnings(){
 function afterLoad(){
   geomCache.clear(); buildAnim.clear(); floaters.length=0; particles.length=0; pulses.length=0; selected=null; lastTut=-1;
   for(const l of S.lines){ l.st=l.st||{rev:0,riders:0,loadSum:0,loadN:0}; }
+  for(const c of S.cities){ c.pop0=c.pop0||c.pop; }
   dispMoney=S.money; pickTutorialPair(); setMode("select"); readColors(); resize();
   // 最初は全体の半分くらいを拡大して表示（町が見やすい）
   const c=S.lines.length? geom(S.lines[0]).pts[0] : S.cities[tutA];
