@@ -138,6 +138,10 @@ a{color:var(--accent)}
     <div class="row" style="justify-content:flex-end"><button class="primary" id="helpClose">はじめる</button></div>
   </div>
 </div>
+<div class="overlay" id="confirmModal" hidden>
+  <div class="modal"><h2 id="cfTitle"></h2><p id="cfText"></p>
+    <div class="row" style="justify-content:flex-end"><button id="cfCancel">やめる</button><button class="primary" id="cfOk">OK</button></div></div>
+</div>
 <div class="overlay" id="endModal" hidden>
   <div class="modal"><h2 id="endTitle"></h2><p id="endText"></p>
     <div class="row" style="justify-content:flex-end"><button id="endContinue">続ける</button><button class="primary" id="endRestart">最初から</button></div></div>
@@ -448,8 +452,9 @@ function renderSide(){
     d.querySelectorAll("[data-ext]").forEach(b=>b.addEventListener("click",()=>startExtend(l,b.dataset.ext)));
     d.querySelectorAll("[data-buy]").forEach(b=>b.addEventListener("click",()=>{ if(addTrain(l,b.dataset.buy)){ blip(780); renderSide(); } }));
     d.querySelector("[data-sell]").addEventListener("click",()=>{ const t=l.trains.pop(); if(!t) return; const v=Math.round(TRAINS[t.type].cost*0.4); S.money+=v; news(`${TRAINS[t.type].name}列車を売却（+${yen(v)}）`); renderSide(); });
-    d.querySelector("[data-del]").addEventListener("click",()=>{ if(!confirm(`${l.name}を廃線にしますか？（建設費の20%が戻ります）`)) return;
-      const v=Math.round(l.cost*0.2)+l.trains.reduce((a,t)=>a+TRAINS[t.type].cost*0.4,0); S.money+=v; S.lines=S.lines.filter(x=>x!==l); geomCache.delete(l.id); news(`${l.name}を廃線にしました（+${yen(v)}）`); renderSide(); });
+    d.querySelector("[data-del]").addEventListener("click",()=>askConfirm(`${l.name}を廃線にしますか？`,"建設費の20%と列車の売却額が戻ります。","廃線にする",()=>{
+      if(!S.lines.includes(l)) return;
+      const v=Math.round(l.cost*0.2)+l.trains.reduce((a,t)=>a+TRAINS[t.type].cost*0.4,0); S.money+=v; S.lines=S.lines.filter(x=>x!==l); geomCache.delete(l.id); news(`${l.name}を廃線にしました（+${yen(v)}）`); renderSide(); }));
     lp.appendChild(d);
   }
   // 目標
@@ -560,10 +565,23 @@ document.getElementById("soundBtn").onclick=e=>{ sound=!sound; e.target.textCont
 document.getElementById("helpBtn").onclick=()=>document.getElementById("help").hidden=false;
 document.getElementById("helpClose").onclick=()=>document.getElementById("help").hidden=true;
 document.getElementById("saveBtn").onclick=()=>save(false);
-document.getElementById("resetBtn").onclick=()=>{ if(confirm("最初からやり直しますか？（新しい地図になります）")){ newGame(); geomCache.clear(); selected=null; setMode("select"); readColors(); renderSide(); } };
+// ブラウザの confirm() はアプリ内表示などでブロックされることがあるので自前の確認画面を使う
+let confirmCb=null;
+function askConfirm(title,text,okLabel,cb){
+  document.getElementById("cfTitle").textContent=title; document.getElementById("cfText").textContent=text;
+  document.getElementById("cfOk").textContent=okLabel; confirmCb=cb; document.getElementById("confirmModal").hidden=false;
+}
+document.getElementById("cfCancel").onclick=()=>{ confirmCb=null; document.getElementById("confirmModal").hidden=true; };
+document.getElementById("cfOk").onclick=()=>{ const cb=confirmCb; confirmCb=null; document.getElementById("confirmModal").hidden=true; if(cb) cb(); };
+function restart(){
+  document.getElementById("endModal").hidden=true;
+  newGame(); geomCache.clear(); floaters.length=0; selected=null; setMode("select"); readColors(); renderSide(); save(true);
+  document.getElementById("saveMsg").textContent=""; news("🗺️ 新しい地図で始めました");
+}
+document.getElementById("resetBtn").onclick=()=>askConfirm("最初からやり直しますか？","今のデータは消え、新しい地図になります。","やり直す",restart);
 function showEnd(t,x){ document.getElementById("endTitle").textContent=t; document.getElementById("endText").textContent=x; document.getElementById("endModal").hidden=false; document.getElementById("endContinue").hidden=S.over; }
 document.getElementById("endContinue").onclick=()=>document.getElementById("endModal").hidden=true;
-document.getElementById("endRestart").onclick=()=>{ document.getElementById("endModal").hidden=true; newGame(); geomCache.clear(); selected=null; readColors(); renderSide(); };
+document.getElementById("endRestart").onclick=restart;
 window.addEventListener("keydown",e=>{ if(e.key==="Escape") setMode("select"); if(e.key===" "&&e.target===document.body){ e.preventDefault(); document.querySelector(`#speed button[data-s="${speed?0:1}"]`).click(); } });
 
 // ===================== セーブ =====================
