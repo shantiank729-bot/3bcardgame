@@ -97,7 +97,7 @@ a{color:var(--accent)}
   <div class="mapwrap" id="mapwrap">
     <canvas id="cv"></canvas>
     <div class="buildbar" id="buildbar" hidden>
-      <b>路線建設中</b>
+      <b id="buildTitle">路線建設中</b>
       <span id="buildInfo" class="muted">駅をクリックして順番につないでください</span>
       <span class="spacer"></span>
       <button id="buildUndo">1つ戻す</button>
@@ -247,6 +247,7 @@ const GOALS = [
 
 // ===================== 実行時のみの状態 =====================
 let speed=1, sound=true, mode="select", buildStops=[], selected=null, hover=null;
+let ext=null; // 延伸中: {line, side:"start"|"end", base}
 const floaters=[]; let lastBlip=0;
 const cv=document.getElementById("cv"), ctx=cv.getContext("2d");
 let view={scale:1,ox:0,oy:0,dpr:1};
@@ -357,13 +358,30 @@ function buildQuote(stops){
 }
 function clickStation(id){
   if(mode==="build"){
-    if(buildStops[buildStops.length-1]===id) return;
-    if(buildStops.includes(id)){ news("同じ駅を2回は通れません"); return; }
-    buildStops.push(id); blip(520); updateBuildBar();
+    if(buildStops.includes(id)){ if(!ext && buildStops[buildStops.length-1]!==id) news("同じ駅を2回は通れません"); return; }
+    if(ext && ext.side==="start") buildStops.unshift(id); else buildStops.push(id);
+    blip(520); updateBuildBar();
   } else { selected=id; renderSide(); }
+}
+// 延伸のときは「新しく足した区間」だけを見積もる
+function newPart(){
+  if(!ext) return buildStops;
+  const added=buildStops.length-ext.base;
+  return ext.side==="end" ? buildStops.slice(ext.base-1) : buildStops.slice(0,added+1);
 }
 function updateBuildBar(){
   const info=document.getElementById("buildInfo"), ok=document.getElementById("buildOk");
+  document.getElementById("buildTitle").textContent= ext? `${ext.line.name}を延伸中` : "路線建設中";
+  ok.textContent= ext? "延伸する" : "開業する";
+  if(ext){
+    const end=S.cities[ext.side==="end"?buildStops[buildStops.length-1]:buildStops[0]];
+    if(buildStops.length===ext.base){ info.textContent=`${end.name}駅から${ext.side==="end"?"先":"手前"}の駅をクリック（いくつでも）`; ok.disabled=true; return; }
+    const q=buildQuote(newPart());
+    info.innerHTML=`${buildStops.map(i=>S.cities[i].name).join("→")}　延伸費 <b>${yen(q.cost)}</b>`+
+      (q.parts.mount>1?`　⛰️トンネル${Math.round(q.parts.mount)}`:"")+(q.parts.river>1?`　🌉鉄橋${Math.round(q.parts.river)}`:"")+
+      (q.cost>S.money?` <span class="neg">資金不足</span>`:"");
+    ok.disabled= q.cost>S.money; return;
+  }
   if(buildStops.length<2){ info.textContent= buildStops.length? `${S.cities[buildStops[0]].name} から… 次の駅をクリック` : "駅をクリックして順番につないでください"; ok.disabled=true; return; }
   const q=buildQuote(buildStops), price=trainPrice("local");
   const total=q.cost+price;
@@ -372,8 +390,22 @@ function updateBuildBar(){
     (total>S.money?` <span class="neg">資金不足</span>`:"");
   ok.disabled= total>S.money;
 }
-function setMode(m){ mode=m; buildStops=[]; document.getElementById("buildbar").hidden= m!=="build"; if(m==="build") updateBuildBar(); }
+function startExtend(line,side){ setMode("build"); ext={line,side,base:line.stops.length}; buildStops=[...line.stops]; updateBuildBar(); }
+function confirmExtend(){
+  const q=buildQuote(newPart()); if(q.cost>S.money) return;
+  const l=ext.line, added=buildStops.length-ext.base; if(added<=0) return;
+  S.money-=q.cost; S.monthOut+=q.cost; l.cost+=q.cost;
+  l.stops=[...buildStops]; geomCache.delete(l.id);
+  if(ext.side==="start"){ // 先頭に駅が増えたので列車の位置と乗客の行き先をずらす
+    const off=geom(l).cum[added];
+    for(const t of l.trains){ t.pos+=off; t.atStop+=added; t.load.forEach(p=>{p.from+=added;p.dest+=added;}); }
+  }
+  news(`🚧 ${l.name}を延伸（${buildStops.map(i=>S.cities[i].name).join("・")}）`); blip(990,.2,.06);
+  setMode("select"); renderSide();
+}
+function setMode(m){ mode=m; buildStops=[]; ext=null; document.getElementById("buildbar").hidden= m!=="build"; if(m==="build") updateBuildBar(); }
 function confirmBuild(){
+  if(ext) return confirmExtend();
   const q=buildQuote(buildStops), price=trainPrice("local"); if(q.cost+price>S.money) return;
   S.money-=q.cost; S.monthOut+=q.cost;
   const used=S.lines.map(l=>l.color); const color=LINE_COLORS.find(c=>!used.includes(c))||LINE_COLORS[S.lines.length%LINE_COLORS.length];
@@ -411,7 +443,9 @@ function renderSide(){
       <div class="muted">${l.stops.map(i=>S.cities[i].name).join("→")}</div>
       <div class="muted">列車：${Object.entries(counts).map(([k,v])=>TRAINS[k].name+"×"+v).join("、")||"なし"}</div>
       <div class="row" style="margin-top:6px">${avail.map(k=>`<button data-buy="${k}" ${S.money<trainPrice(k)?"disabled":""}>＋${TRAINS[k].name} ${yen(trainPrice(k))}</button>`).join("")}</div>
-      <div class="row" style="margin-top:6px"><button data-sell ${l.trains.length<=1?"disabled":""}>列車を1編成売却</button><button data-del>廃線</button></div>`;
+      <div class="row" style="margin-top:6px"><button data-sell ${l.trains.length<=1?"disabled":""}>列車を1編成売却</button><button data-del>廃線</button></div>
+      <div class="row" style="margin-top:6px"><button data-ext="start">◀ ${S.cities[l.stops[0]].name}側を延伸</button><button data-ext="end">${S.cities[l.stops[l.stops.length-1]].name}側を延伸 ▶</button></div>`;
+    d.querySelectorAll("[data-ext]").forEach(b=>b.addEventListener("click",()=>startExtend(l,b.dataset.ext)));
     d.querySelectorAll("[data-buy]").forEach(b=>b.addEventListener("click",()=>{ if(addTrain(l,b.dataset.buy)){ blip(780); renderSide(); } }));
     d.querySelector("[data-sell]").addEventListener("click",()=>{ const t=l.trains.pop(); if(!t) return; const v=Math.round(TRAINS[t.type].cost*0.4); S.money+=v; news(`${TRAINS[t.type].name}列車を売却（+${yen(v)}）`); renderSide(); });
     d.querySelector("[data-del]").addEventListener("click",()=>{ if(!confirm(`${l.name}を廃線にしますか？（建設費の20%が戻ります）`)) return;
@@ -484,7 +518,8 @@ function draw(){
   // 建設プレビュー
   if(mode==="build" && buildStops.length){ ctx.setLineDash([10,8]); ctx.strokeStyle=colors["--ink"]; ctx.lineWidth=4; ctx.beginPath();
     buildStops.forEach((id,i)=>{const c=S.cities[id]; i?ctx.lineTo(c.x,c.y):ctx.moveTo(c.x,c.y);});
-    if(hover!=null && !buildStops.includes(hover)){ const c=S.cities[hover]; ctx.lineTo(c.x,c.y); }
+    if(hover!=null && !buildStops.includes(hover)){ const c=S.cities[hover];
+      if(ext&&ext.side==="start"){ const f=S.cities[buildStops[0]]; ctx.moveTo(f.x,f.y); } ctx.lineTo(c.x,c.y); }
     ctx.stroke(); ctx.setLineDash([]); }
   // 列車
   for(const l of S.lines) for(const t of l.trains){ const p=trainXY(l,t), spec=TRAINS[t.type];
@@ -518,7 +553,7 @@ cv.addEventListener("pointermove",e=>{ hover=pick(toWorld(e)); cv.style.cursor=h
 cv.addEventListener("pointerdown",e=>{ const id=pick(toWorld(e)); if(id!=null) clickStation(id); else if(mode==="select"){ selected=null; renderSide(); } });
 document.getElementById("newLineBtn").onclick=()=>setMode("build");
 document.getElementById("buildCancel").onclick=()=>setMode("select");
-document.getElementById("buildUndo").onclick=()=>{ buildStops.pop(); updateBuildBar(); };
+document.getElementById("buildUndo").onclick=()=>{ if(ext){ if(buildStops.length>ext.base){ ext.side==="start"?buildStops.shift():buildStops.pop(); } } else buildStops.pop(); updateBuildBar(); };
 document.getElementById("buildOk").onclick=confirmBuild;
 document.querySelectorAll("#speed button").forEach(b=>b.onclick=()=>{ speed=+b.dataset.s; document.querySelectorAll("#speed button").forEach(x=>x.classList.toggle("on",x===b)); });
 document.getElementById("soundBtn").onclick=e=>{ sound=!sound; e.target.textContent=sound?"🔊":"🔇"; };
