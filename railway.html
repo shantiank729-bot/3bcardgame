@@ -164,9 +164,9 @@ a{color:var(--accent)}
       <li><b>稼ぐ</b>：運賃は乗った距離で決まります。列車の値段は何台買っても同じですが、<b>維持費がとても高い</b>ので、ガラガラの列車はすぐ赤字になります。人口の多い町どうしを、山や川を避けて長くつなぐのがコツ。</li>
       <li><b>見きわめる</b>：「路線」タブで路線ごとの利益と乗車率がわかります。満員続きなら列車を追加、ガラガラなら減らしましょう。</li>
       <li><b>町が育つ</b>：駅の待ち客（青い輪）をさばけていると人口が増えます。輪が赤い駅は混雑しています。</li>
-      <li><b>広げる</b>：路線は両端から延伸できます。駅を改良すると乗客が増えます。</li>
+      <li><b>広げる（延伸が強い）</b>：乗り換えなしで行ける駅が多いほど、その駅の乗客が増えます（1駅ごとに+10%）。さらに途中駅を通過して遠くまで乗る客は運賃が割増（1駅ごとに+12%）。路線を両端から延伸して長い路線に育てよう。</li>
     </ol>
-    <p class="muted">操作：ドラッグで移動／ピンチ・ホイールで拡大／左下のミニマップでジャンプ。キー：Space=一時停止、N=新路線、Esc=取消、+/-=拡大縮小。<br><b>難易度：高</b>　列車・線路の維持費は高く、毎年8%ずつ上がります（運賃は4%）。1本の路線に走らせられる列車の数には上限があります。<b>10年以内に借金ゼロで資金100億円</b>でクリア。資金がマイナスのまま3か月続くと倒産。ゲームを閉じている間も、最大6か月分まで半分の効率で稼ぎます。</p>
+    <p class="muted">操作：ドラッグで移動／ピンチ・ホイールで拡大／左下のミニマップでジャンプ。キー：Space=一時停止、N=新路線、Esc=取消、+/-=拡大縮小。<br><b>難易度：高</b>　列車・線路の維持費は高く、毎年10%ずつ上がります（運賃は4%）。1本の路線に走らせられる列車の数には上限があります。<b>10年以内に借金ゼロで資金100億円</b>でクリア。資金がマイナスのまま3か月続くと倒産。ゲームを閉じている間も、最大6か月分まで半分の効率で稼ぎます。</p>
     <div class="row" style="justify-content:flex-end"><button class="primary" id="helpClose">OK</button></div>
   </div>
 </div>
@@ -196,11 +196,14 @@ const CFG = {
   tunnelMul: 2.5, bridgeMul: 4, seaMul: 8,
   stationFee: 3_000_000,
   trackUpkeepPerPx: 2_000,                   // 線路の保守費（月額・1pxあたり）
-  inflationPerYear: 0.08,                    // 維持費・保守費は毎年8%ずつ上がる
+  inflationPerYear: 0.10,                    // 維持費・保守費は毎年10%ずつ上がる
   fareRisePerYear: 0.04,                     // 運賃は毎年4%しか上がらない → 年々効率化が必要
   fareBase: 500, farePerPx: 7,
   genPerPop: 1/120, waitCapPerPop: 1/25, growthPerDay: 0.0012, popCapMul: 3,  // 人口は最初の3倍まで
-  pxPerTrain: 60,                            // 路線の長さ60pxごとに1編成まで走らせられる
+  pxPerTrain: 60,
+  netBonus: 0.1, netBonusMax: 2.5,            // 直通で行ける駅が1つ増えるごとに乗客+10%（最大2.5倍）
+  throughBonus: 0.12,                        // 途中駅を1つ通過するごとに運賃+12%（直通運賃ボーナス）
+  maxParticles: 90, maxFloaters: 24,                            // 路線の長さ60pxごとに1編成まで走らせられる
   stationUpgradeBase: 8_000_000,
   loanUnit: 20_000_000, loanMax: 300_000_000, loanRate: 0.01,
   offlineEff: 0.5, offlineMaxMonths: 6,      // 留守中の収入：効率50%、上限6か月
@@ -277,6 +280,7 @@ function newGame(){
     const i=cities.length, pop = i<3? 110000+r()*90000 : i<10? 40000+r()*40000 : 8000+r()*28000;
     cities.push({id:i,name:CITY_NAMES[i],x,y,pop:Math.round(pop),pop0:Math.round(pop),waiting:0,level:1,boost:0});
   }
+  invalidateNet();
   S={v:2,seed,money:CFG.startMoney,day:0,riders:0,earned:0,cities,lines:[],trainsBought:0,loan:0,negMonths:0,
      goalsDone:[],unlocks:[],over:false,cleared:false,rank:0,
      m:{fare:0,invest:0,upkeep:0,track:0,interest:0,other:0}, history:[], tut:0, tutSpeed:false, savedAt:Date.now()};
@@ -285,7 +289,16 @@ const geomCache=new Map();
 function geom(line){ let g=geomCache.get(line.id); if(!g){ const pts=line.stops.map(id=>S.cities[id]); const cum=[0];
   for(let i=1;i<pts.length;i++) cum.push(cum[i-1]+Math.hypot(pts[i].x-pts[i-1].x,pts[i].y-pts[i-1].y));
   g={pts,cum,total:cum[cum.length-1]}; geomCache.set(line.id,g);} return g; }
-function connected(cid){ return S.lines.some(l=>l.stops.includes(cid)); }
+// 路線網のキャッシュ：接続済みの駅と「乗り換えなしで行ける駅の数」。路線が変わったら invalidateNet()
+let netCache=null;
+function invalidateNet(){ netCache=null; }
+function net(){ if(netCache) return netCache;
+  const reach=new Map(); for(const l of S.lines) for(const id of l.stops){ let r=reach.get(id); if(!r){ r=new Set(); reach.set(id,r); } for(const o of l.stops) if(o!==id) r.add(o); }
+  const segs=new Map(); for(const l of S.lines) for(let i=1;i<l.stops.length;i++){ const a=l.stops[i-1],b=l.stops[i],key=a<b?a+"-"+b:b+"-"+a; if(!segs.has(key)) segs.set(key,[]); segs.get(key).push(l); }
+  netCache={reach,segs}; return netCache; }
+function connected(cid){ return net().reach.has(cid); }
+function destCount(cid){ const r=net().reach.get(cid); return r?r.size:0; }
+function netMul(cid){ return Math.min(CFG.netBonusMax, 1+CFG.netBonus*Math.max(0,destCount(cid)-1)); }
 function trainPrice(type){ return TRAINS[type].cost; }   // 何台買っても値段は同じ
 function inflation(){ return 1+CFG.inflationPerYear*Math.floor(S.day/360); }
 function fareMul(){ return 1+CFG.fareRisePerYear*Math.floor(S.day/360); }
@@ -360,15 +373,20 @@ function addTrain(line,type,free=false){
   line.trains.push({type,pos:n%2?g.total:0,dir:n%2?-1:1,dwell:0.5,load:[],atStop:n%2?line.stops.length-1:0});
   return true;
 }
+// 運賃 = (基本＋距離) × 物価 × 直通ボーナス（途中駅を通過するほど割増）
+function fare(g,from,to){ return (CFG.fareBase+Math.abs(g.cum[to]-g.cum[from])*CFG.farePerPx)*fareMul()*(1+CFG.throughBonus*(Math.abs(to-from)-1)); }
 function arrive(line,t,si){
   const g=geom(line), city=S.cities[line.stops[si]], spec=TRAINS[t.type];
   let income=0, off=0;
-  t.load=t.load.filter(p=>{ if(p.dest===si){ income+=p.n*(CFG.fareBase+Math.abs(g.cum[si]-g.cum[p.from])*CFG.farePerPx)*fareMul(); off+=p.n; return false;} return true; });
+  t.load=t.load.filter(p=>{ if(p.dest===si){ income+=p.n*fare(g,p.from,si); off+=p.n; return false;} return true; });
   if(off>0){ income=Math.round(income); S.money+=income; S.m.fare+=income; S.earned+=income; S.riders+=off;
     line.st.rev+=income; line.st.riders+=off;
-    floaters.push({x:city.x,y:city.y,text:"+"+yen(income),life:1.6});
-    const n=Math.min(8,2+Math.floor(off/15)); for(let i=0;i<n;i++){ const a=-Math.PI/2+(Math.random()-.5)*2.2, v=60+Math.random()*90; particles.push({x:city.x,y:city.y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,life:.9,color:"#F2C14E",size:4}); }
-    pulses.push({x:city.x,y:city.y,life:.6,color:line.color}); SFX.coin(off); bumpMoney(); }
+    // 同じ駅の表示はまとめる（大量の列車でも重くならないように）
+    const f=floaters.find(f=>f.city===city.id && f.life>1.2);
+    if(f){ f.amount+=income; f.text="+"+yen(f.amount); }
+    else if(floaters.length<CFG.maxFloaters) floaters.push({city:city.id,x:city.x,y:city.y,amount:income,text:"+"+yen(income),life:1.6});
+    const n=particles.length>CFG.maxParticles?0:Math.min(6,2+Math.floor(off/20)); for(let i=0;i<n;i++){ const a=-Math.PI/2+(Math.random()-.5)*2.2, v=60+Math.random()*90; particles.push({x:city.x,y:city.y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,life:.9,color:"#F2C14E",size:4}); }
+    if(pulses.length<40) pulses.push({x:city.x,y:city.y,life:.6,color:line.color}); SFX.coin(off); bumpMoney(); }
   let dir=t.dir; if(si===0) dir=1; if(si===line.stops.length-1) dir=-1; t.dir=dir;
   const onboard=t.load.reduce((a,p)=>a+p.n,0), free=spec.cap-onboard, board=Math.min(free,Math.floor(city.waiting));
   if(board>0){
@@ -386,7 +404,7 @@ function simulate(dtReal){
   const days=dt/CFG.dayRealSec;
   for(const c of S.cities){
     if(!connected(c.id)){ c.waiting=0; continue; }
-    const cap=waitCap(c), mul=c.level*(c.boost>0?2:1);
+    const cap=waitCap(c), mul=c.level*(c.boost>0?2:1)*netMul(c.id);
     c.waiting=Math.min(cap,c.waiting+c.pop*CFG.genPerPop*mul*days);
     const ratio=c.waiting/cap;
     if(ratio<0.8) c.pop=Math.min(c.pop0*CFG.popCapMul*(0.5+c.level*0.5), c.pop*(1+CFG.growthPerDay*days*(1-ratio)*(c.level*0.5+0.5)));
@@ -520,7 +538,7 @@ function confirmBuild(){
   const used=S.lines.map(l=>l.color), color=LINE_COLORS.find(c=>!used.includes(c))||LINE_COLORS[S.lines.length%LINE_COLORS.length];
   const id=S.lines.reduce((a,l)=>Math.max(a,l.id),0)+1;
   const line={id,name:`${S.cities[buildStops[0]].name}${S.cities[buildStops[buildStops.length-1]].name}線`,color,stops:[...buildStops],trains:[],cost:q.cost,st:{rev:0,riders:0,loadSum:0,loadN:0},last:null};
-  S.lines.push(line); addTrain(line,"local");
+  S.lines.push(line); invalidateNet(); addTrain(line,"local");
   buildAnim.set(id,0); shake=.25; SFX.build();
   banner("🎉 開業！", `${line.name}（${line.stops.map(i=>S.cities[i].name).join("・")}）`);
   setMode("select"); setTab("lines");
@@ -528,7 +546,7 @@ function confirmBuild(){
 function confirmExtend(){
   const q=buildQuote(newPart()); if(q.cost>S.money) return;
   const l=ext.line, added=buildStops.length-ext.base; if(added<=0) return;
-  S.money-=q.cost; S.m.invest+=q.cost; l.cost+=q.cost; l.stops=[...buildStops]; geomCache.delete(l.id);
+  S.money-=q.cost; S.m.invest+=q.cost; l.cost+=q.cost; l.stops=[...buildStops]; geomCache.delete(l.id); invalidateNet();
   if(ext.side==="start"){ const off=geom(l).cum[added]; for(const t of l.trains){ t.pos+=off; t.atStop+=added; t.load.forEach(p=>{p.from+=added;p.dest+=added;}); } }
   shake=.2; SFX.build(); banner("🚧 延伸完了", `${l.name}：${buildStops.map(i=>S.cities[i].name).join("・")}`);
   setMode("select"); renderSide();
@@ -576,7 +594,7 @@ function renderLines(){
       l.trains.splice(i,1); const v=Math.round(TRAINS[type].cost*0.4); S.money+=v; S.m.other+=v; news(`${TRAINS[type].name}列車を売却（+${yen(v)}）`); SFX.click(); renderSide(); }));
     d.querySelector("[data-del]").addEventListener("click",()=>askConfirm(`${l.name}を廃線にしますか？`,"建設費の20%と列車の売却額が戻ります。","廃線にする",()=>{
       if(!S.lines.includes(l)) return; const v=Math.round(l.cost*0.2+l.trains.reduce((a,t)=>a+TRAINS[t.type].cost*0.4,0));
-      S.money+=v; S.m.other+=v; S.lines=S.lines.filter(x=>x!==l); geomCache.delete(l.id); news(`${l.name}を廃線にしました（+${yen(v)}）`); renderSide(); }));
+      S.money+=v; S.m.other+=v; S.lines=S.lines.filter(x=>x!==l); geomCache.delete(l.id); invalidateNet(); news(`${l.name}を廃線にしました（+${yen(v)}）`); renderSide(); }));
     d.querySelector("[data-focus]").addEventListener("click",()=>focusLine(l));
     lp.appendChild(d);
   }
@@ -589,7 +607,7 @@ function renderStation(){
   const lines=S.lines.filter(l=>l.stops.includes(c.id)), ratio=conn?c.waiting/cap:0;
   sp.innerHTML=`<div class="card"><div class="row between"><b style="font-size:17px">${c.name}${conn?"駅":"（未開通）"}</b><span class="muted">Lv.${c.level} ${"★".repeat(c.level-1)}</span></div>
     <div class="kv" style="margin-top:4px"><span>人口</span><span>${Math.round(c.pop).toLocaleString()}人 ${c.boost>0?"🎆":""}</span>
-    ${conn?`<span>待ち客</span><span>${Math.floor(c.waiting)} / ${Math.floor(cap)}</span><span>1日の乗客発生</span><span>約${Math.round(c.pop*CFG.genPerPop*c.level)}人</span>`:""}</div>
+    ${conn?`<span>待ち客</span><span>${Math.floor(c.waiting)} / ${Math.floor(cap)}</span><span>乗り換えなしで行ける駅</span><span>${destCount(c.id)}駅（乗客×${netMul(c.id).toFixed(1)}）</span><span>1日の乗客発生</span><span>約${Math.round(c.pop*CFG.genPerPop*c.level*netMul(c.id))}人</span>`:""}</div>
     ${conn?`<div class="bar"><i style="width:${Math.min(100,ratio*100)}%;background:${ratio>0.8?"var(--bad)":"var(--accent)"}"></i></div>
       <div class="tip">${ratio>0.8?"⚠️ 待ち客があふれて町が育ちません。この駅を通る路線に列車を増やしましょう":"🌱 町は順調に成長中"}</div>
       <div class="muted" style="margin-top:6px">路線：${lines.map(l=>`<span class="swatch" style="background:${l.color}"></span> ${l.name}`).join("　")}</div>
@@ -700,7 +718,7 @@ $("coachNext").onclick=()=>{ S.tut=99; updateTutorial(); SFX.goal(); };
 // ============================================================
 function css(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
 let colors={};
-function readColors(){ ["--land","--land2","--water","--sea","--sand","--mount","--mount2","--label","--halo","--accent","--gold","--bad","--ink"].forEach(k=>colors[k]=css(k)); }
+function readColors(){ ["--land","--land2","--water","--sea","--sand","--mount","--mount2","--label","--halo","--accent","--gold","--bad","--ink","--f","--panel","--line"].forEach(k=>colors[k]=css(k)); }
 function resize(){
   const r=cv.parentElement.getBoundingClientRect(); if(!r.width||!r.height) return; view.dpr=devicePixelRatio||1;
   cv.width=Math.round(r.width*view.dpr); cv.height=Math.round(r.height*view.dpr); view.w=r.width; view.h=r.height;
@@ -748,7 +766,7 @@ function trainXY(line,pos){
 }
 function segOffset(a,b,line){
   const key=a<b?a+"-"+b:b+"-"+a;
-  const users=S.lines.filter(l=>{ for(let i=1;i<l.stops.length;i++){ const x=l.stops[i-1],y=l.stops[i]; if((x<y?x+"-"+y:y+"-"+x)===key) return true; } return false; });
+  const users=net().segs.get(key)||[line];
   return (users.indexOf(line)-(users.length-1)/2)*7;
 }
 function drawLinePath(l,k,progress=1){
@@ -780,12 +798,20 @@ function draw(time){
     ctx.setLineDash([]);
   }
   // 列車（車両を連結して描く）
-  const ts=Math.max(1,0.55*k);
-  for(const l of S.lines){ if(buildAnim.has(l.id)) continue; for(const t of l.trains){ const spec=TRAINS[t.type], load=t.load.reduce((a,x)=>a+x.n,0)/spec.cap;
-    for(let c=0;c<spec.cars;c++){ const p=trainXY(l,clamp(t.pos-t.dir*c*16*ts,0,geom(l).total));
-      ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.ang); ctx.scale(ts,ts);
-      ctx.fillStyle=spec.color; ctx.strokeStyle="#1C2B3A"; ctx.lineWidth=1.4; ctx.beginPath(); ctx.roundRect(-7,-5,14,10,c===0?4:2); ctx.fill(); ctx.stroke();
-      ctx.fillStyle=l.color; ctx.fillRect(-5,-2.5,10*clamp(load,0,1),5); ctx.restore(); } } }
+  // 画面外は描かない／引いて見ているときは1編成を1本の棒で描く（列車が多くても軽く）
+  const ts=Math.max(1,0.55*k), vx0=-view.ox/view.scale-80, vy0=-view.oy/view.scale-80, vx1=vx0+view.w/view.scale+160, vy1=vy0+view.h/view.scale+160;
+  const detailed=view.scale>=0.6;
+  for(const l of S.lines){ if(buildAnim.has(l.id)) continue; const tot=geom(l).total;
+    for(const t of l.trains){ const spec=TRAINS[t.type], head=trainXY(l,t.pos);
+      if(head.x<vx0||head.x>vx1||head.y<vy0||head.y>vy1) continue;
+      if(!detailed){ const tail=trainXY(l,clamp(t.pos-t.dir*spec.cars*16*ts,0,tot));
+        ctx.strokeStyle="#1C2B3A"; ctx.lineWidth=11*ts; ctx.beginPath(); ctx.moveTo(head.x,head.y); ctx.lineTo(tail.x,tail.y); ctx.stroke();
+        ctx.strokeStyle=spec.color; ctx.lineWidth=8*ts; ctx.stroke(); continue; }
+      const load=t.load.reduce((a,x)=>a+x.n,0)/spec.cap;
+      for(let c=0;c<spec.cars;c++){ const p=c?trainXY(l,clamp(t.pos-t.dir*c*16*ts,0,tot)):head;
+        ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.ang); ctx.scale(ts,ts);
+        ctx.fillStyle=spec.color; ctx.strokeStyle="#1C2B3A"; ctx.lineWidth=1.4; ctx.beginPath(); ctx.roundRect(-7,-5,14,10,c===0?4:2); ctx.fill(); ctx.stroke();
+        ctx.fillStyle=l.color; ctx.fillRect(-5,-2.5,10*clamp(load,0,1),5); ctx.restore(); } } }
   // 波紋
   for(const p of pulses){ const a=p.life/0.6; ctx.strokeStyle=p.color; ctx.globalAlpha=clamp(a,0,1); ctx.lineWidth=3*k; ctx.beginPath(); ctx.arc(p.x,p.y,(14+(1-a)*30)*Math.max(1,k*.7),0,7); ctx.stroke(); }
   ctx.globalAlpha=1;
@@ -803,9 +829,9 @@ function draw(time){
     // ズームに応じてラベルを出し分け（小さい町は拡大したときだけ）
     const showLabel=!lowZoom||c.pop>=50000||conn||c.id===hover||c.id===selected||inBuild||c.id===tutTarget;
     if(showLabel){ ctx.textAlign="center"; ctx.lineWidth=4*k; ctx.strokeStyle=colors["--halo"]; ctx.fillStyle=colors["--label"];
-      const fs=(c.pop>=100000?15:13)*k; ctx.font=`bold ${fs}px ${css("--f")}`; const label=c.name+(c.boost>0?"🎆":"");
+      const fs=(c.pop>=100000?15:13)*k; ctx.font=`bold ${fs}px ${colors["--f"]}`; const label=c.name+(c.boost>0?"🎆":"");
       ctx.strokeText(label,c.x,c.y-r-7*k); ctx.fillText(label,c.x,c.y-r-7*k);
-      if(!lowZoom||c.id===hover){ ctx.font=`${11*k}px ${css("--f")}`; const sub=Math.round(c.pop/1000)+"千人"; ctx.strokeText(sub,c.x,c.y+r+13*k); ctx.fillText(sub,c.x,c.y+r+13*k); } }
+      if(!lowZoom||c.id===hover){ ctx.font=`${11*k}px ${colors["--f"]}`; const sub=Math.round(c.pop/1000)+"千人"; ctx.strokeText(sub,c.x,c.y+r+13*k); ctx.fillText(sub,c.x,c.y+r+13*k); } }
   }
   // パーティクル・収入ポップ
   for(const p of particles){ ctx.globalAlpha=clamp(p.life,0,1); ctx.fillStyle=p.color; const s=p.size*k;
@@ -820,10 +846,10 @@ function draw(time){
   if(hover!=null){ const c=S.cities[hover]; const sx=view.ox+c.x*view.scale, sy=view.oy+c.y*view.scale; let lines;
     if(mode==="build"){ const cand=candidate(hover); if(cand){ const key=cand.join(",")+(ext?ext.side:""); if(previewCache.key!==key){ const q=buildQuote(newPart(cand)); previewCache={key,text:`つなぐと +${yen(q.cost)}`}; } lines=[c.name,previewCache.text]; } }
     else lines=[`${c.name}　人口${Math.round(c.pop).toLocaleString()}`, connected(c.id)?`待ち客 ${Math.floor(c.waiting)}/${Math.floor(waitCap(c))}`:"未開通（タップで詳細）"];
-    if(lines){ ctx.font="12px "+css("--f"); const w=Math.max(...lines.map(s=>ctx.measureText(s).width))+16, h=lines.length*17+8;
+    if(lines){ ctx.font="12px "+colors["--f"]; const w=Math.max(...lines.map(s=>ctx.measureText(s).width))+16, h=lines.length*17+8;
       let x=sx+16, y=sy-h-10; if(x+w>view.w-4) x=sx-w-16; if(y<4) y=sy+16;
-      ctx.fillStyle=css("--panel"); ctx.strokeStyle=css("--line"); ctx.lineWidth=1; ctx.beginPath(); ctx.roundRect(x,y,w,h,8); ctx.fill(); ctx.stroke();
-      ctx.fillStyle=css("--ink"); ctx.textAlign="left"; lines.forEach((s,i)=>ctx.fillText(s,x+8,y+18+i*17)); } }
+      ctx.fillStyle=colors["--panel"]; ctx.strokeStyle=colors["--line"]; ctx.lineWidth=1; ctx.beginPath(); ctx.roundRect(x,y,w,h,8); ctx.fill(); ctx.stroke();
+      ctx.fillStyle=colors["--ink"]; ctx.textAlign="left"; lines.forEach((s,i)=>ctx.fillText(s,x+8,y+18+i*17)); } }
 }
 // ミニマップ
 const mini=$("mini"), mctx=mini.getContext("2d");
@@ -924,7 +950,7 @@ function offlineEarnings(){
   $("infoModal").hidden=false;
 }
 function afterLoad(){
-  geomCache.clear(); buildAnim.clear(); floaters.length=0; particles.length=0; pulses.length=0; selected=null; lastTut=-1;
+  geomCache.clear(); invalidateNet(); buildAnim.clear(); floaters.length=0; particles.length=0; pulses.length=0; selected=null; lastTut=-1;
   for(const l of S.lines){ l.st=l.st||{rev:0,riders:0,loadSum:0,loadN:0}; }
   for(const c of S.cities){ c.pop0=c.pop0||c.pop; }
   dispMoney=S.money; pickTutorialPair(); setMode("select"); readColors(); resize();
@@ -942,7 +968,7 @@ function frame(now){
   const dt=Math.min(0.1,(now-last)/1000); last=now;
   simulate(dt); updateFx(dt); updateCamera(dt);
   draw(now); renderTop();
-  miniTimer+=dt; if(miniTimer>0.2){ miniTimer=0; drawMini(); }
+  miniTimer+=dt; if(miniTimer>0.5){ miniTimer=0; drawMini(); }
   sideTimer+=dt; if(sideTimer>1){ sideTimer=0; if(mode==="build") updateBuildBar(); else if(!(document.activeElement&&$("side").contains(document.activeElement)&&document.activeElement.tagName==="BUTTON")) renderSide(); }
   updateTutorial();
   requestAnimationFrame(frame);
