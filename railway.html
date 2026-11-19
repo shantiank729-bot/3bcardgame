@@ -1,0 +1,560 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>路線王</title>
+<style>
+:root{
+  --bg:#EEF2EC; --panel:#FFFFFF; --soft:#F1F4F7; --ink:#1C2B3A; --sub:#5B6B7A; --line:#D3DCE3;
+  --accent:#2A4FA8; --accent-fg:#fff; --good:#1F8A4C; --bad:#C8352E; --gold:#B7791F;
+  --land:#DCE9CF; --land2:#CFE0BF; --water:#8DBFE6; --mount:#B9A88C; --mount2:#9C8A6E;
+  --label:#1C2B3A; --halo:rgba(255,255,255,.85);
+  --f:"Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#121821; --panel:#1B2430; --soft:#232F3E; --ink:#E6ECF2; --sub:#9AA9B8; --line:#344354;
+    --accent:#8FB0FF; --accent-fg:#0E1622; --good:#5BD18E; --bad:#FF7A70; --gold:#F2C14E;
+    --land:#26362A; --land2:#2D3F30; --water:#2F5B82; --mount:#5A5040; --mount2:#4A4234;
+    --label:#E6ECF2; --halo:rgba(18,24,33,.85); color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#121821; --panel:#1B2430; --soft:#232F3E; --ink:#E6ECF2; --sub:#9AA9B8; --line:#344354;
+  --accent:#8FB0FF; --accent-fg:#0E1622; --good:#5BD18E; --bad:#FF7A70; --gold:#F2C14E;
+  --land:#26362A; --land2:#2D3F30; --water:#2F5B82; --mount:#5A5040; --mount2:#4A4234;
+  --label:#E6ECF2; --halo:rgba(18,24,33,.85); color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--ink);font:14px/1.5 var(--f);}
+.app{display:grid;grid-template-columns:1fr 340px;grid-template-rows:auto 1fr;height:100vh;}
+header{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;padding:8px 16px;background:var(--panel);border-bottom:1px solid var(--line)}
+header h1{font-size:18px;margin:0 8px 0 0;letter-spacing:.05em}
+.stat{display:flex;flex-direction:column;line-height:1.2}
+.stat small{color:var(--sub);font-size:11px}
+.stat b{font-size:16px;font-variant-numeric:tabular-nums}
+.pos{color:var(--good)} .neg{color:var(--bad)}
+.spacer{flex:1}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{border:0;border-radius:0;border-right:1px solid var(--line)}
+.seg button:last-child{border-right:0}
+button{font:inherit;color:var(--ink);background:var(--soft);border:1px solid var(--line);border-radius:8px;padding:6px 10px;cursor:pointer}
+button:hover{filter:brightness(.97)}
+button.on,button.primary{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+button:disabled{opacity:.45;cursor:not-allowed}
+.mapwrap{position:relative;overflow:hidden;min-height:0;background:var(--land)}
+canvas{display:block;width:100%;height:100%;touch-action:none;cursor:pointer}
+.news{position:absolute;left:12px;right:12px;bottom:12px;pointer-events:none;display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+.news div{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 10px;box-shadow:0 2px 8px rgba(0,0,0,.12);animation:fade 5s forwards}
+@keyframes fade{0%{opacity:0;transform:translateY(6px)}8%{opacity:1;transform:none}85%{opacity:1}100%{opacity:0}}
+.buildbar{position:absolute;top:12px;left:12px;right:12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:var(--panel);border:1px solid var(--accent);border-radius:10px;padding:8px 12px;box-shadow:0 2px 10px rgba(0,0,0,.15)}
+aside{background:var(--panel);border-left:1px solid var(--line);overflow:auto;padding:12px 16px 24px}
+aside h2{font-size:14px;margin:16px 0 8px;color:var(--sub);letter-spacing:.05em}
+aside h2:first-child{margin-top:4px}
+.card{background:var(--soft);border-radius:10px;padding:10px 12px;margin-bottom:8px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.row.between{justify-content:space-between}
+.swatch{width:12px;height:12px;border-radius:3px;display:inline-block}
+.muted{color:var(--sub);font-size:12px}
+.goal{display:flex;gap:8px;align-items:flex-start;padding:4px 0}
+.goal .chk{width:18px;flex:none;text-align:center}
+.goal.done{color:var(--sub);text-decoration:line-through}
+.bar{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin-top:4px}
+.bar i{display:block;height:100%;background:var(--accent)}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:16px;z-index:10}
+.modal{background:var(--panel);border-radius:14px;max-width:520px;width:100%;padding:20px 22px;max-height:90vh;overflow:auto}
+.modal h2{margin:0 0 8px}
+.modal ol{padding-left:20px;margin:8px 0}
+a{color:var(--accent)}
+@media (max-width:820px){
+  .app{grid-template-columns:1fr;grid-template-rows:auto calc(100vw*0.667 + 8px) auto;height:auto}
+  .news div{font-size:12px;padding:4px 8px}
+  .buildbar{top:6px;left:6px;right:6px;padding:6px 8px;font-size:12px}
+  aside{border-left:0;border-top:1px solid var(--line);overflow:visible}
+  header{padding:8px 16px}
+  header h1{font-size:16px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>🚃 路線王</h1>
+    <div class="stat"><small>資金</small><b id="money">-</b></div>
+    <div class="stat"><small>先月の収支</small><b id="profit">-</b></div>
+    <div class="stat"><small>日付</small><b id="date">-</b></div>
+    <div class="stat"><small>累計乗客</small><b id="riders">-</b></div>
+    <div class="spacer"></div>
+    <div class="seg" id="speed">
+      <button data-s="0">⏸</button><button data-s="1" class="on">▶</button><button data-s="2">▶▶</button><button data-s="4">▶▶▶</button>
+    </div>
+    <button id="soundBtn" title="効果音">🔊</button>
+    <button id="helpBtn">遊び方</button>
+  </header>
+  <div class="mapwrap" id="mapwrap">
+    <canvas id="cv"></canvas>
+    <div class="buildbar" id="buildbar" hidden>
+      <b>路線建設中</b>
+      <span id="buildInfo" class="muted">駅をクリックして順番につないでください</span>
+      <span class="spacer"></span>
+      <button id="buildUndo">1つ戻す</button>
+      <button id="buildCancel">やめる</button>
+      <button id="buildOk" class="primary">開業する</button>
+    </div>
+    <div class="news" id="news"></div>
+  </div>
+  <aside id="side">
+    <h2>建設</h2>
+    <button id="newLineBtn" class="primary" style="width:100%">＋ 新しい路線をつくる</button>
+    <p class="muted" style="margin:6px 0 0">山はトンネル(×2.5)、川は鉄橋(×4)で建設費が上がります。</p>
+    <h2>選択中の駅</h2>
+    <div id="stationPanel" class="card muted">地図上の駅をクリック</div>
+    <h2>路線</h2>
+    <div id="linesPanel"></div>
+    <h2>目標</h2>
+    <div id="goalsPanel"></div>
+    <h2>銀行</h2>
+    <div class="card" id="bankPanel"></div>
+    <h2>セーブ</h2>
+    <div class="row"><button id="saveBtn">保存</button><button id="resetBtn">最初から</button><span class="muted" id="saveMsg"></span></div>
+  </aside>
+</div>
+
+<div class="overlay" id="help" hidden>
+  <div class="modal">
+    <h2>🚃 路線王 — 遊び方</h2>
+    <p>小さな鉄道会社の社長になって、町と町を線路でつなぎ、乗客を運んで稼ぎましょう。</p>
+    <ol>
+      <li><b>路線をつくる</b>：「新しい路線をつくる」→ 駅を順番にクリック →「開業する」。</li>
+      <li><b>列車を走らせる</b>：開業すると普通列車が1編成つきます。路線一覧から列車を追加できます。</li>
+      <li><b>稼ぐ</b>：乗客は遠くまで乗るほど運賃が高くなります。人口の多い町同士を長くつなぐのがコツ。</li>
+      <li><b>町が育つ</b>：駅の待ち客をさばけていると町の人口が増え、乗客も増えます。あふれると人口は伸びません。</li>
+      <li><b>毎月の支出</b>：列車の維持費・線路の保守費・借入金の利息が月末に引かれます。</li>
+    </ol>
+    <p class="muted">資金がマイナスのまま3か月続くと倒産です。目標を達成するとボーナスと新しい車両が手に入ります。</p>
+    <div class="row" style="justify-content:flex-end"><button class="primary" id="helpClose">はじめる</button></div>
+  </div>
+</div>
+<div class="overlay" id="endModal" hidden>
+  <div class="modal"><h2 id="endTitle"></h2><p id="endText"></p>
+    <div class="row" style="justify-content:flex-end"><button id="endContinue">続ける</button><button class="primary" id="endRestart">最初から</button></div></div>
+</div>
+
+<script>
+"use strict";
+// ===================== 設定（バランス調整はここ） =====================
+const CFG = {
+  W: 1200, H: 800,
+  startMoney: 50_000_000,
+  dayRealSec: 4,              // 1日 = 実時間4秒（等速）
+  daysPerMonth: 30,
+  trackCostPerPx: 15_000,     // 平地1pxあたり
+  tunnelMul: 2.5, bridgeMul: 4,
+  stationFee: 3_000_000,      // 新しく開業する駅1つあたり
+  trackUpkeepPerPx: 400,      // 月額
+  fareBase: 500, farePerPx: 7,
+  genPerPop: 1/120,           // 1日あたり人口×これ の乗客が発生
+  waitCapPerPop: 1/25,
+  growthPerDay: 0.0025,
+  trainCostGrowth: 1.12,      // 列車を買うたびに価格が上がる（指数コスト）
+  stationUpgradeBase: 8_000_000,
+  loanUnit: 20_000_000, loanMax: 200_000_000, loanRate: 0.01, // 月利
+};
+const TRAINS = {
+  local:   {name:"普通",   cap:60,  speed:55, cost:8_000_000,  upkeep:300_000, dwell:0.9, color:"#E8E8E8"},
+  rapid:   {name:"快速",   cap:100, speed:85, cost:22_000_000, upkeep:700_000, dwell:0.7, color:"#F2C14E", unlock:"rapid"},
+  express: {name:"特急",   cap:160, speed:130,cost:60_000_000, upkeep:1_600_000,dwell:0.6, color:"#E0533D", unlock:"express"},
+};
+const LINE_COLORS = ["#2A7FDB","#E0533D","#2BA36B","#9B59B6","#F39C12","#16A5A5","#D64F9A","#7F8C3A","#5D6DBE","#B5651D"];
+const CITY_NAMES = ["青葉","港町","桜台","北原","大川","緑ヶ丘","白浜","東山","西川","南浦","朝日","若松","星見","霧島","春日","鷹野"];
+
+// ===================== 乱数（シード付き） =====================
+function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+
+// ===================== 地形 =====================
+let terrain; // {seed, riverPts:[[x,y]], mountains:[{x,y,r}]}
+function riverX(y){ // 線形補間
+  const p=terrain.riverPts; for(let i=1;i<p.length;i++){ if(y<=p[i][1]){const a=p[i-1],b=p[i],t=(y-a[1])/(b[1]-a[1]||1);return a[0]+(b[0]-a[0])*t;} } return p[p.length-1][0];
+}
+function terrainAt(x,y){
+  if(Math.abs(x-riverX(y))<20) return "river";
+  for(const m of terrain.mountains){ if((x-m.x)**2+(y-m.y)**2 < m.r*m.r) return "mount"; }
+  return "flat";
+}
+function makeTerrain(seed){
+  const r=mulberry(seed); const pts=[]; let x=CFG.W*(0.4+r()*0.2);
+  for(let y=-20;y<=CFG.H+20;y+=40){ x+= (r()-0.5)*70; x=Math.max(CFG.W*0.3,Math.min(CFG.W*0.7,x)); pts.push([x,y]); }
+  terrain={seed,riverPts:pts,mountains:[]};
+  for(let i=0;i<4;i++){ terrain.mountains.push({x:80+r()*(CFG.W-160), y:80+r()*(CFG.H-160), r:55+r()*65}); }
+}
+function segCost(a,b){
+  const len=Math.hypot(b.x-a.x,b.y-a.y), n=Math.max(1,Math.ceil(len/6)); let c=0; const parts={flat:0,mount:0,river:0};
+  for(let i=0;i<n;i++){ const t=(i+.5)/n, t2=terrainAt(a.x+(b.x-a.x)*t, a.y+(b.y-a.y)*t); parts[t2]+=len/n; }
+  c = (parts.flat + parts.mount*CFG.tunnelMul + parts.river*CFG.bridgeMul) * CFG.trackCostPerPx;
+  return {cost:c,len,parts};
+}
+
+// ===================== ゲーム状態 =====================
+let S; // 保存される状態
+function newGame(){
+  const seed=(Math.random()*1e9)|0; makeTerrain(seed); const r=mulberry(seed+7);
+  const cities=[]; let tries=0;
+  while(cities.length<14 && tries<5000){ tries++;
+    const x=60+r()*(CFG.W-120), y=60+r()*(CFG.H-120);
+    if(terrainAt(x,y)!=="flat") continue;
+    if(cities.some(c=>Math.hypot(c.x-x,c.y-y)<140)) continue;
+    const big = cities.length<3;
+    cities.push({id:cities.length,name:CITY_NAMES[cities.length],x,y,pop: Math.round(big? 60000+r()*60000 : 8000+r()*35000),waiting:0,level:1,boost:0});
+  }
+  S={seed,money:CFG.startMoney,day:0,lastProfit:null,monthIn:0,monthOut:0,riders:0,earned:0,
+     cities,lines:[],trainsBought:0,loan:0,negMonths:0,goalsDone:[],unlocks:[],over:false,cleared:false};
+}
+// 線路の総延長
+function lineGeom(line){
+  const pts=line.stops.map(id=>S.cities[id]); const cum=[0];
+  for(let i=1;i<pts.length;i++) cum.push(cum[i-1]+Math.hypot(pts[i].x-pts[i-1].x,pts[i].y-pts[i-1].y));
+  return {pts,cum,total:cum[cum.length-1]};
+}
+const geomCache=new Map();
+function geom(line){ let g=geomCache.get(line.id); if(!g){g=lineGeom(line);geomCache.set(line.id,g);} return g; }
+function connected(cid){ return S.lines.some(l=>l.stops.includes(cid)); }
+function trainPrice(type){ return Math.round(TRAINS[type].cost*Math.pow(CFG.trainCostGrowth,S.trainsBought)/10000)*10000; }
+function totalTrains(){ return S.lines.reduce((a,l)=>a+l.trains.length,0); }
+function totalPop(){ return S.cities.reduce((a,c)=>a+c.pop,0); }
+function trackLen(){ let s=0; for(const l of S.lines) s+=geom(l).total; return s; }
+
+// ===================== 表示用フォーマット =====================
+function yen(n){ const s=n<0?"-":""; n=Math.abs(n);
+  if(n>=1e8) return s+"¥"+(n/1e8).toFixed(n>=1e10?0:2)+"億";
+  if(n>=1e4) return s+"¥"+Math.round(n/1e4).toLocaleString()+"万";
+  return s+"¥"+Math.round(n).toLocaleString(); }
+function dateStr(d){ const y=Math.floor(d/360)+1, m=Math.floor(d%360/30)+1, dd=Math.floor(d%30)+1; return `${y}年目 ${m}月${dd}日`; }
+
+// ===================== 目標（マイルストーン） =====================
+const GOALS = [
+  {id:"first", text:"最初の路線を開業する", reward:5_000_000, check:()=>S.lines.length>=1},
+  {id:"riders1k", text:"累計乗客 1,000人", reward:8_000_000, check:()=>S.riders>=1000},
+  {id:"st5", text:"5つの駅を接続する", reward:10_000_000, check:()=>S.cities.filter(c=>connected(c.id)).length>=5},
+  {id:"tr5", text:"列車を5編成もつ", reward:15_000_000, unlock:"rapid", unlockText:"快速列車", check:()=>totalTrains()>=5},
+  {id:"pop", text:"沿線人口 50万人", reward:30_000_000, check:()=>S.cities.filter(c=>connected(c.id)).reduce((a,c)=>a+c.pop,0)>=500000},
+  {id:"riders50k", text:"累計乗客 50,000人", reward:50_000_000, unlock:"express", unlockText:"特急列車", check:()=>S.riders>=50000},
+  {id:"all", text:"すべての町を接続する", reward:100_000_000, check:()=>S.cities.every(c=>connected(c.id))},
+  {id:"rich", text:"借金ゼロで資金 50億円", reward:0, final:true, check:()=>S.money>=5e9 && S.loan===0},
+];
+
+// ===================== 実行時のみの状態 =====================
+let speed=1, sound=true, mode="select", buildStops=[], selected=null, hover=null;
+const floaters=[]; let lastBlip=0;
+const cv=document.getElementById("cv"), ctx=cv.getContext("2d");
+let view={scale:1,ox:0,oy:0,dpr:1};
+
+// ===================== 効果音 =====================
+let actx=null;
+function blip(freq=880,dur=.06,vol=.05){
+  if(!sound) return; const now=performance.now(); if(now-lastBlip<120) return; lastBlip=now;
+  try{ actx=actx||new (window.AudioContext||window.webkitAudioContext)(); const o=actx.createOscillator(),g=actx.createGain();
+    o.type="square"; o.frequency.value=freq; g.gain.value=vol; g.gain.exponentialRampToValueAtTime(.0001,actx.currentTime+dur);
+    o.connect(g).connect(actx.destination); o.start(); o.stop(actx.currentTime+dur);}catch(e){}
+}
+function news(msg){ const n=document.getElementById("news"), d=document.createElement("div"); d.textContent=msg; n.appendChild(d); setTimeout(()=>d.remove(),5000); while(n.children.length>(innerWidth<820?2:4)) n.firstChild.remove(); }
+
+// ===================== シミュレーション =====================
+function addTrain(line,type,free=false){
+  const price=trainPrice(type);
+  if(!free){ if(S.money<price) return false; S.money-=price; S.monthOut+=price; S.trainsBought++; }
+  const g=geom(line); const n=line.trains.length;
+  line.trains.push({type, pos: n%2? g.total : 0, dir: n%2? -1:1, dwell:0.5, load:[], atStop: n%2? line.stops.length-1 : 0});
+  return true;
+}
+function stopIndexAt(line,pos){ const g=geom(line); for(let i=0;i<g.cum.length;i++) if(Math.abs(g.cum[i]-pos)<0.01) return i; return -1; }
+
+function arrive(line,t,si){
+  const g=geom(line), city=S.cities[line.stops[si]], spec=TRAINS[t.type];
+  // 降車：運賃 = 基本 + 距離
+  let income=0, off=0;
+  t.load=t.load.filter(p=>{ if(p.dest===si){ const d=Math.abs(g.cum[si]-g.cum[p.from]); income+=p.n*(CFG.fareBase+d*CFG.farePerPx); off+=p.n; return false;} return true; });
+  if(off>0){ income=Math.round(income); S.money+=income; S.monthIn+=income; S.earned+=income; S.riders+=off;
+    floaters.push({x:city.x,y:city.y-14,text:"+"+yen(income),life:1.6,color:"gold"}); blip(660+Math.min(off,100)*4); }
+  // 乗車：進行方向の先の駅へ（人口に比例して行き先を分配）
+  let dir=t.dir; if(si===0) dir=1; if(si===line.stops.length-1) dir=-1; t.dir=dir;
+  const onboard=t.load.reduce((a,p)=>a+p.n,0), free=spec.cap-onboard;
+  const board=Math.min(free,Math.floor(city.waiting));
+  if(board>0){
+    const dests=[]; for(let j=si+dir; j>=0 && j<line.stops.length; j+=dir) dests.push(j);
+    const w=dests.map(j=>Math.sqrt(S.cities[line.stops[j]].pop)*(1+Math.abs(j-si)*0.3)); const sw=w.reduce((a,b)=>a+b,0);
+    let left=board; dests.forEach((j,k)=>{ const n= k===dests.length-1? left : Math.min(left,Math.round(board*w[k]/sw)); if(n>0){ t.load.push({from:si,dest:j,n}); left-=n; } });
+    city.waiting-=board;
+  }
+  t.dwell=spec.dwell; t.atStop=si;
+}
+
+function simulate(dtReal){
+  if(S.over) return;
+  const dt=dtReal*speed; if(dt<=0) return;
+  const days=dt/CFG.dayRealSec;
+  // 乗客発生・人口成長
+  for(const c of S.cities){
+    if(!connected(c.id)) { c.waiting=0; continue; }
+    const cap=c.pop*CFG.waitCapPerPop*c.level;
+    const mul=c.level*(c.boost>0?2:1);
+    c.waiting=Math.min(cap, c.waiting + c.pop*CFG.genPerPop*mul*days);
+    const ratio=c.waiting/cap;
+    if(ratio<0.8) c.pop*= 1 + CFG.growthPerDay*days*(1-ratio)*(c.level*0.5+0.5);
+    if(c.boost>0) c.boost-=days;
+  }
+  // 列車
+  for(const line of S.lines){ const g=geom(line);
+    for(const t of line.trains){
+      const spec=TRAINS[t.type];
+      if(t.dwell>0){ t.dwell-=dt; continue; }
+      let move=spec.speed*dt;
+      while(move>0){
+        const nextIdx = t.dir>0 ? g.cum.findIndex(c=>c>t.pos+1e-6) : (()=>{for(let i=g.cum.length-1;i>=0;i--) if(g.cum[i]<t.pos-1e-6) return i; return -1;})();
+        if(nextIdx<0){ t.dir*=-1; continue; }
+        const target=g.cum[nextIdx], dist=Math.abs(target-t.pos);
+        if(move>=dist){ t.pos=target; move-=dist; arrive(line,t,nextIdx); break; }
+        t.pos+=t.dir*move; move=0;
+      }
+    }
+  }
+  // 日付・月末処理
+  const before=Math.floor(S.day/CFG.daysPerMonth); S.day+=days; const after=Math.floor(S.day/CFG.daysPerMonth);
+  if(after>before) monthEnd();
+  // 目標
+  for(const gl of GOALS){ if(!S.goalsDone.includes(gl.id) && gl.check()){ S.goalsDone.push(gl.id); S.money+=gl.reward;
+      if(gl.unlock) S.unlocks.push(gl.unlock);
+      news(`🏆 目標達成：${gl.text}${gl.reward?"　ボーナス "+yen(gl.reward):""}${gl.unlock?"　【"+gl.unlockText+"】解禁！":""}`); blip(1200,.15,.06);
+      if(gl.final && !S.cleared){ S.cleared=true; showEnd("🎉 クリア！", `${dateStr(S.day)}、借金ゼロで資金50億円を達成しました。あなたは立派な路線王です！ 累計乗客 ${Math.round(S.riders).toLocaleString()}人。`); }
+      renderSide(); } }
+}
+function monthEnd(){
+  let up=0; for(const l of S.lines) for(const t of l.trains) up+=TRAINS[t.type].upkeep;
+  const track=Math.round(trackLen()*CFG.trackUpkeepPerPx); const interest=Math.round(S.loan*CFG.loanRate);
+  const out=up+track+interest; S.money-=out; S.monthOut+=out;
+  S.lastProfit=S.monthIn-S.monthOut; S.monthIn=0; S.monthOut=0;
+  news(`📅 月末決算：列車維持費 ${yen(up)} / 線路保守 ${yen(track)}${interest?" / 利息 "+yen(interest):""}`);
+  if(S.money<0){ S.negMonths++; news(`⚠️ 資金がマイナスです（${S.negMonths}/3か月）`);
+    if(S.negMonths>=3){ S.over=true; showEnd("💸 倒産…", "資金不足が3か月続き、会社は倒産しました。建設費と維持費のバランスを見直して再挑戦しましょう。"); } }
+  else S.negMonths=0;
+  // ランダムイベント
+  const conn=S.cities.filter(c=>connected(c.id));
+  if(conn.length && Math.random()<0.6){ const c=conn[Math.floor(Math.random()*conn.length)]; const r=Math.random();
+    if(r<0.5){ c.boost=5; news(`🎆 ${c.name}でお祭り！5日間 乗客が2倍`); }
+    else if(r<0.8){ const g=Math.round(c.pop*0.08); c.pop+=g; news(`🏘️ ${c.name}に新しい団地ができた（人口+${g.toLocaleString()}）`); }
+    else { const cost=Math.round(trackLen()*CFG.trackUpkeepPerPx*0.5); S.money-=cost; news(`🌧️ 大雨で線路を補修（${yen(cost)}）`); } }
+  save(true); renderSide();
+}
+
+// ===================== 建設 =====================
+function buildQuote(stops){
+  let cost=0, parts={flat:0,mount:0,river:0};
+  for(let i=1;i<stops.length;i++){ const q=segCost(S.cities[stops[i-1]],S.cities[stops[i]]); cost+=q.cost; for(const k in parts) parts[k]+=q.parts[k]; }
+  const newSt=[...new Set(stops)].filter(id=>!connected(id)).length; cost+=newSt*CFG.stationFee;
+  return {cost:Math.round(cost/10000)*10000,parts,newSt};
+}
+function clickStation(id){
+  if(mode==="build"){
+    if(buildStops[buildStops.length-1]===id) return;
+    if(buildStops.includes(id)){ news("同じ駅を2回は通れません"); return; }
+    buildStops.push(id); blip(520); updateBuildBar();
+  } else { selected=id; renderSide(); }
+}
+function updateBuildBar(){
+  const info=document.getElementById("buildInfo"), ok=document.getElementById("buildOk");
+  if(buildStops.length<2){ info.textContent= buildStops.length? `${S.cities[buildStops[0]].name} から… 次の駅をクリック` : "駅をクリックして順番につないでください"; ok.disabled=true; return; }
+  const q=buildQuote(buildStops), price=trainPrice("local");
+  const total=q.cost+price;
+  info.innerHTML=`${buildStops.map(i=>S.cities[i].name).join("→")}　建設費 <b>${yen(q.cost)}</b> ＋ 列車 ${yen(price)}`+
+    (q.parts.mount>1?`　⛰️トンネル${Math.round(q.parts.mount)}`:"")+(q.parts.river>1?`　🌉鉄橋${Math.round(q.parts.river)}`:"")+
+    (total>S.money?` <span class="neg">資金不足</span>`:"");
+  ok.disabled= total>S.money;
+}
+function setMode(m){ mode=m; buildStops=[]; document.getElementById("buildbar").hidden= m!=="build"; if(m==="build") updateBuildBar(); }
+function confirmBuild(){
+  const q=buildQuote(buildStops), price=trainPrice("local"); if(q.cost+price>S.money) return;
+  S.money-=q.cost; S.monthOut+=q.cost;
+  const used=S.lines.map(l=>l.color); const color=LINE_COLORS.find(c=>!used.includes(c))||LINE_COLORS[S.lines.length%LINE_COLORS.length];
+  const id=(S.lines.reduce((a,l)=>Math.max(a,l.id),0))+1;
+  const line={id,name:`${S.cities[buildStops[0]].name}${S.cities[buildStops[buildStops.length-1]].name}線`,color,stops:[...buildStops],trains:[],cost:q.cost};
+  S.lines.push(line); addTrain(line,"local");
+  news(`🎉 ${line.name}（${line.stops.map(i=>S.cities[i].name).join("・")}）開業！`); blip(990,.2,.06);
+  setMode("select"); renderSide();
+}
+
+// ===================== サイドパネル =====================
+function renderSide(){
+  // 駅
+  const sp=document.getElementById("stationPanel");
+  if(selected==null){ sp.className="card muted"; sp.textContent="地図上の駅をクリック"; }
+  else { const c=S.cities[selected]; sp.className="card"; const cap=c.pop*CFG.waitCapPerPop*c.level; const up=Math.round(CFG.stationUpgradeBase*Math.pow(2.2,c.level-1)*(c.pop/40000)/10000)*10000;
+    const lines=S.lines.filter(l=>l.stops.includes(c.id));
+    sp.innerHTML=`<div class="row between"><b style="font-size:16px">${c.name}駅</b><span class="muted">Lv.${c.level}</span></div>
+      <div>人口 ${Math.round(c.pop).toLocaleString()}人 ${c.boost>0?"🎆":""}</div>
+      ${connected(c.id)?`<div class="muted">待ち客 ${Math.floor(c.waiting)} / ${Math.floor(cap)}</div><div class="bar"><i style="width:${Math.min(100,c.waiting/cap*100)}%;background:${c.waiting/cap>0.8?"var(--bad)":"var(--accent)"}"></i></div>
+      <div class="muted" style="margin-top:4px">${c.waiting/cap>0.8?"⚠️ 待ち客があふれて町が育ちません。列車を増やしましょう":"町は順調に成長中"}</div>
+      <div class="muted">路線：${lines.map(l=>`<span class="swatch" style="background:${l.color}"></span> ${l.name}`).join("　")}</div>
+      <div class="row" style="margin-top:8px"><button data-act="upst" ${S.money<up||c.level>=5?"disabled":""}>駅を改良 ${c.level>=5?"(最大)":yen(up)}</button><span class="muted">乗客発生・待合室が増える</span></div>`
+      : `<div class="muted">まだ線路が通っていません</div>`}`;
+    sp.querySelector('[data-act="upst"]')?.addEventListener("click",()=>{ if(S.money<up) return; S.money-=up; S.monthOut+=up; c.level++; news(`🏗️ ${c.name}駅を改良しました（Lv.${c.level}）`); renderSide(); });
+  }
+  // 路線
+  const lp=document.getElementById("linesPanel"); lp.innerHTML="";
+  if(!S.lines.length) lp.innerHTML=`<div class="card muted">まだ路線がありません。まずは人口の多い町（大きな丸）同士をつないでみましょう。</div>`;
+  for(const l of S.lines){
+    const d=document.createElement("div"); d.className="card";
+    const counts={}; l.trains.forEach(t=>counts[t.type]=(counts[t.type]||0)+1);
+    const avail=Object.keys(TRAINS).filter(k=>!TRAINS[k].unlock||S.unlocks.includes(TRAINS[k].unlock));
+    d.innerHTML=`<div class="row between"><b><span class="swatch" style="background:${l.color}"></span> ${l.name}</b><span class="muted">${Math.round(geom(l).total)}km</span></div>
+      <div class="muted">${l.stops.map(i=>S.cities[i].name).join("→")}</div>
+      <div class="muted">列車：${Object.entries(counts).map(([k,v])=>TRAINS[k].name+"×"+v).join("、")||"なし"}</div>
+      <div class="row" style="margin-top:6px">${avail.map(k=>`<button data-buy="${k}" ${S.money<trainPrice(k)?"disabled":""}>＋${TRAINS[k].name} ${yen(trainPrice(k))}</button>`).join("")}</div>
+      <div class="row" style="margin-top:6px"><button data-sell ${l.trains.length<=1?"disabled":""}>列車を1編成売却</button><button data-del>廃線</button></div>`;
+    d.querySelectorAll("[data-buy]").forEach(b=>b.addEventListener("click",()=>{ if(addTrain(l,b.dataset.buy)){ blip(780); renderSide(); } }));
+    d.querySelector("[data-sell]").addEventListener("click",()=>{ const t=l.trains.pop(); if(!t) return; const v=Math.round(TRAINS[t.type].cost*0.4); S.money+=v; news(`${TRAINS[t.type].name}列車を売却（+${yen(v)}）`); renderSide(); });
+    d.querySelector("[data-del]").addEventListener("click",()=>{ if(!confirm(`${l.name}を廃線にしますか？（建設費の20%が戻ります）`)) return;
+      const v=Math.round(l.cost*0.2)+l.trains.reduce((a,t)=>a+TRAINS[t.type].cost*0.4,0); S.money+=v; S.lines=S.lines.filter(x=>x!==l); geomCache.delete(l.id); news(`${l.name}を廃線にしました（+${yen(v)}）`); renderSide(); });
+    lp.appendChild(d);
+  }
+  // 目標
+  const gp=document.getElementById("goalsPanel"); gp.innerHTML="";
+  const next=GOALS.find(g=>!S.goalsDone.includes(g.id));
+  GOALS.forEach(g=>{ const done=S.goalsDone.includes(g.id); if(!done && g!==next && GOALS.indexOf(g)>GOALS.indexOf(next)+1) return;
+    const e=document.createElement("div"); e.className="goal"+(done?" done":"");
+    e.innerHTML=`<span class="chk">${done?"✅":g===next?"▶":"・"}</span><span>${g.text}${g.reward&&!done?`<br><span class="muted">報酬 ${yen(g.reward)}${g.unlockText?"＋"+g.unlockText+"解禁":""}</span>`:""}</span>`; gp.appendChild(e); });
+  // 銀行
+  const bp=document.getElementById("bankPanel");
+  bp.innerHTML=`<div>借入金 <b>${yen(S.loan)}</b> <span class="muted">（月利${CFG.loanRate*100}%）</span></div>
+    <div class="row" style="margin-top:6px"><button data-b="borrow" ${S.loan>=CFG.loanMax?"disabled":""}>${yen(CFG.loanUnit)}借りる</button><button data-b="repay" ${S.loan<=0||S.money<CFG.loanUnit?"disabled":""}>${yen(CFG.loanUnit)}返す</button></div>`;
+  bp.querySelector('[data-b="borrow"]').addEventListener("click",()=>{ S.loan+=CFG.loanUnit; S.money+=CFG.loanUnit; renderSide(); });
+  bp.querySelector('[data-b="repay"]').addEventListener("click",()=>{ S.loan-=CFG.loanUnit; S.money-=CFG.loanUnit; renderSide(); });
+}
+let sideTimer=0;
+function renderTop(){
+  const m=document.getElementById("money"); m.textContent=yen(S.money); m.className=S.money<0?"neg":"";
+  const p=document.getElementById("profit"); p.textContent=S.lastProfit==null?"-":(S.lastProfit>=0?"+":"")+yen(S.lastProfit); p.className=S.lastProfit==null?"":S.lastProfit>=0?"pos":"neg";
+  document.getElementById("date").textContent=dateStr(S.day);
+  document.getElementById("riders").textContent=Math.round(S.riders).toLocaleString()+"人";
+}
+
+// ===================== 描画 =====================
+function css(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+let colors={};
+function readColors(){ ["--land","--land2","--water","--mount","--mount2","--label","--halo","--accent","--gold","--bad","--ink"].forEach(k=>colors[k]=css(k)); bgCache=null; }
+let bgCache=null;
+function resize(){
+  const r=cv.parentElement.getBoundingClientRect(); view.dpr=window.devicePixelRatio||1;
+  cv.width=Math.round(r.width*view.dpr); cv.height=Math.round(r.height*view.dpr);
+  view.scale=Math.min(r.width/CFG.W, r.height/CFG.H); view.ox=(r.width-CFG.W*view.scale)/2; view.oy=(r.height-CFG.H*view.scale)/2; bgCache=null;
+}
+function drawBackground(){
+  const c=document.createElement("canvas"); c.width=CFG.W; c.height=CFG.H; const g=c.getContext("2d");
+  g.fillStyle=colors["--land"]; g.fillRect(0,0,CFG.W,CFG.H);
+  const r=mulberry(terrain.seed+3); g.fillStyle=colors["--land2"];
+  for(let i=0;i<90;i++){ g.beginPath(); g.arc(r()*CFG.W,r()*CFG.H,10+r()*30,0,7); g.fill(); }
+  for(const m of terrain.mountains){ const grd=g.createRadialGradient(m.x,m.y,4,m.x,m.y,m.r); grd.addColorStop(0,colors["--mount2"]); grd.addColorStop(1,colors["--mount"]);
+    g.fillStyle=grd; g.beginPath(); g.arc(m.x,m.y,m.r,0,7); g.fill();
+    g.fillStyle=colors["--mount2"]; for(let k=0;k<4;k++){ const a=k*1.6+m.r, px=m.x+Math.cos(a)*m.r*.45, py=m.y+Math.sin(a)*m.r*.45; g.beginPath(); g.moveTo(px-12,py+8); g.lineTo(px,py-10); g.lineTo(px+12,py+8); g.fill(); } }
+  g.strokeStyle=colors["--water"]; g.lineWidth=36; g.lineCap="round"; g.lineJoin="round"; g.beginPath();
+  terrain.riverPts.forEach((p,i)=>i?g.lineTo(p[0],p[1]):g.moveTo(p[0],p[1])); g.stroke();
+  bgCache=c;
+}
+function trainXY(line,t){
+  const g=geom(line); let i=1; while(i<g.cum.length-1 && g.cum[i]<t.pos) i++;
+  const a=g.pts[i-1], b=g.pts[i], seg=g.cum[i]-g.cum[i-1]||1, f=(t.pos-g.cum[i-1])/seg;
+  return {x:a.x+(b.x-a.x)*f, y:a.y+(b.y-a.y)*f, ang:Math.atan2(b.y-a.y,b.x-a.x)};
+}
+// 同じ区間を複数路線が通るときに少しずらす
+function segOffset(a,b,line){
+  const key=a<b?a+"-"+b:b+"-"+a; const users=S.lines.filter(l=>{for(let i=1;i<l.stops.length;i++){const x=l.stops[i-1],y=l.stops[i]; if((x<y?x+"-"+y:y+"-"+x)===key) return true;} return false;});
+  const k=users.indexOf(line); return (k-(users.length-1)/2)*7;
+}
+function draw(){
+  ctx.setTransform(view.dpr,0,0,view.dpr,0,0); ctx.clearRect(0,0,cv.width,cv.height);
+  ctx.translate(view.ox,view.oy); ctx.scale(view.scale,view.scale);
+  if(!bgCache) drawBackground(); ctx.drawImage(bgCache,0,0);
+  // 路線
+  ctx.lineCap="round"; ctx.lineJoin="round";
+  for(const l of S.lines){ ctx.strokeStyle=l.color; ctx.lineWidth=6;
+    for(let i=1;i<l.stops.length;i++){ const a=S.cities[l.stops[i-1]], b=S.cities[l.stops[i]], off=segOffset(l.stops[i-1],l.stops[i],l);
+      const nx=-(b.y-a.y), ny=(b.x-a.x), nl=Math.hypot(nx,ny)||1; const ox=nx/nl*off, oy=ny/nl*off;
+      ctx.beginPath(); ctx.moveTo(a.x+ox,a.y+oy); ctx.lineTo(b.x+ox,b.y+oy); ctx.stroke(); } }
+  // 建設プレビュー
+  if(mode==="build" && buildStops.length){ ctx.setLineDash([10,8]); ctx.strokeStyle=colors["--ink"]; ctx.lineWidth=4; ctx.beginPath();
+    buildStops.forEach((id,i)=>{const c=S.cities[id]; i?ctx.lineTo(c.x,c.y):ctx.moveTo(c.x,c.y);});
+    if(hover!=null && !buildStops.includes(hover)){ const c=S.cities[hover]; ctx.lineTo(c.x,c.y); }
+    ctx.stroke(); ctx.setLineDash([]); }
+  // 列車
+  for(const l of S.lines) for(const t of l.trains){ const p=trainXY(l,t), spec=TRAINS[t.type];
+    ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.ang); ctx.fillStyle=spec.color; ctx.strokeStyle="#222"; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.roundRect(-13,-5,26,10,3); ctx.fill(); ctx.stroke();
+    const load=t.load.reduce((a,x)=>a+x.n,0)/spec.cap; ctx.fillStyle=l.color; ctx.fillRect(-11,-3,22*load,6); ctx.restore(); }
+  // 駅
+  ctx.textAlign="center"; ctx.font="bold 14px "+css("--f");
+  for(const c of S.cities){ const conn=connected(c.id), r=6+Math.sqrt(c.pop)/28;
+    const cap=c.pop*CFG.waitCapPerPop*c.level, ratio=conn?c.waiting/cap:0;
+    if(c.id===selected||c.id===hover||(mode==="build"&&buildStops.includes(c.id))){ ctx.fillStyle="rgba(42,79,168,.25)"; ctx.beginPath(); ctx.arc(c.x,c.y,r+8,0,7); ctx.fill(); }
+    ctx.fillStyle= conn? "#fff":"rgba(255,255,255,.55)"; ctx.strokeStyle= conn? "#1C2B3A":"#7A8794"; ctx.lineWidth=conn?3:2;
+    ctx.beginPath(); ctx.arc(c.x,c.y,r,0,7); ctx.fill(); ctx.stroke();
+    if(conn && ratio>0.02){ ctx.strokeStyle= ratio>0.8? colors["--bad"] : "#2A7FDB"; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(c.x,c.y,r+4,-Math.PI/2,-Math.PI/2+Math.PI*2*ratio); ctx.stroke(); }
+    if(c.level>1){ ctx.fillStyle="#1C2B3A"; ctx.font="bold 10px sans-serif"; ctx.fillText("★".repeat(c.level-1),c.x,c.y+4); ctx.font="bold 14px "+css("--f"); }
+    ctx.lineWidth=4; ctx.strokeStyle=colors["--halo"]; ctx.fillStyle=colors["--label"];
+    const label=c.name+(c.boost>0?"🎆":""), sub=Math.round(c.pop/1000)+"千人";
+    ctx.strokeText(label,c.x,c.y-r-8); ctx.fillText(label,c.x,c.y-r-8);
+    ctx.font="11px "+css("--f"); ctx.strokeText(sub,c.x,c.y+r+14); ctx.fillText(sub,c.x,c.y+r+14); ctx.font="bold 14px "+css("--f"); }
+  // 収入ポップ
+  ctx.font="bold 15px sans-serif";
+  for(const f of floaters){ ctx.globalAlpha=Math.max(0,Math.min(1,f.life)); ctx.lineWidth=4; ctx.strokeStyle=colors["--halo"]; ctx.fillStyle=colors["--gold"];
+    ctx.strokeText(f.text,f.x,f.y); ctx.fillText(f.text,f.x,f.y); }
+  ctx.globalAlpha=1;
+}
+
+// ===================== 入力 =====================
+function toWorld(e){ const r=cv.getBoundingClientRect(); return {x:(e.clientX-r.left-view.ox)/view.scale, y:(e.clientY-r.top-view.oy)/view.scale}; }
+function pick(p){ let best=null,bd=1e9; for(const c of S.cities){ const d=Math.hypot(c.x-p.x,c.y-p.y), r=6+Math.sqrt(c.pop)/28+14; if(d<r&&d<bd){bd=d;best=c.id;} } return best; }
+cv.addEventListener("pointermove",e=>{ hover=pick(toWorld(e)); cv.style.cursor=hover!=null?"pointer":"default"; });
+cv.addEventListener("pointerdown",e=>{ const id=pick(toWorld(e)); if(id!=null) clickStation(id); else if(mode==="select"){ selected=null; renderSide(); } });
+document.getElementById("newLineBtn").onclick=()=>setMode("build");
+document.getElementById("buildCancel").onclick=()=>setMode("select");
+document.getElementById("buildUndo").onclick=()=>{ buildStops.pop(); updateBuildBar(); };
+document.getElementById("buildOk").onclick=confirmBuild;
+document.querySelectorAll("#speed button").forEach(b=>b.onclick=()=>{ speed=+b.dataset.s; document.querySelectorAll("#speed button").forEach(x=>x.classList.toggle("on",x===b)); });
+document.getElementById("soundBtn").onclick=e=>{ sound=!sound; e.target.textContent=sound?"🔊":"🔇"; };
+document.getElementById("helpBtn").onclick=()=>document.getElementById("help").hidden=false;
+document.getElementById("helpClose").onclick=()=>document.getElementById("help").hidden=true;
+document.getElementById("saveBtn").onclick=()=>save(false);
+document.getElementById("resetBtn").onclick=()=>{ if(confirm("最初からやり直しますか？（新しい地図になります）")){ newGame(); geomCache.clear(); selected=null; setMode("select"); readColors(); renderSide(); } };
+function showEnd(t,x){ document.getElementById("endTitle").textContent=t; document.getElementById("endText").textContent=x; document.getElementById("endModal").hidden=false; document.getElementById("endContinue").hidden=S.over; }
+document.getElementById("endContinue").onclick=()=>document.getElementById("endModal").hidden=true;
+document.getElementById("endRestart").onclick=()=>{ document.getElementById("endModal").hidden=true; newGame(); geomCache.clear(); selected=null; readColors(); renderSide(); };
+window.addEventListener("keydown",e=>{ if(e.key==="Escape") setMode("select"); if(e.key===" "&&e.target===document.body){ e.preventDefault(); document.querySelector(`#speed button[data-s="${speed?0:1}"]`).click(); } });
+
+// ===================== セーブ =====================
+const KEY="rosen-ou-save-v1";
+function save(auto){ try{ localStorage.setItem(KEY,JSON.stringify(S)); if(!auto) document.getElementById("saveMsg").textContent="保存しました"; }catch(e){ if(!auto) document.getElementById("saveMsg").textContent="保存できませんでした"; } }
+function load(){ try{ const s=localStorage.getItem(KEY); if(!s) return false; S=JSON.parse(s); makeTerrain(S.seed); return true; }catch(e){ return false; } }
+
+// ===================== ループ =====================
+let last=performance.now();
+function frame(now){
+  const dt=Math.min(0.1,(now-last)/1000); last=now;
+  simulate(dt);
+  for(const f of floaters){ f.life-=dt; f.y-=dt*18; } for(let i=floaters.length-1;i>=0;i--) if(floaters[i].life<=0) floaters.splice(i,1);
+  draw(); renderTop();
+  sideTimer+=dt; if(sideTimer>1){ sideTimer=0; if(mode!=="build") refreshSideLight(); else updateBuildBar(); }
+  requestAnimationFrame(frame);
+}
+// ボタンの有効/無効と駅情報を定期更新（フォーカス中は作り直さない）
+function refreshSideLight(){ if(document.activeElement && document.getElementById("side").contains(document.activeElement)) return; renderSide(); }
+
+if(!load()){ newGame(); document.getElementById("help").hidden=false; }
+readColors(); resize(); renderSide();
+window.addEventListener("resize",resize);
+matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change",readColors);
+window.addEventListener("beforeunload",()=>save(true));
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
