@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="ja">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ほしかげの剣 II</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap">
+<style>
+/* レイアウト: 夜空の上に 4:3 のゲーム画面を1枚。下にタッチ用の十字キーとA/B。単一のダークな世界観 */
+:root{
+  --night:#080a1c; --night2:#141838; --ink:#f3f0ff; --sub:#9da3d6;
+  --gold:#ffd451; --pad:#1c2046; --pad-edge:#3a4182; --pad-hi:#2f3678;
+  --win:#000000; --edge:#f3f0ff; --warn:#ffae42; --poison:#8dff8a; --dead:#ff6a6a;
+  --f-pix:"DotGothic16","Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{
+  margin:0; color:var(--ink); font-family:var(--f-pix);
+  background:var(--night);
+  background-image:
+    radial-gradient(1px 1px at 12% 18%,#fff8 50%,transparent 51%),
+    radial-gradient(1px 1px at 78% 9%,#fff6 50%,transparent 51%),
+    radial-gradient(1px 1px at 55% 32%,#fff5 50%,transparent 51%),
+    radial-gradient(1px 1px at 90% 60%,#fff6 50%,transparent 51%),
+    radial-gradient(1px 1px at 22% 74%,#fff4 50%,transparent 51%),
+    linear-gradient(var(--night),var(--night2));
+  background-attachment:fixed;
+  padding-block:12px 20px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+  -webkit-user-select:none; user-select:none; -webkit-touch-callout:none;
+  overscroll-behavior:none;
+}
+.app{max-width:780px; margin:0 auto; display:flex; flex-direction:column; align-items:center; gap:12px}
+.bar{width:100%; display:flex; align-items:center; justify-content:space-between; gap:12px}
+.bar h1{margin:0; font-size:1.05rem; font-weight:400; letter-spacing:.12em; color:var(--gold); text-shadow:0 0 8px #ffd45155}
+.bar button{
+  font:inherit; font-size:.85rem; color:var(--ink); background:var(--pad); border:1px solid var(--pad-edge);
+  border-radius:999px; padding:4px 12px; cursor:pointer;
+}
+button:focus-visible{outline:2px solid var(--gold); outline-offset:2px}
+
+.screen{
+  --reserve:300px;
+  position:relative; width:min(100%, max(280px, calc((100dvh - var(--reserve)) * 1.3636)));
+  aspect-ratio:240/176; max-width:100%;
+  container-type:inline-size; background:#000; border-radius:6px; overflow:hidden;
+  box-shadow:0 0 0 2px #2a2f63, 0 12px 40px #000a;
+}
+.screen.shake{animation:shake .26s linear}
+@keyframes shake{0%,100%{transform:translate(0,0)}20%{transform:translate(-1.2%,.6%)}40%{transform:translate(1.2%,-.6%)}60%{transform:translate(-.8%,.4%)}80%{transform:translate(.8%,0)}}
+canvas{display:block; width:100%; height:100%; image-rendering:pixelated; image-rendering:crisp-edges}
+#ui{position:absolute; inset:0; pointer-events:none}
+#ui .win, #ui input, #ui button{pointer-events:auto}
+#fade{position:absolute; inset:0; background:#000; opacity:0; pointer-events:none; transition:opacity .2s linear}
+
+/* DQ風ウインドウ: 黒地に白い角丸の枠 */
+.win{
+  position:absolute; background:var(--win); color:var(--ink);
+  border:.75cqw solid var(--edge); border-radius:1.4cqw; outline:.5cqw solid #000;
+  padding:1.4cqw 2.4cqw; font-size:3.7cqw; line-height:1.45; letter-spacing:.04em;
+}
+#msg{left:3%; right:3%; bottom:3%; height:30%; overflow:hidden; display:flex; flex-direction:column; justify-content:flex-end; padding-bottom:2cqw}
+#msg p{margin:0; white-space:pre-wrap}
+#msg .more{position:absolute; left:50%; bottom:.2cqw; transform:translateX(-50%); font-size:2.6cqw; animation:blink .6s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.menu .wt{font-size:.85em; text-align:center; color:var(--ink); margin-bottom:.15em; opacity:.85}
+.menu .grid{display:grid; column-gap:2.2cqw}
+.menu .it{display:grid; grid-template-columns:3.2cqw minmax(0,1fr) auto; column-gap:.8cqw; white-space:nowrap}
+.menu .rt{text-align:right; font-variant-numeric:tabular-nums}
+.menu .dis .lb,.menu .dis .rt{opacity:.45}
+.menu.active .sel .cur{animation:blink .5s steps(1) infinite}
+.menu .desc{margin-top:.3em; font-size:.82em; color:var(--sub); white-space:normal}
+.party{position:absolute; display:flex; gap:1cqw}
+.party .stat{position:relative; width:20.5cqw; font-size:2.9cqw; line-height:1.35; padding:.8cqw 1.5cqw}
+.stat .row{display:flex; justify-content:space-between; gap:1cqw; font-variant-numeric:tabular-nums}
+.stat .lv{justify-content:center}
+.stat.low{color:var(--warn); border-color:var(--warn)}
+.stat.poison{color:var(--poison); border-color:var(--poison)}
+.stat.dead{color:var(--dead); border-color:var(--dead)}
+.stat.act{box-shadow:0 0 0 .7cqw var(--gold)}
+.stat .nm{text-align:center; border-bottom:.4cqw solid currentColor; margin-bottom:.2em}
+.chap{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:#000a; transition:opacity .45s; z-index:5}
+.chap.out{opacity:0}
+.chap .win{position:relative; text-align:center; padding:3cqw 7cqw}
+.chap .no{font-size:3.4cqw; color:var(--sub); letter-spacing:.3em}
+.chap .tt{font-size:6.4cqw; color:var(--gold); letter-spacing:.12em; margin-top:1cqw}
+.toast{left:50%; top:4%; transform:translateX(-50%); white-space:nowrap; transition:opacity .4s}
+.big{font-size:3.4cqw}
+.big .row{display:flex; justify-content:space-between; gap:3cqw; font-variant-numeric:tabular-nums}
+
+/* タイトル */
+.title{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; padding-top:12%; pointer-events:none; text-align:center}
+.title .logo{font-size:10.5cqw; color:var(--gold); letter-spacing:.14em; text-shadow:0 .6cqw 0 #6a3d00, 0 0 3cqw #ffd45188; line-height:1.1}
+.title .sub{font-size:3.2cqw; color:var(--sub); letter-spacing:.3em; margin-top:1.6cqw}
+.title .foot{position:absolute; bottom:3%; font-size:2.6cqw; color:#8f95c8}
+.namebox{left:50%; top:50%; transform:translate(-50%,-50%); width:68%; text-align:center}
+.namebox input{
+  width:100%; margin:2cqw 0; font:inherit; font-size:5cqw; text-align:center; color:var(--ink);
+  background:#111; border:.5cqw solid #888; border-radius:1cqw; padding:1cqw;
+}
+.namebox input:focus{outline:none; border-color:var(--gold)}
+.namebox button{font:inherit; font-size:3.6cqw; color:#000; background:var(--gold); border:0; border-radius:1cqw; padding:1cqw 4cqw; cursor:pointer}
+.end{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; pointer-events:none}
+.end .logo{font-size:8cqw; color:var(--gold); letter-spacing:.14em; text-shadow:0 0 3cqw #ffd45188}
+.end p{font-size:3.6cqw; margin:2cqw 0 0}
+
+/* タッチ操作 */
+.pad{width:min(100%,520px); display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:12px; touch-action:none}
+.dpad{position:relative; width:136px; height:136px; touch-action:none}
+.dpad .arm{position:absolute; background:var(--pad); border:2px solid var(--pad-edge)}
+.dpad .v{left:44px; width:48px; top:0; height:136px; border-radius:10px}
+.dpad .h{top:44px; height:48px; left:0; width:136px; border-radius:10px}
+.dpad .hub{position:absolute; left:46px; top:46px; width:44px; height:44px; background:var(--pad)}
+.dpad .tri{position:absolute; width:0; height:0; border:9px solid transparent; opacity:.7}
+.dpad .tri.u{left:59px; top:10px; border-bottom:12px solid var(--ink); border-top:0}
+.dpad .tri.d{left:59px; bottom:10px; border-top:12px solid var(--ink); border-bottom:0}
+.dpad .tri.l{top:59px; left:10px; border-right:12px solid var(--ink); border-left:0}
+.dpad .tri.r{top:59px; right:10px; border-left:12px solid var(--ink); border-right:0}
+.dpad .glow{position:absolute; width:48px; height:48px; border-radius:10px; background:var(--pad-hi); opacity:0}
+.dpad[data-dir="up"] .g-up,.dpad[data-dir="down"] .g-down,.dpad[data-dir="left"] .g-left,.dpad[data-dir="right"] .g-right{opacity:1}
+.g-up{left:44px; top:0}.g-down{left:44px; bottom:0}.g-left{left:0; top:44px}.g-right{right:0; top:44px}
+.pbtn{font:inherit; color:var(--ink); background:var(--pad); border:2px solid var(--pad-edge); cursor:pointer; touch-action:none}
+.pbtn.on{background:var(--pad-hi)}
+.ab{position:relative; width:150px; height:132px}
+.ab .pbtn{position:absolute; width:62px; height:62px; border-radius:50%; font-size:1.3rem}
+.ab .ba{right:0; top:6px; color:var(--gold); border-color:#8a7330}
+.ab .bb{left:0; bottom:6px}
+.ab .mbtn{left:0; top:0; width:auto; height:auto; border-radius:999px; padding:4px 12px; font-size:.75rem; letter-spacing:.08em; white-space:nowrap}
+.ab small{position:absolute; font-size:.7rem; color:var(--sub)}
+.keys{margin:0; font-size:.8rem; color:var(--sub); text-align:center; line-height:1.8; text-wrap:balance; display:none}
+@media (hover:hover) and (pointer:fine){
+  .pad{display:none}
+  .keys{display:block}
+  .screen{--reserve:150px}
+}
+@media (max-width:380px){
+  .dpad{transform:scale(.88); transform-origin:left center}
+  .ab{transform:scale(.88); transform-origin:right center}
+}
+</style>
+
+<div class="app">
+  <header class="bar">
+    <h1>ほしかげの剣 II</h1>
+    <button id="snd" type="button" aria-pressed="true">♪ おと ON</button>
+  </header>
+  <div class="screen" id="screen">
+    <canvas id="cv"></canvas>
+    <div id="ui"><div id="msg" class="win" hidden></div></div>
+    <div id="fade"></div>
+  </div>
+  <div class="pad" id="pad">
+    <div class="dpad" id="dpad" aria-label="十字キー">
+      <div class="arm v"></div><div class="arm h"></div><div class="hub"></div>
+      <div class="glow g-up"></div><div class="glow g-down"></div><div class="glow g-left"></div><div class="glow g-right"></div>
+      <div class="tri u"></div><div class="tri d"></div><div class="tri l"></div><div class="tri r"></div>
+    </div>
+    <div></div>
+    <div class="ab">
+      <button class="pbtn mbtn" data-b="menu" type="button">メニュー</button>
+      <button class="pbtn bb" data-b="b" type="button">B</button>
+      <button class="pbtn ba" data-b="a" type="button">A</button>
+    </div>
+  </div>
+  <p class="keys">矢印キー / WASD：いどう ・ Z / Enter / Space：けってい・はなす・しらべる ・ X / Esc：キャンセル・メニュー</p>
+</div>
+
+<script>
+'use strict';
+/* =========================================================
+   ほしかげの剣 II — なまえを なくした せかい（オリジナルRPG）
+   ========================================================= */
+const TS=16, VW=15, VH=11, SW=VW*TS, SH=VH*TS;
+const cv=document.getElementById('cv'); cv.width=SW; cv.height=SH;
+const ctx=cv.getContext('2d'); ctx.imageSmoothingEnabled=false;
+const ui=document.getElementById('ui'), msgEl=document.getElementById('msg');
+const fadeEl=document.getElementById('fade'), screenEl=document.getElementById('screen');
+const rnd=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+const pickR=a=>a[Math.floor(Math.random()*a.length)];
+let FAST=false, AUTO=false;   // テストプレイ よう（こうそく・じどう せんとう）
+const sleep=ms=>FAST?Promise.resolve():new Promise(r=>setTimeout(r,ms));
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const reduceMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const store={
+  get(k){try{return localStorage.getItem(k)}catch(e){return null}},
+  set(k,v){try{localStorage.setItem(k,v);return true}catch(e){return false}},
+};
+const SAVE_KEY='hoshikage2-save-v1';
+
+/* ---------- ピクセルアート ---------- */
+function art(rows,pal,flip){
+  const h=rows.length, w=Math.max(...rows.map(r=>r.length));
+  const c=document.createElement('canvas'); c.width=w; c.height=h;
+  const g=c.getContext('2d'); let top=h, bot=0;
+  for(let y=0;y<h;y++){const r=rows[y]; for(let x=0;x<r.length;x++){const col=pal[r[x]]; if(!col) continue;
+    g.fillStyle=col; g.fillRect(flip?w-1-x:x,y,1,1); top=Math.min(top,y); bot=Math.max(bot,y);}}
+  c.top=top; c.bot=bot; return c;
+}
+function mkTile(fn){const c=document.createElement('canvas'); c.width=c.height=16; const g=c.getContext('2d'); fn(g); return c;}
+function R(g,c,x,y,w=1,h=1){g.fillStyle=c; g.fillRect(x,y,w,h);}
+function prng(seed){let s=seed>>>0||1; return ()=>{s=(s*1664525+1013904223)>>>0; return s/4294967296;};}
+
+/* 人物 (16x16) */
+const PERSON={
+ down:[[
+"................",".....kkkkkk.....","....khhhhhhk....","...khhhhhhhhk...","...khhhhhhhhk...",
+"...khsssssshk...","...kskssssksk...","...kssssssssk...","....kssssssk....","...krrrrrrrrk...",
+"..kggggggggggk..","..ksgggbbgggsk..","..kkggggggggkk..","...kggggggggk...","...kbbk..kbbk...","...kkkk..kkkk..."],
+ null],
+ up:[[
+"................",".....kkkkkk.....","....khhhhhhk....","...khhhhhhhhk...","...khhhhhhhhk...",
+"...khhhhhhhhk...","...khhhhhhhhk...","...khhhhhhhhk...","....khhhhhhk....","...krrrrrrrrk...",
+"..kggggggggggk..","..ksggggggggsk..","..kkggggggggkk..","...kggggggggk...","...kbbk..kbbk...","...kkkk..kkkk..."],
+ null],
+ side:[[
+"................",".....kkkkkk.....","....khhhhhhk....","...khhhhhhhhk...","...khhhhhhhhk...",
+"...khhhhhsssk...","...khhhhssksk...","...khhhssssssk..","....khssssssk...","....krrrrrrk....",
+"...kggggggggk...","...kggggsgggk...","...kggggggggk...","....kggggggk....","...kbbk..kbbk...","...kkkk..kkkk..."],
+ null],
+};
+for(const d of ['down','up','side']){
+  const a=PERSON[d][0].slice();
+  a[14]="....kbbkkbbk...."; a[15]="....kkkkkkkk....";
+  PERSON[d][1]=a;
+}
+const PPAL={
+  hero:{h:'#6e3f1e',g:'#3d8f52',r:'#e04a3a'},
+  elder:{h:'#eeeeee',g:'#6a4a9a',r:'#a88ad0'},
+  woman:{h:'#e0782c',g:'#d86a9a',r:'#f4e0a0'},
+  kid:{h:'#3a2a1a',g:'#4a7ad8',r:'#f0d040'},
+  merchant:{h:'#2a2020',g:'#a07040',r:'#f0c040'},
+  guard:{h:'#9aa0b0',g:'#3a5ab0',r:'#c0c8d8'},
+  granny:{h:'#c8c8d0',g:'#7a6a50',r:'#c09a6a'},
+  inn:{h:'#8a3a2a',g:'#e8e0d0',r:'#c84a4a'},
+  sage:{h:'#d0d0d8',g:'#2e6a6a',r:'#e0c040'},
+  mira:{h:'#c03a6a',g:'#5a3aa0',r:'#f0d040'},
+  gou:{h:'#2a1a10',g:'#b04a20',r:'#e8e8e8',s:'#d8a070'},
+};
+const sprCache={};
+function personSprite(palName,dir,frame){
+  const key=palName+dir+frame; if(sprCache[key]) return sprCache[key];
+  const p=Object.assign({k:'#1a1226',s:'#f6c79f',b:'#5a3a22'},PPAL[palName]);
+  const d=dir==='left'||dir==='right'?'side':dir;
+  return sprCache[key]=art(PERSON[d][frame],p,dir==='left');
+}
+
+/* モンスター (16x16) — すべてオリジナルデザイン */
+const MSPR={
+ seed:["................","........kk......",".......k33k.....","......k33k......",".....kkk3kkk....",
+  "....k1111111k...","...k111111111k..","..k11wk111wk11k.","..k11kk111kk11k.","..k11111111111k.",
+  "..k12111111121k.","..k11112221111k.","...k222222222k..","....k2222222k...",".....kkkkkkk....","................"],
+ beast:["................","................","................","..k..k..........",".k1kk1k.........",
+  ".k11111k........","k1e11111k.....kk","k3111111kkkkkk1k",".kw111111111111k","..kk11111111111k",
+  "...k11111111112k","...k1221111221k.","...k1kk1k1kk1k..","...kk.kk.kk.kk..","................","................"],
+ bat:["................","......k..k......",".....k1kk1k.....","k...k111111k...k","kk..k1e11e1k..kk",
+  "k2k.k111111k.k2k","k22kk11ww11kk22k","k222k111111k222k","k2222k1111k2222k","k22222kkkk22222k",
+  "k2k2k2k..k2k2k2k","kk.k.k....k.k.kk","................","................","................","................"],
+ shroom:["................",".....kkkkkk.....","...kk11ww111kk..","..k111ww111111k.",".k11111111ww111k",
+  ".k1ww1111111ww1k","..kkkkkkkkkkkk..","....k333333k....","....k3k33k3k....","....k333333k....",
+  "...kk322223kk...","..k3k333333k3k..","...kk333333kk...","....k3kkkk3k....","....kkk..kkk....","................"],
+ snake:["................",".......kkkk.....","......k1111k....",".....k1e11e1k...",".....k111111k...",
+  "......k1ww1k....",".......k11k.....",".......k12k.....","....kkkk12kkk...","...k2111111112k.",
+  "..k211222222112k","..k111111111111k",".k2112222222211k",".k111111111111k.","..kkkkkkkkkkkk..","................"],
+ golem:["................","....kkkkkkkk....","...k11111111k...","...k1ee11ee1k...","...k11111111k...",
+  ".kkk12222221kkk.","k111k111111k111k","k121k121121k121k","k111k111111k111k","k121k122221k121k",
+  ".kkkk111111kkkk.","....k11kk11k....","....k11kk11k....","...k211kk112k...","...kkkkkkkkkk...","................"],
+ skel:["................",".....kkkkkk.....","....kwwwwwwk....","....kkewwekk....","....kwwwwwwk....",
+  ".....kwkwkwk....","......kkkk......","....kwwwwwwk....","...kwkwwwwkwk...","...kwkkwwkkwk...",
+  "...kwkwwwwkwk...","..kwk.kwwk.kwk..",".....kwkkwk.....",".....kwk..kwk...","....kwwk..kwwk..","....kkkk..kkkk.."],
+ mage:[".......kk.......","......k11k......",".....k1111k.....","....k111111k....","....k1kkkk1k....",
+  "....k1ekke1k....","....k1kkkk1k....","...k11k33k11k...","..k1111331111k..","..k1111331111k..",
+  ".k111113311111k.",".k122111111221k.","k11111111111111k","k12121212121212k","kkkkkkkkkkkkkkkk","................"],
+ ghost:["................","......kkkk......","....kk1111kk....","...k11111111k...","..k1111111111k..",
+  "..k11kk11kk11k..","..k11ke11ek11k..","..k1111111111k..","..k1111221111k..","k1k1111111111k1k",
+  ".kk1111111111kk.","...k1111111111k.","....k22111111k..",".....k2221k2k...","......kkk..k....","................"],
+ frog:["................","................","...kkk....kkk...","..kwwek..kewwk..","..kwwkkkkkkwwk..",
+  "..k1111111111k..",".k111111111111k.",".k1kkkkkkkkkk1k.",".k122222222221k.","k11122222222111k",
+  "k31112222221113k","k11111111111111k",".kk11kkkkkk11kk.","k11kk......kk11k","kkkk........kkkk","................"],
+ plant:["................",".....kkkkkk.....","...kk333333kk...","..k3333333333k..",".k333k1111k333k.",
+  ".k33k1e11e1k33k.",".k33k111111k33k.","..k33k1221k33k..","...kk3kkkk3kk...",".....kk22kk.....",
+  "..kk..k22k..kk..",".k22k.k22k.k22k.","..k22kk22kk22k..","...kkk2222kkk...","....kkkkkkkk....","................"],
+ dragon:["..........kk....",".........k22k...","..kk....k2222k..",".k11k..k222222k.","k1e11k.k2222222k",
+  "k1111kk1k222222k",".kww11111kk2222k","..kk11111111kkk.","....k11333311k..","...k1133333311k.",
+  "...k1133333311k.","..k111333311111k","..k11k1111k1kk1k","..k1k.k11k.k..k.","..kkk.kkkk......","................"],
+ knight:["................",".....kkkkkk.....","....k111111k....","....k1kkkk1k....","....k1keek1k....",
+  "....k111111k....","..kkk122221kkk..",".k11k111111k11k.",".k12k113311k21k.",".k11k113311k11k.",
+  ".kk2k111111k2kk.","...kk111111kk...","....k11kk11k....","....k11kk11k....","...kk22kk22kk...","...kkkkkkkkkk..."],
+};
+const monCache={};
+function monSprite(id,alt){
+  const key=id+(alt?'*':''); if(monCache[key]) return monCache[key];
+  const d=MON[id]; const pal=Object.assign({k:'#140c18',w:'#f4f2ea',e:'#ff3040'},d.p,alt?d.p2:null);
+  return monCache[key]=art(MSPR[d.s],pal,false);
+}
+
+/* 宝箱 */
+const CHEST_C=["................","................","..kkkkkkkkkkkk..",".kooooooooooook.",".kyyyyyyyyyyyyk.",".kooooooooooook.",
+ ".kkkkkkyykkkkkk.",".kooookyykooook.",".kooooooooooook.",".kyyyyyyyyyyyyk.",".kooooooooooook.",".kooooooooooook.",".kkkkkkkkkkkkkk.","................"];
+const CHEST_O=["................","..kkkkkkkkkkkk..",".kooooooooooook.",".kyyyyyyyyyyyyk.",".kkkkkkkkkkkkkk.",".kddddddddddddk.",
+ ".kddddddddddddk.",".kooookyykooook.",".kooooooooooook.",".kyyyyyyyyyyyyk.",".kooooooooooook.",".kooooooooooook.",".kkkkkkkkkkkkkk.","................"];
+const CPAL={k:'#2a160a',o:'#a8642c',y:'#f0c040',d:'#120a06'};
+const chestClosed=art(CHEST_C,CPAL), chestOpen=art(CHEST_O,CPAL);
+const graveArt=art(["................","................",".......kk.......","......kwwk......","....kkkwwkkk....","....kwwwwwwk....",
+ "....kkkwwkkk....","......kwwk......","......kwwk......","......kwwk......","....kkkkkkkk....","...kggggggggk...","...kkkkkkkkkk..."],{k:'#1a1226',w:'#c8c8d4',g:'#7a5a3a'});
+
+/* ---------- タイル ---------- */
+function grass(g,seed){R(g,'#57a43c',0,0,16,16); const r=prng(seed);
+  for(let i=0;i<5;i++){const x=(r()*13)|0,y=(r()*13)|0; R(g,'#3f8a33',x,y); R(g,'#3f8a33',x+1,y+1); R(g,'#3f8a33',x+2,y);}
+  for(let i=0;i<4;i++) R(g,'#7cc25a',(r()*16)|0,(r()*16)|0);}
+const TREE=["..kkkk..",".kGGGGk.","kGGgGGGk","kGgGGGGk","kGGGGgGk",".kGGGGk.","..kttk..","...tt..."];
+const treeArt=art(TREE,{k:'#173f1d',G:'#2e7a34',g:'#62b04e',t:'#6b4423'});
+function forest(g,seed){grass(g,seed); g.drawImage(treeArt,0,0); g.drawImage(treeArt,8,3); g.drawImage(treeArt,3,8);}
+function mountain(g,snowy){grass(g,7); const cx=8;
+  for(let y=1;y<16;y++){const hw=Math.min(8,Math.floor(y*0.55)+1);
+    for(let x=cx-hw;x<cx+hw;x++){const right=x>=cx+Math.floor(hw/3);
+      let col=right?'#7d5c3c':'#a67f56'; if(y<5&&snowy!==false) col=right?'#cdd5e2':'#f6f8fc'; R(g,col,x,y);}
+    R(g,'#3b2a1b',cx-hw,y); R(g,'#3b2a1b',cx+hw-1,y);}
+  R(g,'#3b2a1b',cx-1,0,2,1); R(g,'#5e4430',5,9,2,1); R(g,'#5e4430',9,12,3,1);}
+function water(g,f){R(g,'#2b62c4',0,0,16,16); const o=f?3:0;
+  for(const [x,y] of [[1,3],[9,6],[4,11],[11,13]]){R(g,'#6a9cf0',(x+o)%14,y,3,1); R(g,'#6a9cf0',(x+o+3)%14,y-1,2,1);}}
+function sand(g){R(g,'#e4cb86',0,0,16,16); const r=prng(31); for(let i=0;i<10;i++){R(g,'#c8aa62',(r()*16)|0,(r()*16)|0); R(g,'#f4e2aa',(r()*16)|0,(r()*16)|0);}}
+const HOUSE=["..kkk..",".kRRRk.","kRRRRRk","kkkkkkk","kWWWWWk","kWWdWWk","kkkdkkk"];
+const TOWN=["kk.kk....kk.kk","kBBBk....kBBBk","kSWSkkkkkkSWSk","kSSSSSSSSSSSSk","kSSSSSSSSSSSSk","kSSSSSkkSSSSSk","kSSSSkddkSSSSk","kkkkkkddkkkkkk"];
+const CASTLE=["..k........k..",".kRk......kRk.","kRRRk....kRRRk","kCCCk.kk.kCCCk","kCCCkkCCkkCCCk","kCCCCCCCCCCCCk",
+  "kCCkCCCCCCkCCk","kCCCCCkkCCCCCk","kCCCCkddkCCCCk","kkkkkkddkkkkkk"];
+const TILES={};
+function buildTiles(){
+  const T=(ch,fn)=>{TILES[ch]=[mkTile(g=>fn(g,0)),mkTile(g=>fn(g,1))];};
+  T('.',g=>grass(g,3)); T('T',g=>forest(g,5)); T('Y',g=>forest(g,9)); T('^',g=>mountain(g));
+  T('~',(g,f)=>water(g,f)); T(':',g=>sand(g));
+  T('=',(g,f)=>{water(g,f); R(g,'#a8743c',3,0,10,16); for(let y=1;y<16;y+=3) R(g,'#7a4e24',3,y,10,1); R(g,'#5a3618',2,0,1,16); R(g,'#5a3618',13,0,1,16);});
+  T('V',g=>{grass(g,11); const pal={k:'#2a1a14',R:'#c8463a',W:'#f2e2c2',d:'#4a2a18'};
+    g.drawImage(art(HOUSE,pal),1,7); g.drawImage(art(HOUSE,Object.assign({},pal,{R:'#3a78c8'})),8,3);});
+  T('G',g=>{grass(g,13); g.drawImage(art(TOWN,{k:'#2a2a34',S:'#bcbcc6',B:'#3a6ad0',W:'#ffe08a',d:'#3a2414'}),1,5);});
+  T('C',g=>{mountain(g,false); R(g,'#3b2a1b',4,9,8,7); R(g,'#0a0606',5,10,6,6); R(g,'#0a0606',6,9,4,1);});
+  T('K',g=>{sand(g); g.drawImage(art(CASTLE,{k:'#140a20',R:'#3a2058',C:'#6c5a8e',d:'#0a0510'}),1,4); R(g,'#e03040',3,0,3,2); R(g,'#2a1a10',2,0,1,5);});
+  T('%',(g,f)=>{R(g,'#5a3a6a',0,0,16,16); const r=prng(f?55:56); for(let i=0;i<9;i++){R(g,'#3a2848',(r()*15)|0,(r()*15)|0,2,1); R(g,'#7e5a92',(r()*15)|0,(r()*15)|0);} R(g,'#9a7ab0',f?4:10,f?9:4,2,2);});
+  T('H',g=>{grass(g,19); const pal={k:'#2a1a14',R:'#3a9a4a',W:'#f2e2c2',d:'#4a2a18'}; g.drawImage(art(HOUSE,pal),1,8); g.drawImage(art(HOUSE,Object.assign({},pal,{R:'#d08a2a'})),8,4); g.drawImage(treeArt,9,0);});
+  T('R',g=>{mountain(g,false); const t=art(["..kkkk..",".kSSSSk.","kSSSSSSk","kSWSSWSk","kSSSSSSk","kSSWSSSk","kSSSSSSk","kSWSSWSk","kSSSSSSk","kSSkkSSk","kSkddkSk","kkkddkkk"],{k:'#1a2420',S:'#8a9a88',W:'#ffe08a',d:'#0a0a0a'}); g.drawImage(t,4,3); R(g,'#a0d8ff',7,1,2,2);});
+  T('S',g=>{grass(g,23); g.drawImage(art(["...kk...","..kBBk..",".kBBBBk.","kBBBBBBk","kkkkkkkk",".kWWWWk.",".kWkkWk.",".kWkdWk.",".kkkdkk."],{k:'#1a1a2a',B:'#3a6ad0',W:'#e8e8f0',d:'#ffe08a'}),4,5); R(g,'#ffe060',7,2,2,2);});
+  T('Q',g=>{R(g,'#4e6a52',0,0,16,16); for(let y=0;y<16;y+=4){R(g,'#2e4232',0,y+3,16,1); for(let x=(y/4)%2?4:0;x<16;x+=8) R(g,'#2e4232',x,y,1,3);} R(g,'#6e8a6a',2,0,4,1); R(g,'#7aa070',11,8,3,1);});
+  T('q',g=>{R(g,'#7a8a72',0,0,16,16); R(g,'#626e5a',0,7,16,1); R(g,'#626e5a',0,15,16,1); R(g,'#626e5a',7,0,1,8); R(g,'#626e5a',15,8,1,8); R(g,'#5a8a4a',3,3,2,1); R(g,'#5a8a4a',11,12,2,1);});
+  T('u',g=>{R(g,'#7a8a72',0,0,16,16); for(let i=0;i<4;i++) R(g,['#4e5a48','#62705a','#7a8a72','#9aaa90'][i],2,2+i*3,12,3); R(g,'#2e3a2a',1,1,1,14); R(g,'#2e3a2a',14,1,1,14);});
+  T('d',g=>{R(g,'#2a2420',0,0,16,16); for(let i=0;i<4;i++) R(g,['#8a7a66','#76685a','#62564a','#4e443a'][i],2,2+i*3,12,3); R(g,'#1a1612',1,1,1,14); R(g,'#1a1612',14,1,1,14);});
+  const BR=(g,b,m,h)=>{R(g,b,0,0,16,16); for(let y=0;y<16;y+=4){R(g,m,0,y+3,16,1); for(let x=(y/4)%2?4:0;x<16;x+=8) R(g,m,x,y,1,3);} R(g,h,2,0,4,1); R(g,h,10,4,4,1);};
+  const FL=(g,b,d,l,seed)=>{R(g,b,0,0,16,16); const r=prng(seed); for(let i=0;i<8;i++){R(g,d,(r()*16)|0,(r()*16)|0); R(g,l,(r()*16)|0,(r()*16)|0);}};
+  T('J',g=>BR(g,'#3e5a72','#22344a','#6a8aa8')); T('j',(g)=>{FL(g,'#5a7088','#46596e','#7a92aa',61); R(g,'#8ac0e8',4,6,2,1); R(g,'#8ac0e8',11,12,2,1);});
+  T('E',g=>BR(g,'#4a5a40','#2a3424','#6a7a5a')); T('e',g=>{FL(g,'#6a6a5a','#52524a','#828270',62); R(g,'#3a6a5a',0,7,16,2); R(g,'#5a9a80',3,7,3,1);});
+  T('N',g=>BR(g,'#3a2e48','#1e1628','#5a4a6a')); T('n',g=>{FL(g,'#5a5260','#46404c','#6e6676',63); R(g,'#d8d0c0',4,10,3,1); R(g,'#d8d0c0',5,9,1,3);});
+  T('A',g=>BR(g,'#4a201a','#24100c','#7a3424')); T('a',g=>FL(g,'#5a4a46','#463836','#7a6660',64));
+  T('L',(g,f)=>{R(g,'#d8401a',0,0,16,16); const r=prng(f?65:66); for(let i=0;i<7;i++){R(g,'#ffb030',(r()*14)|0,(r()*14)|0,3,1); R(g,'#901a0a',(r()*14)|0,(r()*14)|0,2,2);} R(g,'#fff080',f?5:10,f?10:4,1,1);});
+  T('I',g=>{R(g,'#141432',0,0,16,16); const r=prng(67); for(let i=0;i<6;i++) R(g,'#c8c8ff',(r()*16)|0,(r()*16)|0); R(g,'#2a2a5a',0,15,16,1); R(g,'#2a2a5a',15,0,1,16);});
+  T('i',g=>{R(g,'#2a2a5a',0,0,16,16); R(g,'#3a3a72',0,7,16,1); R(g,'#3a3a72',7,0,1,16); const r=prng(68); for(let i=0;i<3;i++) R(g,'#fff0a0',(r()*16)|0,(r()*16)|0);});
+  T('O',g=>{mountain(g,false); R(g,'#3b2a1b',4,9,8,7); R(g,'#1a3a6a',5,10,6,6); R(g,'#5a90e0',6,13,4,1);});
+  T('Z',g=>{grass(g,29); for(let y=2;y<16;y++){const hw=Math.min(8,Math.floor(y*0.6)+1); for(let x=8-hw;x<8+hw;x++) R(g,x>=8?'#5a2a1a':'#7a3a24',x,y);} R(g,'#ff5020',6,2,4,2); R(g,'#ffb030',7,1,2,1); R(g,'#ff5020',7,5,2,4);});
+  T('M',g=>{grass(g,31); for(const [x,y] of [[2,4],[9,2],[5,9],[11,9]]){R(g,'#2a2a34',x,y,4,6); R(g,'#a8a8b4',x+1,y+1,2,4); R(g,'#2a2a34',x+1,y+2,2,1);}});
+  T('B',(g,f)=>{grass(g,33); R(g,'#2a1a5a',3,3,10,10); R(g,'#4a2a9a',4,4,8,8); R(g,f?'#ffe080':'#fff8d0',7,5,2,6); R(g,f?'#ffe080':'#fff8d0',5,7,6,2); R(g,'#1a1030',3,3,10,1); R(g,'#1a1030',3,12,10,1);});
+  T('_',g=>{R(g,'#c8a46c',0,0,16,16); const r=prng(41); for(let i=0;i<8;i++){R(g,'#a8844c',(r()*16)|0,(r()*16)|0); R(g,'#dcc08a',(r()*16)|0,(r()*16)|0);}});
+  T('W',g=>{R(g,'#a86e46',0,0,16,16); for(let y=0;y<16;y+=4){R(g,'#6e4428',0,y+3,16,1); for(let x=(y/4)%2?4:0;x<16;x+=8) R(g,'#6e4428',x,y,1,3);} R(g,'#c88a5e',0,0,16,1);});
+  T('f',g=>{R(g,'#c08a52',0,0,16,16); for(let y=3;y<16;y+=4) R(g,'#94643a',0,y,16,1); R(g,'#94643a',5,0,1,3); R(g,'#94643a',11,4,1,3); R(g,'#94643a',3,8,1,3); R(g,'#94643a',13,12,1,3);});
+  T('+',g=>{R(g,'#a86e46',0,0,16,16); R(g,'#c08a52',3,2,10,14); R(g,'#4a2e1a',2,1,12,1); R(g,'#4a2e1a',2,1,1,15); R(g,'#4a2e1a',13,1,1,15);});
+  T('c',g=>{R(g,'#c08a52',0,0,16,16); R(g,'#6e4020',0,4,16,11); R(g,'#b8803e',0,3,16,4); R(g,'#4a2a12',0,14,16,1); R(g,'#8a5a2a',2,9,12,1);});
+  T('F',g=>{grass(g,17); const r=prng(5); for(let i=0;i<5;i++){const x=1+((r()*12)|0),y=1+((r()*12)|0),c=['#ff6a8a','#ffe060','#ffffff'][i%3]; R(g,c,x,y,2,2); R(g,'#c87a20',x,y+1);} });
+  T('X',g=>{R(g,'#4a4e60',0,0,16,16); for(let y=0;y<16;y+=4){R(g,'#262a38',0,y+3,16,1); for(let x=(y/4)%2?4:0;x<16;x+=8) R(g,'#262a38',x,y,1,3);} R(g,'#6a6e82',1,0,6,1); R(g,'#6a6e82',9,4,6,1);});
+  T('#',g=>{R(g,'#4c4038',0,0,16,16); const r=prng(77); for(let i=0;i<6;i++){R(g,'#6a5a4c',(r()*13)|0,(r()*13)|0,3,2); R(g,'#2c241e',(r()*14)|0,(r()*14)|0,2,1);} });
+  T(',',g=>{R(g,'#6e5f4e',0,0,16,16); const r=prng(13); for(let i=0;i<8;i++){R(g,'#5a4c3e',(r()*16)|0,(r()*16)|0); R(g,'#82725e',(r()*16)|0,(r()*16)|0);} });
+  T('U',g=>{R(g,'#2a2420',0,0,16,16); for(let i=0;i<4;i++) R(g,['#8a7a66','#76685a','#62564a','#4e443a'][i],2,2+i*3,12,3); R(g,'#1a1612',1,1,1,14); R(g,'#1a1612',14,1,1,14);});
+  T('s',g=>{R(g,'#9a98a6',0,0,16,16); R(g,'#7e7c8a',0,7,16,1); R(g,'#7e7c8a',0,15,16,1); R(g,'#7e7c8a',7,0,1,8); R(g,'#7e7c8a',15,8,1,8); R(g,'#b0aebc',1,1,5,1); R(g,'#b0aebc',9,9,5,1);});
+  T('r',g=>{R(g,'#a4243a',0,0,16,16); R(g,'#e0b040',0,0,1,16); R(g,'#e0b040',15,0,1,16); R(g,'#7e1a2c',7,3,2,2); R(g,'#7e1a2c',6,4,4,1); R(g,'#7e1a2c',7,11,2,2); R(g,'#7e1a2c',6,12,4,1);});
+  T('p',g=>{TILES.s[0]&&g.drawImage(TILES.s[0],0,0); R(g,'#d6d4de',4,0,8,16); R(g,'#a8a6b4',9,0,3,16); R(g,'#8e8c9a',3,0,10,2); R(g,'#8e8c9a',3,14,10,2);});
+  T('t',g=>{TILES.r[0]&&g.drawImage(TILES.r[0],0,0); R(g,'#1a0e08',3,0,10,14); R(g,'#e0b040',4,1,8,12); R(g,'#6a2a8a',5,3,6,6); R(g,'#e0b040',3,10,10,3); R(g,'#ff4060',7,1,2,1);});
+}
+buildTiles();
+const SOLID=new Set(['^','~','Y','W','c','X','#','p','t','Q','J','E','N','A','I']);
+const ENC_RATE={'.':22,'T':12,':':24,',':16,'s':18,'r':18,'%':13,'q':16,'j':18,'e':17,'n':15,'a':15,'L':15,'i':14};
