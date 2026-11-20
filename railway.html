@@ -301,7 +301,7 @@ function segCost(a,b){
 let S;
 function freshM(){ return {fare:0,shop:0,rent:0,invest:0,upkeep:0,track:0,facility:0,interest:0,other:0}; }
 function freshCitySt(){ return {board:0,xfer:0,foot:0,lost:0,lostRev:0}; }
-function freshLineSt(){ return {rev:0,riders:0,seatUsed:0,seatCap:0}; }
+function freshLineSt(){ return {rev:0,riders:0,seatUsed:0,seatCap:0,lost:0,lostRev:0}; }
 function newGame(){
   const seed=(Math.random()*1e9)|0; makeTerrain(seed); const r=mulberry(seed+7);
   const cities=[]; let tries=0;
@@ -347,7 +347,8 @@ function net(){ if(netCache) return netCache;
     best.delete(src); route.set(src,best); }
   netCache={conn,segs,linesAt,route};
   // 行き先がなくなった待ち客は帰ってしまう
-  for(const c of S.cities){ const r=route.get(c.id); c.xw=c.xw||{}; for(const m of [c.wait,c.xw]) for(const d in m){ if(!r||!r.has(+d)) delete m[d]; } c.waiting=Object.values(c.wait).reduce((a,e)=>a+e[0],0); c.xwaiting=Object.values(c.xw).reduce((a,e)=>a+e[0],0); }
+  for(const c of S.cities){ const r=route.get(c.id); c.xw=c.xw||{}; for(const m of [c.wait,c.xw]) for(const d in m){ if(!r||!r.has(+d)) delete m[d]; } c.waiting=Object.values(c.wait).reduce((a,e)=>a+e[0],0); c.xwaiting=Object.values(c.xw).reduce((a,e)=>a+e[0],0);
+    c.wl={}; if(r) for(const d in c.wait){ const h=r.get(+d); if(h) c.wl[h.hop.line]=(c.wl[h.hop.line]||0)+c.wait[d][0]; } }
   return netCache; }
 function connected(cid){ return net().conn.has(cid); }
 function destCount(cid){ const r=net().route.get(cid); return r?r.size:0; }
@@ -359,6 +360,9 @@ function popCap(c){ return c.pop0*(CFG.popCapMul+CFG.devCapMul*c.dev+CFG.levelCa
 function devCost(c){ return Math.round(10_000_000*Math.pow(2,c.dev)*(0.5+c.pop0/100000)/1e5)*1e5; }
 function upCost(c){ return Math.round(CFG.stationUpgradeBase*Math.pow(2.2,c.level-1)*(c.pop/40000)/10000)*10000; }
 // 待ち客：wait＝この町から乗る客（待合室の定員あり）、xw＝乗り換え客（ホームで待つので定員に数えない）
+// ホームは路線ごとに分かれている：c.wl[路線id]＝その路線を待つ客（この町から乗る客）。定員は路線ごとに waitCap
+function waitRatio(c){ const cap=waitCap(c); let m=0; for(const k in (c.wl||{})) m=Math.max(m,c.wl[k]/cap); return m; }
+function maxPlatform(c){ let m=0; for(const k in (c.wl||{})) m=Math.max(m,c.wl[k]); return m; }
 function addWait(c,d,n,f,D,xfer=false){ const m=xfer?(c.xw||(c.xw={})):c.wait; const e=m[d]; if(e){ const t=e[0]+n; e[1]=(e[0]*e[1]+n*f)/t; e[2]=(e[0]*e[2]+n*D)/t; e[0]=t; } else m[d]=[n,f,D]; if(xfer) c.xwaiting=(c.xwaiting||0)+n; else c.waiting+=n; }
 function trainPrice(type){ return TRAINS[type].cost; }   // 何台買っても値段は同じ
 function inflation(){ return 1+CFG.inflationPerYear*Math.floor(S.day/360); }
@@ -449,7 +453,7 @@ function arrive(line,t,si){
     if(city.id===p.d || !r0 || !r0.has(p.d)){ const pay=p.n*p.f; income+=pay; line.st.rev+=pay; off+=p.n; return false; }
     const share=Math.min(0.95,dist/Math.max(1,p.D)), pay=p.n*p.f*share; income+=pay; line.st.rev+=pay;
     const f2=p.f*(1-share), D2=Math.max(1,p.D-dist);
-    if((city.xwaiting||0)+p.n>xcap){ city.st.lost+=p.n; city.st.lostRev+=p.n*f2; }   // ホームがあふれて乗り換えをあきらめた
+    if((city.xwaiting||0)+p.n>xcap){ city.st.lost+=p.n; city.st.lostRev+=p.n*f2; const nl=S.lines.find(x=>x.id===r0.get(p.d).hop.line); if(nl){ nl.st.lost+=p.n; nl.st.lostRev+=p.n*f2; } }   // 乗り換え先のホームがあふれてあきらめた
     else { addWait(city,p.d,p.n,f2,D2,true); xfer+=p.n; }
     return false; });
   t.n=t.load.reduce((a,p)=>a+p.n,0);
@@ -471,24 +475,27 @@ function arrive(line,t,si){
     if(take>0){ let left=take, local=0;
       cands.forEach(([d,e,toIdx,m],k)=>{ const n=k===cands.length-1?left:Math.min(left,Math.floor(take*e[0]/tot)); if(n<=0) return;
         t.load.push({d,at:toIdx,from:si,n,f:e[1],D:e[2]}); e[0]-=n; left-=n; if(m===city.wait) local+=n; if(e[0]<0.5) delete m[d]; });
-      const boarded=take-left; t.n+=boarded; city.waiting=Math.max(0,city.waiting-local); city.xwaiting=Math.max(0,(city.xwaiting||0)-(boarded-local)); city.st.board+=local; city.st.foot+=boarded; }
+      const boarded=take-left; t.n+=boarded; city.waiting=Math.max(0,city.waiting-local); if(city.wl) city.wl[line.id]=Math.max(0,(city.wl[line.id]||0)-local); city.xwaiting=Math.max(0,(city.xwaiting||0)-(boarded-local)); city.st.board+=local; city.st.foot+=boarded; }
   }
   t.dwell=spec.dwell; t.atStop=si;
 }
 function simulate(dtReal){
   if(S.over) return;
   const dt=dtReal*speed; if(dt<=0) return;
-  const days=dt/CFG.dayRealSec, N=net(), dm=demandMul();
+  const days=dt/CFG.dayRealSec, N=net(), dm=demandMul(), lineById=new Map(S.lines.map(l=>[l.id,l]));
   for(const c of S.cities){
     const r=N.route.get(c.id);
     if(!r||!r.size){ c.waiting=0; c.wait={}; c.xw={}; continue; }
     // 乗客の発生：人口×駅のレベル×（乗り換え込みで行ける駅の多さ）×運賃の高さ
     const gen=c.pop*CFG.genPerPop*c.level*(c.boost>0?2:1)*netMul(c.id)*dm*days;
-    const space=Math.max(0,waitCap(c)-c.waiting), ok=Math.min(gen,space), lost=gen-ok;
     let sw=0; for(const [d] of r) sw+=Math.sqrt(S.cities[d].pop);
-    let fsum=0;
-    for(const [d,h] of r){ const w=Math.sqrt(S.cities[d].pop)/sw, f=fareFor(h.dist,h.legs); fsum+=w*f; if(ok>0) addWait(c,d,ok*w,f,h.dist); }
-    if(lost>0){ c.st.lost+=lost; c.st.lostRev+=lost*fsum; }
+    // 路線ごとに「乗りたい客」を集計し、そのホームの空きの分だけ受け入れる（あふれた分はその路線の取りこぼし）
+    c.wl=c.wl||{}; const want={}, platCap=waitCap(c);
+    for(const [d,h] of r){ const w=Math.sqrt(S.cities[d].pop)/sw; want[h.hop.line]=(want[h.hop.line]||0)+gen*w; }
+    const okRate={}; for(const ln in want){ const space=Math.max(0,platCap-(c.wl[ln]||0)); okRate[ln]=Math.min(1,space/want[ln]); }
+    for(const [d,h] of r){ const w=Math.sqrt(S.cities[d].pop)/sw, f=fareFor(h.dist,h.legs), n=gen*w, ok=n*okRate[h.hop.line], lost=n-ok;
+      if(ok>0){ addWait(c,d,ok,f,h.dist); c.wl[h.hop.line]=(c.wl[h.hop.line]||0)+ok; }
+      if(lost>0){ c.st.lost+=lost; c.st.lostRev+=lost*f; const L=lineById.get(h.hop.line); if(L){ L.st.lost+=lost; L.st.lostRev+=lost*f; } } }
     // 町の成長：客をさばけている（取りこぼしが少ない）ほど育つ。上限は開発と駅の改良で上がる
     const cap=popCap(c);
     if(c.svc>0.35 && c.pop<cap) c.pop=Math.min(cap, c.pop*(1+CFG.growthPerDay*days*Math.min(1,(c.svc-0.35)/0.45)*(0.5+c.level*0.5)*Math.min(1,dm)));  // 客をさばけているほど育つ。運賃が高いと育ちにくい
@@ -564,8 +571,7 @@ function monthEnd(){
   S.lastXfer=m.xfer||0;
   S.history.push({...m,profit,money:S.money}); if(S.history.length>24) S.history.shift();
   S.m=freshM();
-  for(const l of S.lines){ const lost=l.stops.reduce((a,id)=>a+(S.cities[id].last?.lost||0),0), lostRev=l.stops.reduce((a,id)=>a+(S.cities[id].last?.lostRev||0),0);
-    l.last={rev:l.st.rev,riders:l.st.riders,load:l.st.seatCap?l.st.seatUsed/l.st.seatCap:0,upkeep:lineUpkeep(l),lost,lostRev}; l.st=freshLineSt(); }
+  for(const l of S.lines){ l.last={rev:l.st.rev,riders:l.st.riders,load:l.st.seatCap?l.st.seatUsed/l.st.seatCap:0,upkeep:lineUpkeep(l),lost:l.st.lost||0,lostRev:l.st.lostRev||0}; l.st=freshLineSt(); }
   news(`📅 月末決算：利益 ${profit>=0?"+":""}${yen(profit)}`);
   if(S.money<0){ S.negMonths++; news(`⚠️ 資金がマイナスです（${S.negMonths}/3か月）`); SFX.bad();
     if(S.negMonths>=3){ S.over=true; showEnd("💸 倒産…","資金不足が3か月続き、会社は倒産しました。財務タブで路線ごとの利益を確かめ、赤字路線を整理するのがコツです。"); } }
@@ -702,7 +708,7 @@ function renderLines(){
       <div class="muted">列車：${Object.entries(counts).map(([k,v])=>TRAINS[k].name+"×"+v).join("、")||"なし"}（${l.trains.length}編成）</div>
       ${L?`<div class="kv" style="margin-top:6px"><span>先月の運賃収入</span><span>${yen(L.rev)}</span><span>経費（列車＋線路）</span><span>-${yen(L.upkeep)}</span><span><b>路線の利益</b></span><span class="${prof>=0?"pos":"neg"}"><b>${prof>=0?"+":""}${yen(prof)}</b></span>
         <span>乗車率（走行中の座席）</span><span>${Math.round(L.load*100)}%</span>
-        <span>沿線の取りこぼし</span><span class="${L.lost>L.riders*0.15?"neg":""}">${Math.round(L.lost).toLocaleString()}人（${yen(L.lostRev)}）</span></div>
+        <span>この路線の取りこぼし</span><span class="${L.lost>L.riders*0.15?"neg":""}">${Math.round(L.lost).toLocaleString()}人（${yen(L.lostRev)}）</span></div>
         <div class="bar"><i style="width:${Math.min(100,L.load*100)}%;background:${L.load>0.85?"var(--bad)":"var(--accent)"}"></i></div>`:""}
       ${lineTip(l)}
       <div class="row" style="margin-top:6px">${avail.map(k=>`<button data-buy="${k}" ${S.money<trainPrice(k)?"disabled":""}>＋${TRAINS[k].name} ${yen(trainPrice(k))}<br><span class="muted">維持費 月${yen(trainUpkeep(k))}</span></button>`).join("")}</div>
@@ -728,14 +734,14 @@ function renderStation(){
   if(selected==null){ sp.innerHTML=`<div class="card muted">地図上の駅（町）をタップすると、ここに詳しい情報が出ます。</div>`; return; }
   const c=S.cities[selected], cap=waitCap(c), conn=connected(c.id), L=c.last;
   const up=upCost(c), dc=devCost(c), nextShop=SHOPS[c.shop+1];
-  const lines=S.lines.filter(l=>l.stops.includes(c.id)), ratio=conn?c.waiting/cap:0, pc=popCap(c);
+  const lines=S.lines.filter(l=>l.stops.includes(c.id)), ratio=conn?waitRatio(c):0, pc=popCap(c);
   const estShop=nextShop&&L? Math.round((L.foot+L.xfer*0.5)*nextShop.spend*fareMul()) : null;
   sp.innerHTML=`<div class="card"><div class="row between"><b style="font-size:17px">${c.name}${conn?"駅":"（未開通）"}</b><span class="muted">${TIERS[tierOf(c.pop)][1]}・駅Lv.${c.level}${lines.length>1?`・${lines.length}路線の乗換駅`:""}</span></div>
     <div class="kv" style="margin-top:4px"><span>人口</span><span>${Math.round(c.pop).toLocaleString()}人 ${c.boost>0?"🎆":""}</span><span>人口の上限</span><span>${Math.round(pc).toLocaleString()}人</span></div>
     <div class="bar"><i style="width:${Math.min(100,c.pop/pc*100)}%;background:#2BA36B"></i></div>
     ${conn?`<div class="tip">${c.pop>=pc*0.98?"🏗️ 人口が上限です。<b>沿線開発</b>や<b>駅の改良</b>で上限を上げよう":c.svc>0.35?"🌱 客をさばけているので町が育っています":"⚠️ 客を取りこぼしていて町が育ちません。列車を足そう"}</div>
       <div class="kv" style="margin-top:6px"><span>乗り換え込みで行ける駅</span><span>${destCount(c.id)}駅（乗客×${netMul(c.id).toFixed(2)}）</span>
-      <span>待ち客</span><span>${Math.floor(c.waiting)} / ${Math.floor(cap)}</span>
+      <span>次の列車を待つ客</span><span>${Math.floor(c.waiting)}人</span><span>いちばん混んでいるホーム</span><span>${Math.floor(maxPlatform(c))} / ${Math.floor(cap)}</span>
       ${L?`<span>先月 乗った客</span><span>${Math.round(L.board).toLocaleString()}人</span><span>先月 乗り換え客</span><span>${Math.round(L.xfer).toLocaleString()}人</span>
       <span>先月 取りこぼし</span><span class="${L.lost>L.board*0.15?"neg":""}">${Math.round(L.lost).toLocaleString()}人（${yen(L.lostRev)}）</span>
       <span>駅ナカ売上／家賃</span><span>${yen(L.shopRev)} ／ ${yen(L.rent)}</span>`:`<span class="muted">月末に実績が出ます</span><span></span>`}</div>
@@ -1066,7 +1072,7 @@ function draw(time){
   const tut=tutStep(), tutTarget= tut===1?tutA : tut===2?tutB : null;
   const lowZoom=view.scale<0.45;
   for(const c of S.cities){ const conn=connected(c.id), nl=conn?linesAtCount(c.id):0; let r=6+Math.sqrt(c.pop)/28; r=Math.max(r,4*k);
-    const cap=waitCap(c), ratio=conn?c.waiting/cap:0, inBuild=mode==="build"&&buildStops.includes(c.id);
+    const ratio=conn?waitRatio(c):0, inBuild=mode==="build"&&buildStops.includes(c.id);
     if(c.id===tutTarget){ const pr=r+10*k+Math.sin(time/180)*5*k; ctx.strokeStyle="#F2C14E"; ctx.lineWidth=4*k; ctx.beginPath(); ctx.arc(c.x,c.y,pr+6*k,0,7); ctx.stroke(); }
     if(c.id===selected||c.id===hover||inBuild){ ctx.fillStyle="rgba(42,79,168,.25)"; ctx.beginPath(); ctx.arc(c.x,c.y,r+8*Math.max(1,k*.6),0,7); ctx.fill(); }
     ctx.fillStyle=conn?"#fff":"rgba(255,255,255,.6)"; ctx.strokeStyle=conn?"#1C2B3A":"#7A8794"; ctx.lineWidth=Math.max(conn?3:2,1.5*k);
@@ -1097,7 +1103,7 @@ function draw(time){
   ctx.setTransform(view.dpr,0,0,view.dpr,0,0);
   if(hover!=null){ const c=S.cities[hover]; const sx=view.ox+c.x*view.scale, sy=view.oy+c.y*view.scale; let lines;
     if(mode==="build"){ const cand=candidate(hover); if(cand){ const key=cand.join(",")+(ext?ext.side:""); if(previewCache.key!==key){ const q=buildQuote(newPart(cand)); previewCache={key,text:`つなぐと +${yen(q.cost)}`}; } lines=[c.name,previewCache.text]; } }
-    else lines=[`${c.name}（${TIERS[tierOf(c.pop)][1]}）人口${Math.round(c.pop).toLocaleString()}`, connected(c.id)?`待ち客 ${Math.floor(c.waiting)}/${Math.floor(waitCap(c))}${linesAtCount(c.id)>1?`・${linesAtCount(c.id)}路線の乗換駅`:""}`:"未開通（タップで詳細）"];
+    else lines=[`${c.name}（${TIERS[tierOf(c.pop)][1]}）人口${Math.round(c.pop).toLocaleString()}`, connected(c.id)?`次の列車を待つ客 ${Math.floor(c.waiting)}人（ホーム最大 ${Math.floor(maxPlatform(c))}/${Math.floor(waitCap(c))}）${linesAtCount(c.id)>1?`・${linesAtCount(c.id)}路線の乗換駅`:""}`:"未開通（タップで詳細）"];
     if(lines){ ctx.font="12px "+colors["--f"]; const w=Math.max(...lines.map(s=>ctx.measureText(s).width))+16, h=lines.length*17+8;
       let x=sx+16, y=sy-h-10; if(x+w>view.w-4) x=sx-w-16; if(y<4) y=sy+16;
       ctx.fillStyle=colors["--panel"]; ctx.strokeStyle=colors["--line"]; ctx.lineWidth=1; ctx.beginPath(); ctx.roundRect(x,y,w,h,8); ctx.fill(); ctx.stroke();
