@@ -165,6 +165,7 @@ a{color:var(--accent)}
       <li><b>稼ぐ</b>：運賃は乗った距離で決まります。列車の値段は何台買っても同じですが、<b>維持費がとても高い</b>ので、ガラガラの列車はすぐ赤字になります。人口の多い町どうしを、山や川を避けて長くつなぐのがコツ。</li>
       <li><b>見きわめる</b>：「路線」タブで路線ごとの利益と乗車率がわかります。満員続きなら列車を追加、ガラガラなら減らしましょう。</li>
       <li><b>取りこぼしに注意</b>：駅の待ち客（青い輪）が赤くなると、乗れずに帰る客が出ます。路線カードと駅の情報に「取りこぼし」と逃した売上が出ます。</li>
+      <li><b>環状線</b>：3駅以上つないだあと、<b>最初の駅をもう一度タップ</b>すると輪が閉じて環状線になります。列車は外回り・内回りが交互に走り、終点で折り返さないので効率よく回ります。</li>
       <li><b>乗り換え</b>：客は路線を乗り換えて、つながっているどの町へも行きます。路線が集まるハブ駅には乗り換え客があふれます。乗り換えると基本料金がもう1回かかります。行ける駅が多いほど客も増えます（1駅ごとに+8%）。</li>
       <li><b>経営</b>：駅をタップして<b>駅ナカ</b>（通る人・乗り換え客が買い物）や<b>沿線開発</b>（家賃収入＋人口の上限アップ）。財務タブで<b>運賃</b>を設定（満員なら値上げ、空いていれば値下げ）。</li>
       <li><b>都市を育てる</b>：客をさばけている町は人口が増え、村→町→市→大都市→巨大都市へ。上限は沿線開発と駅の改良で上がります。</li>
@@ -305,7 +306,10 @@ function newGame(){
      m:freshM(), history:[], tut:0, tutSpeed:false, savedAt:Date.now()};
 }
 const geomCache=new Map();
-function geom(line){ let g=geomCache.get(line.id); if(!g){ const pts=line.stops.map(id=>S.cities[id]); const cum=[0];
+// 環状線は最後の駅から最初の駅へ戻る区間も線路になる
+function pathStops(l){ return l.loop?[...l.stops,l.stops[0]]:l.stops; }
+function wrapPos(l,x){ const T=geom(l).total; return l.loop? ((x%T)+T)%T : clamp(x,0,T); }
+function geom(line){ let g=geomCache.get(line.id); if(!g){ const pts=pathStops(line).map(id=>S.cities[id]); const cum=[0];
   for(let i=1;i<pts.length;i++) cum.push(cum[i-1]+Math.hypot(pts[i].x-pts[i-1].x,pts[i].y-pts[i-1].y));
   g={pts,cum,total:cum[cum.length-1]}; geomCache.set(line.id,g);} return g; }
 // 路線網のキャッシュ：接続済みの駅・経路（乗り換え込み）・区間の重なり。路線が変わったら invalidateNet()
@@ -313,12 +317,17 @@ let netCache=null;
 function invalidateNet(){ netCache=null; }
 function net(){ if(netCache) return netCache;
   const conn=new Set(); for(const l of S.lines) for(const id of l.stops) conn.add(id);
-  const segs=new Map(); for(const l of S.lines) for(let i=1;i<l.stops.length;i++){ const a=l.stops[i-1],b=l.stops[i],key=a<b?a+"-"+b:b+"-"+a; if(!segs.has(key)) segs.set(key,[]); segs.get(key).push(l); }
+  const segs=new Map(); for(const l of S.lines){ const ps=pathStops(l); for(let i=1;i<ps.length;i++){ const a=ps[i-1],b=ps[i],key=a<b?a+"-"+b:b+"-"+a; if(!segs.has(key)) segs.set(key,[]); segs.get(key).push(l); } }
   const linesAt=new Map(); for(const l of S.lines) for(const id of l.stops){ if(!linesAt.has(id)) linesAt.set(id,[]); linesAt.get(id).push(l); }
   // 経路：各駅から全駅へ、ダイクストラ法で「距離＋乗り換えの手間」が最小の経路を求め、最初に乗る列車（路線・向き・降りる駅）を覚える
   const edges=new Map(); for(const id of conn) edges.set(id,[]);
-  for(const l of S.lines){ const g=geom(l); for(let i=0;i<l.stops.length;i++) for(let j=0;j<l.stops.length;j++){ if(i===j) continue;
-    const d=Math.abs(g.cum[j]-g.cum[i]); edges.get(l.stops[i]).push({to:l.stops[j],cost:d+CFG.transferPenaltyPx,dist:d,hop:{line:l.id,dir:j>i?1:-1,toIdx:j}}); } }
+  for(const l of S.lines){ const g=geom(l);
+    // 環状線：外回り(+1)・内回り(-1)のうち、列車が走っている向きだけ使える
+    const dirs=new Set(l.trains.map(t=>t.dir)); const okDir=d=>!dirs.size||dirs.has(d);
+    for(let i=0;i<l.stops.length;i++) for(let j=0;j<l.stops.length;j++){ if(i===j) continue;
+      const add=(d,dir)=>edges.get(l.stops[i]).push({to:l.stops[j],cost:d+CFG.transferPenaltyPx,dist:d,hop:{line:l.id,dir,toIdx:j}});
+      if(l.loop){ const cw=(g.cum[j]-g.cum[i]+g.total)%g.total; if(okDir(1)) add(cw,1); if(okDir(-1)) add(g.total-cw,-1); }
+      else add(Math.abs(g.cum[j]-g.cum[i]), j>i?1:-1); } }
   const route=new Map();
   for(const src of conn){ const best=new Map([[src,{cost:0,dist:0,hop:null,legs:0}]]), done=new Set();
     while(true){ let u=null,uc=Infinity; for(const [k,v] of best) if(!done.has(k)&&v.cost<uc){u=k;uc=v.cost;} if(u==null) break; done.add(u); const bu=best.get(u);
@@ -363,6 +372,7 @@ const GOALS = [
   {id:"xfer", text:"1か月の乗り換え客 3,000人", reward:2e7, prog:()=>(S.lastXfer||0)/3000},
   {id:"shop", text:"「駅ナカ」以上の店を開く", reward:2e7, prog:()=>S.cities.some(c=>c.shop>=2)?1:0},
   {id:"profit", text:"月の利益 3,000万円", reward:2e7, prog:()=>Math.max(0,lastProfit()||0)/3e7},
+  {id:"loop", text:"環状線をつくる", reward:3e7, prog:()=>S.lines.some(l=>l.loop)?1:0},
   {id:"bigcity", text:"人口30万人の大都市を育てる", reward:5e7, prog:()=>Math.max(...S.cities.map(c=>c.pop))/3e5},
   {id:"riders100k", text:"累計乗客 10万人", reward:8e7, unlock:"express", unlockText:"特急列車", prog:()=>S.riders/1e5},
   {id:"hub", text:"4路線が集まるハブ駅をつくる", reward:1e8, prog:()=>Math.max(0,...S.cities.map(c=>linesAtCount(c.id)))/4},
@@ -374,6 +384,7 @@ const GOALS = [
 // ============================================================
 // 実行時のみの状態
 // ============================================================
+let buildLoop=false; // 建設中の路線を輪にするか（環状線）
 let speed=1, sound=true, mode="select", buildStops=[], ext=null, selected=null, hover=null, tab="lines";
 const floaters=[], particles=[], pulses=[], buildAnim=new Map();
 let shake=0, dispMoney=0;
@@ -411,6 +422,9 @@ function addTrain(line,type,free=false){
   const price=trainPrice(type);
   if(!free){ if(S.money<price) return false; S.money-=price; S.m.invest+=price; S.trainsBought++; }
   const g=geom(line), n=line.trains.length;
+  if(line.loop){ // 外回り・内回りを交互に、駅をずらして配置
+    const idx=(Math.floor(n/2)*3+(n%2)*Math.floor(line.stops.length/2))%line.stops.length;
+    line.trains.push({type,pos:g.cum[idx],dir:n%2?-1:1,dwell:0.5,load:[],n:0,atStop:idx}); invalidateNet(); return true; }
   line.trains.push({type,pos:n%2?g.total:0,dir:n%2?-1:1,dwell:0.5,load:[],n:0,atStop:n%2?line.stops.length-1:0});
   return true;
 }
@@ -421,7 +435,7 @@ function arrive(line,t,si){
   // 運賃は乗った区間ごとに受け取る（乗り換え客は残りの運賃・残りの距離を持って次の列車へ）
   const r0=net().route.get(city.id), xcap=waitCap(city)*1.5;
   t.load=t.load.filter(p=>{ if(p.at!==si) return true;
-    const dist=Math.abs(g.cum[si]-g.cum[p.from]);
+    const dist=line.loop? (t.dir>0?(g.cum[si]-g.cum[p.from]+g.total)%g.total:(g.cum[p.from]-g.cum[si]+g.total)%g.total) : Math.abs(g.cum[si]-g.cum[p.from]);
     if(city.id===p.d || !r0 || !r0.has(p.d)){ const pay=p.n*p.f; income+=pay; line.st.rev+=pay; off+=p.n; return false; }
     const share=Math.min(0.95,dist/Math.max(1,p.D)), pay=p.n*p.f*share; income+=pay; line.st.rev+=pay;
     const f2=p.f*(1-share), D2=Math.max(1,p.D-dist);
@@ -437,7 +451,7 @@ function arrive(line,t,si){
     else if(floaters.length<CFG.maxFloaters) floaters.push({city:city.id,x:city.x,y:city.y,amount:income,text:"+"+yen(income),life:1.6});
     const n=particles.length>CFG.maxParticles?0:Math.min(6,2+Math.floor((off+xfer)/20)); for(let i=0;i<n;i++){ const a=-Math.PI/2+(Math.random()-.5)*2.2, v=60+Math.random()*90; particles.push({x:city.x,y:city.y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,life:.9,color:"#F2C14E",size:4}); }
     if(pulses.length<40) pulses.push({x:city.x,y:city.y,life:.6,color:line.color}); SFX.coin(off+xfer); bumpMoney(); }
-  let dir=t.dir; if(si===0) dir=1; if(si===line.stops.length-1) dir=-1; t.dir=dir;
+  let dir=t.dir; if(!line.loop){ if(si===0) dir=1; if(si===line.stops.length-1) dir=-1; } t.dir=dir;
   // 乗車：この駅で待つ客のうち「次に乗るのがこの路線のこの向き」の客だけ
   const r=net().route.get(city.id), free=spec.cap-t.n;
   if(free>0 && r){
@@ -477,6 +491,7 @@ function simulate(dtReal){
       let remain=dt, guard=0;
       while(remain>0 && guard++<20){
         let nextIdx=-1;
+        if(line.loop){ if(t.dir>0&&t.pos>=g.total-1e-6) t.pos=0; if(t.dir<0&&t.pos<=1e-6) t.pos=g.total; }   // 環状線は一周したら先頭に戻る
         if(t.dir>0){ nextIdx=g.cum.findIndex(c=>c>t.pos+1e-6); } else { for(let i=g.cum.length-1;i>=0;i--) if(g.cum[i]<t.pos-1e-6){ nextIdx=i; break; } }
         if(nextIdx<0){ t.dir*=-1; continue; }
         // 駅の手前で減速・発車後に加速（見た目の気持ちよさ）
@@ -484,7 +499,7 @@ function simulate(dtReal){
         const v=spec.speed*clamp(Math.min(dNext,dPrev)/50,0.35,1);
         const step=Math.min(remain,0.05), move=Math.min(v*step,dNext);
         line.st.seatUsed+=(t.n||0)*move; line.st.seatCap+=spec.cap*move;   // 乗車率＝走っている間の座席の埋まり具合
-        if(v*step>=dNext){ t.pos=g.cum[nextIdx]; remain-=dNext/v; arrive(line,t,nextIdx); break; }
+        if(v*step>=dNext){ t.pos=g.cum[nextIdx]; remain-=dNext/v; arrive(line,t,line.loop?nextIdx%line.stops.length:nextIdx); break; }
         t.pos+=t.dir*move; remain-=step;
       }
     }
@@ -567,14 +582,19 @@ function newPart(stops=buildStops){
   const added=stops.length-ext.base;
   return ext.side==="end"? stops.slice(ext.base-1) : stops.slice(0,added+1);
 }
+function canCloseLoop(id){ return !ext && !buildLoop && buildStops.length>=3 && id===buildStops[0]; }
+function buildPath(){ return buildLoop?[...buildStops,buildStops[0]]:buildStops; }
 function candidate(id){ // 次にこの駅をつないだら？（ホバー時の見積もり用）
-  if(buildStops.includes(id)) return null;
+  if(canCloseLoop(id)) return [...buildStops,id];
+  if(buildLoop || buildStops.includes(id)) return null;
   if(ext) return ext.side==="start"? [id,...buildStops] : [...buildStops,id];
   return [...buildStops,id];
 }
 function clickStation(id){
   if(mode==="build"){
-    if(buildStops.includes(id)){ if(!ext && buildStops[buildStops.length-1]!==id) news("同じ駅を2回は通れません"); return; }
+    if(canCloseLoop(id)){ buildLoop=true; pulses.push({x:S.cities[id].x,y:S.cities[id].y,life:.6,color:"#F2C14E"}); SFX.click(); updateBuildBar(); return; }
+    if(buildLoop){ news("環状線は輪が閉じています。「1つ戻す」で開けます"); return; }
+    if(buildStops.includes(id)){ if(!ext && buildStops[buildStops.length-1]!==id) news(id===buildStops[0]?"環状線にするには3駅以上つないでから最初の駅をタップ":"同じ駅を2回は通れません"); return; }
     if(ext && ext.side==="start") buildStops.unshift(id); else buildStops.push(id);
     pulses.push({x:S.cities[id].x,y:S.cities[id].y,life:.5,color:"#2A4FA8"}); SFX.click(); updateBuildBar();
   } else { selected=id; setTab("station"); SFX.click(); }
@@ -582,9 +602,9 @@ function clickStation(id){
 function partsText(p){ return (p.mount>1?`　⛰️トンネル${Math.round(p.mount)}`:"")+(p.river>1?`　🌉鉄橋${Math.round(p.river)}`:"")+(p.sea>1?`　🌊海上橋${Math.round(p.sea)}`:""); }
 function updateBuildBar(){
   const info=$("buildInfo"), ok=$("buildOk");
-  $("buildTitle").textContent= ext? `${ext.line.name}を延伸中` : "路線建設中";
+  $("buildTitle").textContent= ext? `${ext.line.name}を延伸中` : buildLoop? "環状線建設中" : "路線建設中";
   ok.textContent= ext? "延伸する" : "開業する";
-  const names=buildStops.map(i=>S.cities[i].name).join("→");
+  const names=buildPath().map(i=>S.cities[i].name).join("→")+(buildLoop?"（1周）":"");
   if(ext){
     const end=S.cities[ext.side==="end"?buildStops[buildStops.length-1]:buildStops[0]];
     if(buildStops.length===ext.base){ info.textContent=`${end.name}駅から${ext.side==="end"?"先":"手前"}の駅をタップ（いくつでも）`; ok.disabled=true; return; }
@@ -593,11 +613,11 @@ function updateBuildBar(){
     ok.disabled=q.cost>S.money; return;
   }
   if(buildStops.length<2){ info.textContent= buildStops.length? `${S.cities[buildStops[0]].name} から… 次の駅をタップ` : "駅をタップして順番につないでください"; ok.disabled=true; return; }
-  const q=buildQuote(buildStops), price=trainPrice("local"), total=q.cost+price;
-  info.innerHTML=`${names}　建設費 <b>${yen(q.cost)}</b> ＋ 列車 ${yen(price)}${partsText(q.parts)}${total>S.money?' <span class="neg">資金不足（財務タブで借入できます）</span>':""}`;
+  const q=buildQuote(buildPath()), price=trainPrice("local"), total=q.cost+price;
+  info.innerHTML=`${names}　建設費 <b>${yen(q.cost)}</b> ＋ 列車 ${yen(price)}${partsText(q.parts)}${total>S.money?' <span class="neg">資金不足（財務タブで借入できます）</span>':""}${!buildLoop&&buildStops.length>=3?'　<span class="muted">💡最初の駅をタップすると環状線</span>':""}`;
   ok.disabled=total>S.money;
 }
-function setMode(m){ mode=m; buildStops=[]; ext=null; $("buildbar").hidden=m!=="build";
+function setMode(m){ mode=m; buildStops=[]; ext=null; buildLoop=false; $("buildbar").hidden=m!=="build";
   document.body.classList.toggle("building",m==="build");
   if(m==="build"){ updateBuildBar(); if(innerWidth<820) $("mapwrap").scrollIntoView({behavior:"smooth",block:"start"}); }
   requestAnimationFrame(resize); }
@@ -605,14 +625,14 @@ function startBuildFrom(id){ setMode("build"); buildStops=[id]; updateBuildBar()
 function startExtend(line,side){ setMode("build"); ext={line,side,base:line.stops.length}; buildStops=[...line.stops]; updateBuildBar(); }
 function confirmBuild(){
   if(ext) return confirmExtend();
-  const q=buildQuote(buildStops), price=trainPrice("local"); if(buildStops.length<2||q.cost+price>S.money) return;
+  const q=buildQuote(buildPath()), price=trainPrice("local"); if(buildStops.length<2||q.cost+price>S.money) return;
   S.money-=q.cost; S.m.invest+=q.cost;
   const used=S.lines.map(l=>l.color), color=LINE_COLORS.find(c=>!used.includes(c))||LINE_COLORS[S.lines.length%LINE_COLORS.length];
   const id=S.lines.reduce((a,l)=>Math.max(a,l.id),0)+1;
-  const line={id,name:`${S.cities[buildStops[0]].name}${S.cities[buildStops[buildStops.length-1]].name}線`,color,stops:[...buildStops],trains:[],cost:q.cost,st:freshLineSt(),last:null};
+  const line={id,name:buildLoop?`${S.cities[buildStops[0]].name}環状線`:`${S.cities[buildStops[0]].name}${S.cities[buildStops[buildStops.length-1]].name}線`,loop:buildLoop,color,stops:[...buildStops],trains:[],cost:q.cost,st:freshLineSt(),last:null};
   S.lines.push(line); invalidateNet(); addTrain(line,"local");
   buildAnim.set(id,0); shake=.25; SFX.build();
-  banner("🎉 開業！", `${line.name}（${line.stops.map(i=>S.cities[i].name).join("・")}）`);
+  banner(line.loop?"🔄 環状線 開業！":"🎉 開業！", `${line.name}（${line.stops.map(i=>S.cities[i].name).join("・")}${line.loop?"・一周":""}）`);
   setMode("select"); setTab("lines");
 }
 function confirmExtend(){
@@ -650,7 +670,7 @@ function renderLines(){
     const avail=Object.keys(TRAINS).filter(k=>!TRAINS[k].unlock||S.unlocks.includes(TRAINS[k].unlock));
     const L=l.last, prof=L? L.rev-L.upkeep : null;
     d.innerHTML=`<div class="row between"><b><span class="swatch" style="background:${l.color}"></span> ${l.name}</b><span class="muted">${Math.round(geom(l).total)}km・${l.stops.length}駅</span></div>
-      <div class="muted">${l.stops.map(i=>S.cities[i].name+(linesAtCount(i)>1?"⇄":"")).join("→")}</div>
+      <div class="muted">${l.loop?"🔄 環状線：":""}${pathStops(l).map(i=>S.cities[i].name+(linesAtCount(i)>1?"⇄":"")).join("→")}${l.loop?`<br>外回り${l.trains.filter(t=>t.dir>0).length}・内回り${l.trains.filter(t=>t.dir<0).length}編成`:""}</div>
       <div class="muted">列車：${Object.entries(counts).map(([k,v])=>TRAINS[k].name+"×"+v).join("、")||"なし"}（${l.trains.length}/${maxTrains(l)}編成）${l.trains.length>=maxTrains(l)?' <span class="neg">満線</span>':""}</div>
       ${L?`<div class="kv" style="margin-top:6px"><span>先月の運賃収入</span><span>${yen(L.rev)}</span><span>経費（列車＋線路）</span><span>-${yen(L.upkeep)}</span><span><b>路線の利益</b></span><span class="${prof>=0?"pos":"neg"}"><b>${prof>=0?"+":""}${yen(prof)}</b></span>
         <span>乗車率（走行中の座席）</span><span>${Math.round(L.load*100)}%</span>
@@ -658,7 +678,7 @@ function renderLines(){
         <div class="bar"><i style="width:${Math.min(100,L.load*100)}%;background:${L.load>0.85?"var(--bad)":"var(--accent)"}"></i></div>`:""}
       ${lineTip(l)}
       <div class="row" style="margin-top:6px">${avail.map(k=>`<button data-buy="${k}" ${S.money<trainPrice(k)||l.trains.length>=maxTrains(l)?"disabled":""}>＋${TRAINS[k].name} ${yen(trainPrice(k))}<br><span class="muted">維持費 月${yen(trainUpkeep(k))}</span></button>`).join("")}</div>
-      <div class="row" style="margin-top:6px"><button data-ext="start">◀ ${S.cities[l.stops[0]].name}側を延伸</button><button data-ext="end">${S.cities[l.stops[l.stops.length-1]].name}側を延伸 ▶</button></div>
+      ${l.loop?"":`<div class="row" style="margin-top:6px"><button data-ext="start">◀ ${S.cities[l.stops[0]].name}側を延伸</button><button data-ext="end">${S.cities[l.stops[l.stops.length-1]].name}側を延伸 ▶</button></div>`}
       <div class="row" style="margin-top:6px">${Object.keys(counts).map(k=>`<button data-sell="${k}" ${l.trains.length<=1?"disabled":""}>${TRAINS[k].name}を売る +${yen(Math.round(TRAINS[k].cost*0.4))}</button>`).join("")}</div>
       <div class="row" style="margin-top:6px"><button data-del>廃線</button><button data-focus>地図で見る</button></div>`;
     d.querySelectorAll("[data-buy]").forEach(b=>b.addEventListener("click",()=>{ if(addTrain(l,b.dataset.buy)){ SFX.build(); pulses.push({x:S.cities[l.stops[0]].x,y:S.cities[l.stops[0]].y,life:.6,color:l.color}); renderSide(); } }));
@@ -666,7 +686,7 @@ function renderLines(){
     // 種類を選んで売る（買値の40%が戻る）。乗っていた客は今の駅で降りて待ち直す
     d.querySelectorAll("[data-sell]").forEach(btn=>btn.addEventListener("click",()=>{ if(l.trains.length<=1) return;
       const type=btn.dataset.sell; let i=-1; for(let j=l.trains.length-1;j>=0;j--) if(l.trains[j].type===type){ i=j; break; } if(i<0) return;
-      const [t]=l.trains.splice(i,1); const st=S.cities[l.stops[t.atStop]]; t.load.forEach(p=>{ if(p.d!==st.id) addWait(st,p.d,p.n,p.f,p.D,true); });
+      const [t]=l.trains.splice(i,1); if(l.loop) invalidateNet(); const st=S.cities[l.stops[t.atStop]]; t.load.forEach(p=>{ if(p.d!==st.id) addWait(st,p.d,p.n,p.f,p.D,true); });
       const v=Math.round(TRAINS[type].cost*0.4); S.money+=v; S.m.other+=v; news(`${TRAINS[type].name}列車を売却（+${yen(v)}）`); SFX.click(); renderSide(); }));
     d.querySelector("[data-del]").addEventListener("click",()=>askConfirm(`${l.name}を廃線にしますか？`,"建設費の20%と列車の売却額が戻ります。","廃線にする",()=>{
       if(!S.lines.includes(l)) return; const v=Math.round(l.cost*0.2+l.trains.reduce((a,t)=>a+TRAINS[t.type].cost*0.4,0));
@@ -870,8 +890,9 @@ function segOffset(a,b,line){
 }
 function drawLinePath(l,k,progress=1){
   const g=geom(l), lim=g.total*progress;
-  for(let i=1;i<l.stops.length;i++){ if(g.cum[i-1]>=lim) break;
-    const a=S.cities[l.stops[i-1]], b=S.cities[l.stops[i]], off=segOffset(l.stops[i-1],l.stops[i],l);
+  const ps=pathStops(l);
+  for(let i=1;i<ps.length;i++){ if(g.cum[i-1]>=lim) break;
+    const a=S.cities[ps[i-1]], b=S.cities[ps[i]], off=segOffset(ps[i-1],ps[i],l);
     const nx=-(b.y-a.y), ny=b.x-a.x, nl=Math.hypot(nx,ny)||1, ox=nx/nl*off, oy=ny/nl*off;
     const f=Math.min(1,(lim-g.cum[i-1])/(g.cum[i]-g.cum[i-1]||1));
     ctx.beginPath(); ctx.moveTo(a.x+ox,a.y+oy); ctx.lineTo(a.x+ox+(b.x-a.x)*f,a.y+oy+(b.y-a.y)*f); ctx.stroke(); }
@@ -896,8 +917,8 @@ function draw(time){
   // 建設プレビュー
   if(mode==="build" && buildStops.length){
     ctx.setLineDash([10*Math.max(1,k*.6),8*Math.max(1,k*.6)]); ctx.lineDashOffset=-time/40; ctx.strokeStyle=colors["--ink"]; ctx.lineWidth=Math.max(4,2.5*k);
-    ctx.beginPath(); buildStops.forEach((id,i)=>{ const c=S.cities[id]; i?ctx.lineTo(c.x,c.y):ctx.moveTo(c.x,c.y); }); ctx.stroke();
-    if(hover!=null && !buildStops.includes(hover)){ const c=S.cities[hover], f=S.cities[ext&&ext.side==="start"?buildStops[0]:buildStops[buildStops.length-1]];
+    ctx.beginPath(); buildPath().forEach((id,i)=>{ const c=S.cities[id]; i?ctx.lineTo(c.x,c.y):ctx.moveTo(c.x,c.y); }); ctx.stroke();
+    if(hover!=null && (!buildStops.includes(hover)||canCloseLoop(hover)) && !buildLoop){ const c=S.cities[hover], f=S.cities[ext&&ext.side==="start"?buildStops[0]:buildStops[buildStops.length-1]];
       ctx.globalAlpha=.5; ctx.beginPath(); ctx.moveTo(f.x,f.y); ctx.lineTo(c.x,c.y); ctx.stroke(); ctx.globalAlpha=1; }
     ctx.setLineDash([]);
   }
@@ -908,11 +929,11 @@ function draw(time){
   for(const l of S.lines){ if(buildAnim.has(l.id)) continue; const tot=geom(l).total;
     for(const t of l.trains){ const spec=TRAINS[t.type], head=trainXY(l,t.pos);
       if(head.x<vx0||head.x>vx1||head.y<vy0||head.y>vy1) continue;
-      if(!detailed){ const tail=trainXY(l,clamp(t.pos-t.dir*spec.cars*16*ts,0,tot));
+      if(!detailed){ const tail=trainXY(l,wrapPos(l,t.pos-t.dir*spec.cars*16*ts));
         ctx.strokeStyle="#1C2B3A"; ctx.lineWidth=11*ts; ctx.beginPath(); ctx.moveTo(head.x,head.y); ctx.lineTo(tail.x,tail.y); ctx.stroke();
         ctx.strokeStyle=spec.color; ctx.lineWidth=8*ts; ctx.stroke(); continue; }
       const load=t.load.reduce((a,x)=>a+x.n,0)/spec.cap;
-      for(let c=0;c<spec.cars;c++){ const p=c?trainXY(l,clamp(t.pos-t.dir*c*16*ts,0,tot)):head;
+      for(let c=0;c<spec.cars;c++){ const p=c?trainXY(l,wrapPos(l,t.pos-t.dir*c*16*ts)):head;
         ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.ang); ctx.scale(ts,ts);
         ctx.fillStyle=spec.color; ctx.strokeStyle="#1C2B3A"; ctx.lineWidth=1.4; ctx.beginPath(); ctx.roundRect(-7,-5,14,10,c===0?4:2); ctx.fill(); ctx.stroke();
         ctx.fillStyle=l.color; ctx.fillRect(-5,-2.5,10*clamp(load,0,1),5); ctx.restore(); } } }
@@ -1017,7 +1038,7 @@ $("zoomOut").onclick=()=>{ fly=null; zoomAt(1/1.4,view.w/2,view.h/2); };
 $("zoomFit").onclick=()=>flyTo(CFG.W/2,CFG.H/2,1);
 $("newLineBtn").onclick=()=>{ if(mode==="build") return; setMode("build"); };
 $("buildCancel").onclick=()=>setMode("select");
-$("buildUndo").onclick=()=>{ if(ext){ if(buildStops.length>ext.base) ext.side==="start"?buildStops.shift():buildStops.pop(); } else buildStops.pop(); updateBuildBar(); };
+$("buildUndo").onclick=()=>{ if(buildLoop){ buildLoop=false; updateBuildBar(); return; } if(ext){ if(buildStops.length>ext.base) ext.side==="start"?buildStops.shift():buildStops.pop(); } else buildStops.pop(); updateBuildBar(); };
 $("buildOk").onclick=confirmBuild;
 document.querySelectorAll("#tabs button").forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
 function setSpeed(s){ speed=s; document.querySelectorAll("#speed button").forEach(x=>x.classList.toggle("on",+x.dataset.s===s)); if(s>=2) S.tutSpeed=true; }
