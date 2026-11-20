@@ -178,7 +178,7 @@ a{color:var(--accent)}
       <li><b>町が増える</b>：最初は45の町。鉄道が通ると、駅の近くにときどき新しい村が生まれます（最大70町）。新しい村もつないで育てよう。</li>
       <li><b>都市を育てる</b>：客をさばけている町は人口が増え、村→町→市→大都市→巨大都市へ。上限は沿線開発と駅の改良で上がります。</li>
     </ol>
-    <p class="muted">操作：ドラッグで移動／ピンチ・ホイールで拡大／左下のミニマップでジャンプ。キー：Space=一時停止、N=新路線、Esc=取消、+/-=拡大縮小。<br><b>難易度：高</b>　列車・線路の維持費は高く、毎年10%ずつ上がります（運賃は4%）。1本の路線に走らせられる列車の数には上限があります。<b>10年以内に借金ゼロで資金100億円</b>でクリア。資金がマイナスのまま3か月続くと倒産。ゲームを閉じている間も、最大6か月分まで半分の効率で稼ぎます。</p>
+    <p class="muted">操作：ドラッグで移動／ピンチ・ホイールで拡大／左下のミニマップでジャンプ。キー：Space=一時停止、N=新路線、Esc=取消、+/-=拡大縮小。<br><b>難易度：高</b>　列車・線路の維持費は高めです。列車は何編成でも足せますが、客の数以上は乗らないので、足しすぎると乗車率が下がって赤字になります。<b>10年以内に借金ゼロで資金100億円</b>でクリア。資金がマイナスのまま3か月続くと倒産。ゲームを閉じている間も、最大6か月分まで半分の効率で稼ぎます。</p>
     <div class="row" style="justify-content:flex-end"><button class="primary" id="helpClose">OK</button></div>
   </div>
 </div>
@@ -209,17 +209,16 @@ const CFG = {
   tunnelMul: 2.5, bridgeMul: 4, seaMul: 8,
   stationFee: 3_000_000,
   trackUpkeepPerPx: 2_000,                   // 線路の保守費（月額・1pxあたり）
-  inflationPerYear: 0.10,                    // 維持費・保守費は毎年10%ずつ上がる
-  fareRisePerYear: 0.04,                     // 運賃は毎年4%しか上がらない → 年々効率化が必要
+  inflationPerYear: 0,                       // 維持費・保守費の年ごとの値上がり（0＝ずっと同じ）
+  fareRisePerYear: 0,                        // 運賃の年ごとの値上がり（0＝ずっと同じ）
   fareBase: 500, farePerPx: 8,               // 運賃＝基本料金×乗った路線の数＋距離（乗り換えると基本料金がもう1回かかる）
   transferPenaltyPx: 150,                    // 経路選び：乗り換え1回は150px分の遠回りと同じくらい嫌われる
-  genPerPop: 1/200, waitCapPerPop: 1/25,
+  genPerPop: 1/1800, waitCapPerPop: 1/150,     // 客の発生（人口あたり／日）と、駅の待合室の広さ
   netBonus: 0.08, netBonusMax: 2.5,          // 乗り換え込みで行ける駅が1つ増えるごとに乗客+8%（最大2.5倍）
   growthPerDay: 0.0022, popCapMul: 2.5,      // 人口の上限は最初の2.5倍＋開発・駅の改良で上がる
   devCapMul: 0.6, levelCapMul: 0.3,
   rentPerPop: 25,                            // 沿線開発1段階あたり 人口×25円/月 の家賃収入
   fareLevels: [0.8,0.9,1,1.1,1.2,1.3], fareElasticity: 1.6, // 運賃を上げると客は減り、町も育ちにくくなる
-  pxPerTrain: 60,                            // 路線の長さ60pxごとに1編成まで
   maxParticles: 90, maxFloaters: 24,
   stationUpgradeBase: 8_000_000,
   loanUnit: 20_000_000, loanMax: 300_000_000, loanRate: 0.01,
@@ -429,9 +428,7 @@ function bumpMoney(){ const m=$("money"); m.classList.add("bump"); clearTimeout(
 // ============================================================
 // シミュレーション
 // ============================================================
-function maxTrains(line){ return Math.max(2,Math.floor(geom(line).total/CFG.pxPerTrain)); }
 function addTrain(line,type,free=false){
-  if(line.trains.length>=maxTrains(line)) return false;
   const price=trainPrice(type);
   if(!free){ if(S.money<price) return false; S.money-=price; S.m.invest+=price; S.trainsBought++; }
   const g=geom(line), n=line.trains.length;
@@ -686,8 +683,7 @@ function renderSide(){
 }
 function lineTip(l){
   if(!l.last) return `<div class="tip muted">⏳ 月末に成績が出ます</div>`;
-  const L=l.last, full=l.trains.length>=maxTrains(l), lostMuch=L.lost>L.riders*0.15;
-  if(L.load>0.75 && lostMuch && full) return `<div class="tip">🚦 満線で客を取りこぼし中。<b>大きな車両</b>に入れ替えるか、<b>延伸</b>、または財務タブで<b>運賃を上げる</b>のも手</div>`;
+  const L=l.last, lostMuch=L.lost>L.riders*0.15;
   if(L.load>0.75 && lostMuch) return `<div class="tip">🔥 混雑して客を逃しています。<b>列車を足すと儲かります</b></div>`;
   if(L.load<0.3 && l.trains.length>1) return `<div class="tip">💤 空席が多め。列車を減らすと経費が浮きます</div>`;
   if(L.rev-L.upkeep<0) return `<div class="tip">📉 赤字。人の多い町へ延伸したり、ハブ駅につないで乗り換え客を呼び込もう</div>`;
@@ -703,13 +699,13 @@ function renderLines(){
     const L=l.last, prof=L? L.rev-L.upkeep : null;
     d.innerHTML=`<div class="row between"><b><span class="swatch" style="background:${l.color}"></span> ${l.name}</b><span class="muted">${Math.round(geom(l).total)}km・${l.stops.length}駅</span></div>
       <div class="muted">${l.loop?"🔄 環状線：":""}${pathStops(l).map(i=>S.cities[i].name+(linesAtCount(i)>1?"⇄":"")).join("→")}${l.loop?`<br>外回り${l.trains.filter(t=>t.dir>0).length}・内回り${l.trains.filter(t=>t.dir<0).length}編成`:""}</div>
-      <div class="muted">列車：${Object.entries(counts).map(([k,v])=>TRAINS[k].name+"×"+v).join("、")||"なし"}（${l.trains.length}/${maxTrains(l)}編成）${l.trains.length>=maxTrains(l)?' <span class="neg">満線</span>':""}</div>
+      <div class="muted">列車：${Object.entries(counts).map(([k,v])=>TRAINS[k].name+"×"+v).join("、")||"なし"}（${l.trains.length}編成）</div>
       ${L?`<div class="kv" style="margin-top:6px"><span>先月の運賃収入</span><span>${yen(L.rev)}</span><span>経費（列車＋線路）</span><span>-${yen(L.upkeep)}</span><span><b>路線の利益</b></span><span class="${prof>=0?"pos":"neg"}"><b>${prof>=0?"+":""}${yen(prof)}</b></span>
         <span>乗車率（走行中の座席）</span><span>${Math.round(L.load*100)}%</span>
         <span>沿線の取りこぼし</span><span class="${L.lost>L.riders*0.15?"neg":""}">${Math.round(L.lost).toLocaleString()}人（${yen(L.lostRev)}）</span></div>
         <div class="bar"><i style="width:${Math.min(100,L.load*100)}%;background:${L.load>0.85?"var(--bad)":"var(--accent)"}"></i></div>`:""}
       ${lineTip(l)}
-      <div class="row" style="margin-top:6px">${avail.map(k=>`<button data-buy="${k}" ${S.money<trainPrice(k)||l.trains.length>=maxTrains(l)?"disabled":""}>＋${TRAINS[k].name} ${yen(trainPrice(k))}<br><span class="muted">維持費 月${yen(trainUpkeep(k))}</span></button>`).join("")}</div>
+      <div class="row" style="margin-top:6px">${avail.map(k=>`<button data-buy="${k}" ${S.money<trainPrice(k)?"disabled":""}>＋${TRAINS[k].name} ${yen(trainPrice(k))}<br><span class="muted">維持費 月${yen(trainUpkeep(k))}</span></button>`).join("")}</div>
       ${l.loop?"":`<div class="row" style="margin-top:6px"><button data-ext="start">◀ ${S.cities[l.stops[0]].name}側を延伸</button><button data-ext="end">${S.cities[l.stops[l.stops.length-1]].name}側を延伸 ▶</button></div>`}
       <div class="row" style="margin-top:6px">${Object.keys(counts).map(k=>`<button data-sell="${k}" ${l.trains.length<=1?"disabled":""}>${TRAINS[k].name}を売る +${yen(Math.round(TRAINS[k].cost*0.4))}</button>`).join("")}</div>
       <div class="row" style="margin-top:6px"><button data-del>廃線</button><button data-focus>地図で見る</button></div>`;
@@ -795,10 +791,10 @@ function guideNow(){
   if(S.money<0) out.push(["🚨",`資金がマイナスです（${S.negMonths}/3か月で倒産）。赤字路線の列車を売るか、財務タブで借り入れを。`]);
   if(!S.lines.length){ out.push(["1️⃣","「＋新しい路線をつくる」で、人口の多い町（大きな丸）どうしをつなごう。"]); return out; }
   for(const l of S.lines){ const L=l.last; if(!L) continue;
-    const full=l.trains.length>=maxTrains(l), busy=L.load>0.75&&L.lost>L.riders*0.1;
+    const busy=L.load>0.75&&L.lost>L.riders*0.1;
     const best=S.unlocks.includes("express")?"express":S.unlocks.includes("rapid")?"rapid":null;
-    if(busy && !full) out.push(["🚃",`<b>${l.name}</b>が満員で客を逃しています → 列車を足そう（${TRAINS.local.name} ${yen(trainPrice("local"))}）`]);
-    else if(busy && full && best && l.trains.some(t=>t.type==="local")) out.push(["🔁",`<b>${l.name}</b>は満線 → 普通を売って<b>${TRAINS[best].name}</b>に入れ替えよう`]);
+    if(busy && !(best && l.trains.length>=8 && l.trains.some(t=>t.type==="local"))) out.push(["🚃",`<b>${l.name}</b>が満員で客を逃しています → 列車を足そう（${TRAINS.local.name} ${yen(trainPrice("local"))}）`]);
+    else if(busy) out.push(["🔁",`<b>${l.name}</b>は普通が多く混雑 → 普通を売って<b>${TRAINS[best].name}</b>に入れ替えると、維持費あたりで多く運べる`]);
     else if(L.load<0.35 && L.rev<L.upkeep && l.trains.length>1) out.push(["💤",`<b>${l.name}</b>は空席が多く赤字 → 列車を1編成売ろう`]);
     else if(L.rev<L.upkeep && l.trains.length===1) out.push(["📉",`<b>${l.name}</b>は赤字 → 1編成だけだと苦しい。2編成目を足すか、人の多い町へ延伸を`]); }
   const conn=S.cities.filter(c=>connected(c.id));
@@ -821,9 +817,9 @@ function guideNow(){
 }
 const GUIDE_HTML=`
 <details open><summary>まず覚えるルール3つ</summary><ol>
-<li><b>お金になるのは満員の列車だけ</b>。普通列車は1編成で維持費 月120万円（毎年上がる）。ガラガラだとすぐ赤字。</li>
+<li><b>お金になるのは満員の列車だけ</b>。普通列車は1編成で維持費 月120万円。ガラガラだとすぐ赤字。</li>
 <li><b>月末の資金がマイナスのまま3か月で倒産</b>。手元には「月の経費の2〜3か月分」を残そう。</li>
-<li>ゴールは<b>10年以内に借金ゼロで資金100億円</b>。経費は毎年+10%、運賃は+4%しか上がらない。</li></ol></details>
+<li>ゴールは<b>10年以内に借金ゼロで資金100億円</b>。</li></ol></details>
 <details><summary>第1段階：最初の3か月</summary><ol>
 <li>チュートリアルで光る2つの町をつなぐ（費用と人口のバランスがいい組み合わせ）。</li>
 <li>開業したら<b>すぐ2編成目</b>を買う。1編成だと線路の保守費で赤字になりがち。</li>
@@ -839,13 +835,13 @@ const GUIDE_HTML=`
 <li>ハブ駅を<b>駅ナカ</b>に（乗り換え客は1.5倍買い物）。目安：通る人 月4万人〜。</li>
 <li>満員で取りこぼしが多いなら<b>運賃110〜120%</b>。上げすぎると町が育たない。</li></ol></details>
 <details><summary>第4段階：3〜6年目（特急・大都市）</summary><ol>
-<li>累計乗客10万人で<b>特急</b>解禁。満線の路線は「普通を売る→特急を買う」（運べる量 約6倍）。</li>
+<li>累計乗客10万人で<b>特急</b>解禁。普通がたくさん走る混雑路線は「普通を売る→特急を買う」（1編成で運べる量 約6倍）。</li>
 <li>町は<b>取りこぼしが少なく運賃が高すぎない</b>と育つ。人口が上限なら沿線開発・駅の改良で上限アップ。</li>
 <li><b>駅の改良</b>は「列車に空席があるのに客が足りない」駅に。満員の路線の駅を改良しても客があふれるだけ。</li>
 <li>メインのハブを<b>駅ビル</b>に（目安：通る人 月9万人〜）。延伸と支線で「20駅」（+2億）。</li></ol></details>
 <details><summary>第5段階：6〜10年目（100億円へ）</summary><ol>
 <li>「40の駅を接続」で+5億。端の小さな町や、新しく生まれた村は、ハブからの支線で拾う。</li>
-<li>年が明ける前に、乗車率35%未満の赤字路線は列車を減らす（経費が上がるため）。</li>
+<li>ときどき路線タブを見直し、乗車率35%未満の赤字路線は列車を減らす。</li>
 <li><b>借金は早めに全部返す</b>。残っているとクリアにならない。</li>
 <li>最後の1〜2年は、元が取れるまで長い買い物（駅ビル・開発3段階目以上）をせず貯める。</li></ol></details>
 <details><summary>やってはいけないこと</summary><ul>
