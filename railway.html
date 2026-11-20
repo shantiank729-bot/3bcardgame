@@ -175,6 +175,7 @@ a{color:var(--accent)}
       <li><b>環状線</b>：3駅以上つないだあと、<b>最初の駅をもう一度タップ</b>すると輪が閉じて環状線になります。列車は外回り・内回りが交互に走り、終点で折り返さないので効率よく回ります。</li>
       <li><b>乗り換え</b>：客は路線を乗り換えて、つながっているどの町へも行きます。路線が集まるハブ駅には乗り換え客があふれます。乗り換えると基本料金がもう1回かかります。行ける駅が多いほど客も増えます（1駅ごとに+8%）。</li>
       <li><b>経営</b>：駅をタップして<b>駅ナカ</b>（通る人・乗り換え客が買い物）や<b>沿線開発</b>（家賃収入＋人口の上限アップ）。財務タブで<b>運賃</b>を設定（満員なら値上げ、空いていれば値下げ）。</li>
+      <li><b>町が増える</b>：最初は45の町。鉄道が通ると、駅の近くにときどき新しい村が生まれます（最大70町）。新しい村もつないで育てよう。</li>
       <li><b>都市を育てる</b>：客をさばけている町は人口が増え、村→町→市→大都市→巨大都市へ。上限は沿線開発と駅の改良で上がります。</li>
     </ol>
     <p class="muted">操作：ドラッグで移動／ピンチ・ホイールで拡大／左下のミニマップでジャンプ。キー：Space=一時停止、N=新路線、Esc=取消、+/-=拡大縮小。<br><b>難易度：高</b>　列車・線路の維持費は高く、毎年10%ずつ上がります（運賃は4%）。1本の路線に走らせられる列車の数には上限があります。<b>10年以内に借金ゼロで資金100億円</b>でクリア。資金がマイナスのまま3か月続くと倒産。ゲームを閉じている間も、最大6か月分まで半分の効率で稼ぎます。</p>
@@ -200,7 +201,8 @@ a{color:var(--accent)}
 // 設定（バランス調整はここだけ触ればOK）
 // ============================================================
 const CFG = {
-  W: 2400, H: 1600, cityCount: 30, cityMinDist: 150,
+  W: 2400, H: 1600, cityCount: 45, cityMinDist: 130,
+  maxCities: 70, townSpawnChance: 0.4,      // 鉄道が通ると、近くに新しい村が生まれる（毎月40%・最大70町）
   startMoney: 50_000_000,
   dayRealSec: 4, daysPerMonth: 30,          // 1日=実時間4秒（等速）→ 1か月=2分
   trackCostPerPx: 15_000,
@@ -242,7 +244,11 @@ function tierOf(pop){ return TIERS.reduce((a,t,i)=>pop>=t[0]?i:a,0); }
 const RANKS = [[0,"町の鉄道"],[2e8,"地方鉄道"],[1e9,"中堅私鉄"],[5e9,"大手私鉄"],[2e10,"鉄道王"]];
 const LINE_COLORS = ["#2A7FDB","#E0533D","#2BA36B","#9B59B6","#F39C12","#16A5A5","#D64F9A","#7F8C3A","#5D6DBE","#B5651D","#C0392B","#1ABC9C"];
 const CITY_NAMES = ["青葉","港町","桜台","北原","大川","緑ヶ丘","白浜","東山","西川","南浦","朝日","若松","星見","霧島","春日","鷹野",
-  "月見","柏木","千歳","高砂","宮前","花園","錦町","水沢","紅葉","石川原","夕凪","富士見","雲雀","松風","若葉","鶴見"];
+  "月見","柏木","千歳","高砂","宮前","花園","錦町","水沢","紅葉","石川原","夕凪","富士見","雲雀","松風","若葉","鶴見",
+  "日向","藤ヶ丘","梅田原","竹野","秋津","冬木","夏目","深川","浜辺","岬町","青山","赤坂","黒岩","白石","銀杏","楓台",
+  "菜の花","蛍川","鈴鳴","風見","光ヶ丘","岩倉","杉並","檜原","柳町","桃園","梨木","栗山","葵","菖蒲","萩原","桐生",
+  "朝霧","夕陽丘","星川","雪見","霞ヶ浦","泉","滝沢","沢田","森下","林間","野辺山","丘陵","湊","灯台","帆立","汐留",
+  "新町","若草","緑町","本町","中央","新田","北町","南町","東町","西町"];
 const SAVE_KEY="rosen-ou-save-v3";
 
 // ============================================================
@@ -304,7 +310,7 @@ function newGame(){
     const x=70+r()*(CFG.W-140), y=70+r()*(CFG.H-140);
     if(terrainAt(x,y)!=="flat") continue;
     if(cities.some(c=>Math.hypot(c.x-x,c.y-y)<CFG.cityMinDist)) continue;
-    const i=cities.length, pop = i<3? 110000+r()*90000 : i<10? 40000+r()*40000 : 8000+r()*28000;
+    const i=cities.length, pop = i<4? 110000+r()*90000 : i<14? 40000+r()*40000 : 6000+r()*26000;
     cities.push({id:i,name:CITY_NAMES[i],x,y,pop:Math.round(pop),pop0:Math.round(pop),waiting:0,level:1,boost:0,shop:0,dev:0,wait:{},st:freshCitySt(),last:null,svc:1,tier:tierOf(pop)});
   }
   invalidateNet();
@@ -384,7 +390,7 @@ const GOALS = [
   {id:"riders100k", text:"累計乗客 10万人", reward:8e7, unlock:"express", unlockText:"特急列車", prog:()=>S.riders/1e5},
   {id:"hub", text:"4路線が集まるハブ駅をつくる", reward:1e8, prog:()=>Math.max(0,...S.cities.map(c=>linesAtCount(c.id)))/4},
   {id:"st20", text:"20の駅を接続する", reward:2e8, prog:()=>connCount()/20},
-  {id:"all", text:"すべての町を接続する", reward:5e8, prog:()=>connCount()/S.cities.length},
+  {id:"all", text:"40の駅を接続する", reward:5e8, prog:()=>connCount()/40},
   {id:"rich", text:"10年以内に、借金ゼロで資金 100億円", reward:0, final:true, prog:()=>(S.loan>0||S.timeUp)?Math.min(.99,S.money/1e10):S.money/1e10},
 ];
 
@@ -526,6 +532,24 @@ function checkGoals(){
   const rk=RANKS.reduce((a,r,i)=>S.earned>=r[0]?i:a,0);
   if(rk>S.rank){ S.rank=rk; banner("⬆️ ランクアップ！", `「${RANKS[rk][1]}」になりました`); confetti(); SFX.goal(); }
 }
+// 新しい村の誕生：鉄道の駅の近く（150〜330px）の平地に、ときどき村が生まれる
+function spawnTown(){
+  if(S.cities.length>=CFG.maxCities || Math.random()>CFG.townSpawnChance) return;
+  const conn=S.cities.filter(c=>connected(c.id)); if(!conn.length) return;
+  const used=new Set(S.cities.map(c=>c.name)), name=CITY_NAMES.find(n=>!used.has(n))||`新町${S.cities.length}`;
+  for(let tries=0;tries<60;tries++){
+    const base=conn[Math.floor(Math.random()*conn.length)], a=Math.random()*Math.PI*2, d=150+Math.random()*180;
+    const x=base.x+Math.cos(a)*d, y=base.y+Math.sin(a)*d;
+    if(x<70||y<70||x>CFG.W-70||y>CFG.H-70||terrainAt(x,y)!=="flat") continue;
+    if(S.cities.some(c=>Math.hypot(c.x-x,c.y-y)<CFG.cityMinDist)) continue;
+    // 線路の真上には生まれない（駅でもないのに路線が通っているように見えてしまうため）
+    if(S.lines.some(l=>{ const g=geom(l); for(let i=1;i<g.pts.length;i++) if(distSeg(x,y,g.pts[i-1].x,g.pts[i-1].y,g.pts[i].x,g.pts[i].y)<60) return true; return false; })) continue;
+    const pop=Math.round(3000+Math.random()*6000+Math.min(20000,base.pop*0.03));   // 大きな町の近くほど大きめの村
+    S.cities.push({id:S.cities.length,name,x,y,pop,pop0:pop,waiting:0,level:1,boost:0,shop:0,dev:0,wait:{},xw:{},st:freshCitySt(),last:null,svc:1,tier:tierOf(pop)});
+    invalidateNet(); pulses.push({x,y,life:.6,color:"#2BA36B"});
+    news(`🌱 ${base.name}の近くに新しい村「${name}」が生まれました（人口${pop.toLocaleString()}）`); return;
+  }
+}
 function monthEnd(){
   let up=0; for(const l of S.lines) for(const t of l.trains) up+=trainUpkeep(t.type);
   const track=trackUpkeep(trackLen()), interest=Math.round(S.loan*CFG.loanRate);
@@ -556,6 +580,7 @@ function monthEnd(){
     if(r<0.45){ c.boost=5; news(`🎆 ${c.name}でお祭り！5日間 乗客が2倍`); }
     else if(r<0.8){ const g=Math.round(c.pop*0.06); c.pop=Math.min(popCap(c)*1.05,c.pop+g); news(`🏘️ ${c.name}に新しい団地（人口+${g.toLocaleString()}）`); }
     else { const cost=Math.round(trackUpkeep(trackLen())*0.5); S.money-=cost; S.m.other-=cost; news(`🌧️ 大雨で線路を補修（${yen(cost)}）`); } }
+  spawnTown();
   save(); renderSide();
 }
 
@@ -819,7 +844,7 @@ const GUIDE_HTML=`
 <li><b>駅の改良</b>は「列車に空席があるのに客が足りない」駅に。満員の路線の駅を改良しても客があふれるだけ。</li>
 <li>メインのハブを<b>駅ビル</b>に（目安：通る人 月9万人〜）。延伸と支線で「20駅」（+2億）。</li></ol></details>
 <details><summary>第5段階：6〜10年目（100億円へ）</summary><ol>
-<li>「すべての町を接続」で+5億。端の小さな町はハブからの支線で拾う。</li>
+<li>「40の駅を接続」で+5億。端の小さな町や、新しく生まれた村は、ハブからの支線で拾う。</li>
 <li>年が明ける前に、乗車率35%未満の赤字路線は列車を減らす（経費が上がるため）。</li>
 <li><b>借金は早めに全部返す</b>。残っているとクリアにならない。</li>
 <li>最後の1〜2年は、元が取れるまで長い買い物（駅ビル・開発3段階目以上）をせず貯める。</li></ol></details>
@@ -1036,7 +1061,7 @@ function draw(time){
         ctx.fillStyle=spec.color; ctx.strokeStyle="#1C2B3A"; ctx.lineWidth=1.4; ctx.beginPath(); ctx.roundRect(-7,-5,14,10,c===0?4:2); ctx.fill(); ctx.stroke();
         ctx.fillStyle=l.color; ctx.fillRect(-5,-2.5,10*clamp(load,0,1),5); ctx.restore(); } } }
   // 波紋
-  for(const p of pulses){ const a=p.life/0.6; ctx.strokeStyle=p.color; ctx.globalAlpha=clamp(a,0,1); ctx.lineWidth=3*k; ctx.beginPath(); ctx.arc(p.x,p.y,(14+(1-a)*30)*Math.max(1,k*.7),0,7); ctx.stroke(); }
+  for(const p of pulses){ const a=p.life/0.6; ctx.strokeStyle=p.color; ctx.globalAlpha=clamp(a,0,1); ctx.lineWidth=3*k; ctx.beginPath(); ctx.arc(p.x,p.y,Math.max(1,(14+(1-a)*30)*Math.max(1,k*.7)),0,7); ctx.stroke(); }
   ctx.globalAlpha=1;
   // 町並み（人口に応じて建物が広がる）
   const x0w=-view.ox/view.scale-120, y0w=-view.oy/view.scale-120, x1w=x0w+view.w/view.scale+240, y1w=y0w+view.h/view.scale+240;
