@@ -9,7 +9,7 @@
   --bg:#EEF2EC; --panel:#FFFFFF; --soft:#F1F4F7; --ink:#1C2B3A; --sub:#5B6B7A; --line:#D3DCE3;
   --accent:#2A4FA8; --accent-fg:#fff; --good:#1F8A4C; --bad:#C8352E; --gold:#B7791F;
   --land:#DCE9CF; --land2:#CFE0BF; --water:#8DBFE6; --sea:#7FB2DE; --sand:#EADFB8; --mount:#B9A88C; --mount2:#9C8A6E;
-  --label:#1C2B3A; --halo:rgba(255,255,255,.88); --bld:#C3C8BE; --bld2:#A9B0A4;
+  --label:#1C2B3A; --halo:rgba(255,255,255,.88); --bld:#B7BEB0; --bld2:#9AA294; --bld3:#7D8A99; --road:#F2EEE3;
   --f:"Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,system-ui,sans-serif;
 }
 @media (prefers-color-scheme: dark){
@@ -17,14 +17,14 @@
     --bg:#121821; --panel:#1B2430; --soft:#232F3E; --ink:#E6ECF2; --sub:#9AA9B8; --line:#344354;
     --accent:#8FB0FF; --accent-fg:#0E1622; --good:#5BD18E; --bad:#FF7A70; --gold:#F2C14E;
     --land:#26362A; --land2:#2D3F30; --water:#2F5B82; --sea:#244C70; --sand:#4B4632; --mount:#5A5040; --mount2:#4A4234;
-    --label:#E6ECF2; --halo:rgba(18,24,33,.88); --bld:#3E4C44; --bld2:#4C5C52; color-scheme:dark;
+    --label:#E6ECF2; --halo:rgba(18,24,33,.88); --bld:#3E4C44; --bld2:#4C5C52; --bld3:#5D6E80; --road:#33402F; color-scheme:dark;
   }
 }
 :root[data-theme="dark"]{
   --bg:#121821; --panel:#1B2430; --soft:#232F3E; --ink:#E6ECF2; --sub:#9AA9B8; --line:#344354;
   --accent:#8FB0FF; --accent-fg:#0E1622; --good:#5BD18E; --bad:#FF7A70; --gold:#F2C14E;
   --land:#26362A; --land2:#2D3F30; --water:#2F5B82; --sea:#244C70; --sand:#4B4632; --mount:#5A5040; --mount2:#4A4234;
-  --label:#E6ECF2; --halo:rgba(18,24,33,.88); --bld:#3E4C44; --bld2:#4C5C52; color-scheme:dark;
+  --label:#E6ECF2; --halo:rgba(18,24,33,.88); --bld:#3E4C44; --bld2:#4C5C52; --bld3:#5D6E80; --road:#33402F; color-scheme:dark;
 }
 *{box-sizing:border-box}
 [hidden]{display:none!important}
@@ -69,7 +69,13 @@ body.building .news{display:none}
 @keyframes pop{0%{transform:translate(-50%,-50%) scale(.3);opacity:0}12%{transform:translate(-50%,-50%) scale(1);opacity:1}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-60%) scale(1)}}
 aside{background:var(--panel);border-left:1px solid var(--line);overflow:auto;padding:12px 16px 24px;display:flex;flex-direction:column;gap:10px}
 .tabs{display:flex;gap:4px;border-bottom:1px solid var(--line)}
-.tabs button{border:0;border-radius:8px 8px 0 0;background:transparent;padding:8px 10px;color:var(--sub);flex:1}
+.tabs button{border:0;border-radius:8px 8px 0 0;background:transparent;padding:8px 6px;color:var(--sub);flex:1;white-space:nowrap}
+.guide details{background:var(--soft);border-radius:10px;padding:8px 12px;margin-bottom:8px}
+.guide summary{cursor:pointer;font-weight:bold}
+.guide ol,.guide ul{padding-left:20px;margin:6px 0}
+.guide li{margin:3px 0;font-size:13px}
+.todo{display:flex;gap:8px;align-items:flex-start;padding:5px 0;border-bottom:1px dashed var(--line);font-size:13px}
+.todo:last-child{border-bottom:0}
 .tabs button.on{background:var(--soft);color:var(--ink);font-weight:bold;box-shadow:inset 0 -2px 0 var(--accent)}
 .card{background:var(--soft);border-radius:10px;padding:10px 12px;margin-bottom:8px}
 .row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
@@ -147,12 +153,13 @@ a{color:var(--accent)}
   <aside id="side">
     <button id="newLineBtn" class="primary" style="width:100%;padding:10px">＋ 新しい路線をつくる</button>
     <div class="tabs" id="tabs">
-      <button data-tab="lines" class="on">路線</button><button data-tab="station">駅</button><button data-tab="finance">財務</button><button data-tab="goals">目標</button>
+      <button data-tab="lines" class="on">路線</button><button data-tab="station">駅</button><button data-tab="finance">財務</button><button data-tab="goals">目標</button><button data-tab="guide">攻略</button>
     </div>
     <div id="tab-lines"></div>
     <div id="tab-station" hidden></div>
     <div id="tab-finance" hidden></div>
     <div id="tab-goals" hidden></div>
+    <div id="tab-guide" hidden></div>
   </aside>
 </div>
 
@@ -648,9 +655,9 @@ function confirmExtend(){
 // サイドパネル（タブ）
 // ============================================================
 function setTab(t){ tab=t; document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("on",b.dataset.tab===t));
-  ["lines","station","finance","goals"].forEach(k=>$("tab-"+k).hidden=k!==t); renderSide(); }
+  ["lines","station","finance","goals","guide"].forEach(k=>$("tab-"+k).hidden=k!==t); renderSide(); }
 function renderSide(){
-  if(tab==="lines") renderLines(); else if(tab==="station") renderStation(); else if(tab==="finance") renderFinance(); else renderGoals();
+  if(tab==="lines") renderLines(); else if(tab==="station") renderStation(); else if(tab==="finance") renderFinance(); else if(tab==="guide") renderGuide(); else renderGoals();
 }
 function lineTip(l){
   if(!l.last) return `<div class="tip muted">⏳ 月末に成績が出ます</div>`;
@@ -755,6 +762,83 @@ function renderFinance(){
   $("resetBtn").onclick=()=>askConfirm("最初からやり直しますか？","今のデータは消え、新しい地図になります。","やり直す",restart);
   drawChart();
 }
+// ============================================================
+// 攻略タブ：いまの状況から「次にやること」を出す＋攻略ガイド
+// ============================================================
+function guideNow(){
+  const out=[], mc=S.lines.reduce((a,l)=>a+lineUpkeep(l),0), buffer=mc*2;
+  if(S.money<0) out.push(["🚨",`資金がマイナスです（${S.negMonths}/3か月で倒産）。赤字路線の列車を売るか、財務タブで借り入れを。`]);
+  if(!S.lines.length){ out.push(["1️⃣","「＋新しい路線をつくる」で、人口の多い町（大きな丸）どうしをつなごう。"]); return out; }
+  for(const l of S.lines){ const L=l.last; if(!L) continue;
+    const full=l.trains.length>=maxTrains(l), busy=L.load>0.75&&L.lost>L.riders*0.1;
+    const best=S.unlocks.includes("express")?"express":S.unlocks.includes("rapid")?"rapid":null;
+    if(busy && !full) out.push(["🚃",`<b>${l.name}</b>が満員で客を逃しています → 列車を足そう（${TRAINS.local.name} ${yen(trainPrice("local"))}）`]);
+    else if(busy && full && best && l.trains.some(t=>t.type==="local")) out.push(["🔁",`<b>${l.name}</b>は満線 → 普通を売って<b>${TRAINS[best].name}</b>に入れ替えよう`]);
+    else if(L.load<0.35 && L.rev<L.upkeep && l.trains.length>1) out.push(["💤",`<b>${l.name}</b>は空席が多く赤字 → 列車を1編成売ろう`]);
+    else if(L.rev<L.upkeep && l.trains.length===1) out.push(["📉",`<b>${l.name}</b>は赤字 → 1編成だけだと苦しい。2編成目を足すか、人の多い町へ延伸を`]); }
+  const conn=S.cities.filter(c=>connected(c.id));
+  const dev=conn.filter(c=>c.dev<2 && devCost(c)<18*c.pop*CFG.rentPerPop).sort((a,b)=>b.pop-a.pop)[0];
+  if(dev && S.money>devCost(dev)+buffer) out.push(["🏘️",`<b>${dev.name}</b>を沿線開発（${yen(devCost(dev))}）→ 家賃 月+${yen(dev.pop*CFG.rentPerPop)}、約${Math.ceil(devCost(dev)/(dev.pop*CFG.rentPerPop))}か月で元が取れる`]);
+  for(const c of conn){ const n=SHOPS[c.shop+1]; if(!n||!c.last) continue; const flow=c.last.foot+c.last.xfer*0.5, gain=flow*(n.spend-SHOPS[c.shop].spend)-(n.upkeep-SHOPS[c.shop].upkeep);
+    if(gain>0 && gain*12>n.cost && S.money>n.cost+buffer){ out.push(["🏬",`<b>${c.name}駅</b>に「${n.name}」（${yen(n.cost)}）→ 月+${yen(gain)}の見込み`]); break; } }
+  const hub=conn.map(c=>[c,linesAtCount(c.id)]).sort((a,b)=>b[1]-a[1])[0];
+  if(hub && hub[1]<4 && !S.goalsDone.includes("hub")) out.push(["⇄",`<b>${hub[0].name}</b>から短い路線を出して、4路線が集まるハブ駅に（目標の報酬 1億円）`]);
+  if(!S.lines.some(l=>l.loop) && S.lines.length>=2) out.push(["🔄","近くの町を3つつないで最初の駅をタップ → 環状線（目標の報酬 3,000万円）"]);
+  const lost=conn.reduce((a,c)=>a+(c.last?.lost||0),0), board=conn.reduce((a,c)=>a+(c.last?.board||0),0), fi=CFG.fareLevels.indexOf(S.fareLevel);
+  if(board>0 && lost>board*0.5 && fi<CFG.fareLevels.length-1) out.push(["💴","全体で客を大きく取りこぼしています → 財務タブで運賃を1段上げると売上が増えます（町の育ちは少し遅くなる）"]);
+  else if(board>0 && lost<board*0.05 && S.fareLevel>1) out.push(["💴","取りこぼしがほぼありません → 運賃を下げると客が増え、町も育ちます"]);
+  if(S.loan>0 && S.money>S.loan+buffer) out.push(["🏦","借金を返せるお金があります。クリアには借金ゼロが必要なので、財務タブで返しておこう"]);
+  const yearsLeft=CFG.deadlineYears-S.day/360;
+  if(yearsLeft<1.5 && !S.cleared) out.push(["⏳","残り1年半を切りました。元を取るのに1年以上かかる買い物（駅ビル・開発の3段階目以上）は控えて、お金を貯めよう"]);
+  const next=GOALS.find(g=>!S.goalsDone.includes(g.id)); if(next) out.push(["🎯",`次の目標：<b>${next.text}</b>（${Math.floor(clamp(next.prog(),0,1)*100)}%）${next.reward?" 報酬 "+yen(next.reward):""}`]);
+  if(out.length<=1) out.push(["👍","順調です。月末ごとに「路線」タブで利益と取りこぼしを見ておこう"]);
+  return out.slice(0,6);
+}
+const GUIDE_HTML=`
+<details open><summary>まず覚えるルール3つ</summary><ol>
+<li><b>お金になるのは満員の列車だけ</b>。普通列車は1編成で維持費 月120万円（毎年上がる）。ガラガラだとすぐ赤字。</li>
+<li><b>月末の資金がマイナスのまま3か月で倒産</b>。手元には「月の経費の2〜3か月分」を残そう。</li>
+<li>ゴールは<b>10年以内に借金ゼロで資金100億円</b>。経費は毎年+10%、運賃は+4%しか上がらない。</li></ol></details>
+<details><summary>第1段階：最初の3か月</summary><ol>
+<li>チュートリアルで光る2つの町をつなぐ（費用と人口のバランスがいい組み合わせ）。</li>
+<li>開業したら<b>すぐ2編成目</b>を買う。1編成だと線路の保守費で赤字になりがち。</li>
+<li>▶▶▶で月末まで進め、「路線」タブで<b>路線の利益がプラス</b>か確かめる。マイナスならもう1編成。</li></ol></details>
+<details><summary>第2段階：1年目（列車5編成・5駅）</summary><ol>
+<li>乗車率80%以上で取りこぼしが出ている間は列車を足す。<b>「列車を5編成もつ」で+1,500万＆快速解禁</b>。</li>
+<li>一番大きな町を<b>沿線開発（1段階目）</b>。人口15万人なら約2,000万円で家賃 月約375万円、半年ほどで元が取れる。</li>
+<li>大きな町へ延伸して「5つの駅を接続」（+1,000万）。</li>
+<li>人の多い駅に<b>売店</b>。駅カードの「先月の人数なら 月◯円」が維持費を大きく超えていればOK（目安：通る人 月1万人〜）。</li></ol></details>
+<details><summary>第3段階：1〜3年目（ハブ駅）</summary><ol>
+<li>一番大きな町から短い路線を何本も出して<b>乗換駅（ハブ）</b>に。「4路線が集まるハブ駅」で<b>+1億円</b>。乗り換え客3,000人/月（+2,000万）もついてくる。</li>
+<li>近くの3つの町で<b>環状線</b>（+3,000万）。小さくてOK、外回り・内回り2編成で十分。</li>
+<li>ハブ駅を<b>駅ナカ</b>に（乗り換え客は1.5倍買い物）。目安：通る人 月4万人〜。</li>
+<li>満員で取りこぼしが多いなら<b>運賃110〜120%</b>。上げすぎると町が育たない。</li></ol></details>
+<details><summary>第4段階：3〜6年目（特急・大都市）</summary><ol>
+<li>累計乗客10万人で<b>特急</b>解禁。満線の路線は「普通を売る→特急を買う」（運べる量 約6倍）。</li>
+<li>町は<b>取りこぼしが少なく運賃が高すぎない</b>と育つ。人口が上限なら沿線開発・駅の改良で上限アップ。</li>
+<li><b>駅の改良</b>は「列車に空席があるのに客が足りない」駅に。満員の路線の駅を改良しても客があふれるだけ。</li>
+<li>メインのハブを<b>駅ビル</b>に（目安：通る人 月9万人〜）。延伸と支線で「20駅」（+2億）。</li></ol></details>
+<details><summary>第5段階：6〜10年目（100億円へ）</summary><ol>
+<li>「すべての町を接続」で+5億。端の小さな町はハブからの支線で拾う。</li>
+<li>年が明ける前に、乗車率35%未満の赤字路線は列車を減らす（経費が上がるため）。</li>
+<li><b>借金は早めに全部返す</b>。残っているとクリアにならない。</li>
+<li>最後の1〜2年は、元が取れるまで長い買い物（駅ビル・開発3段階目以上）をせず貯める。</li></ol></details>
+<details><summary>やってはいけないこと</summary><ul>
+<li>一度に建てすぎて手元のお金がなくなる（いちばん多い倒産パターン）</li>
+<li>満員の幹線の途中に小さな町をはさむ（全部の列車が遅くなる）</li>
+<li>山（×2.5）・川（×4）・海（×8）を突っ切る。少し回り道でも平地が安いことが多い</li>
+<li>満員の路線の駅を改良する／運賃130%のままにする</li></ul></details>
+<details><summary>毎月見るところ（Spaceで一時停止）</summary><ul>
+<li><b>路線タブ</b>：利益・乗車率・取りこぼし。満員で取りこぼし→列車を足す。空いていて赤字→減らす</li>
+<li><b>地図</b>：駅の輪が赤＝客があふれている</li>
+<li><b>駅（タップ）</b>：「先月の人数なら 月◯円」で駅ナカを開くか判断</li>
+<li><b>財務タブ</b>：利益のグラフが下がり続けていたら赤字路線を整理</li></ul></details>
+<p class="muted">参考：経営を全部使ったAIは、この流れで6〜7年目にクリアしました。</p>`;
+function renderGuide(){
+  const gp=$("tab-guide"), open=[...gp.querySelectorAll("details")].map(d=>d.open);
+  gp.innerHTML=`<div class="card"><b>📌 いまのおすすめ</b>${guideNow().map(([i,t])=>`<div class="todo"><span>${i}</span><span>${t}</span></div>`).join("")}</div><div class="guide">${GUIDE_HTML}</div>`;
+  if(open.length) gp.querySelectorAll("details").forEach((d,i)=>{ if(open[i]!==undefined) d.open=open[i]; });   // 開閉状態を保つ
+}
 function drawChart(){
   const c=$("chart"); if(!c) return; const r=c.getBoundingClientRect(), dpr=devicePixelRatio||1; c.width=r.width*dpr; c.height=r.height*dpr;
   const g=c.getContext("2d"); g.scale(dpr,dpr); const W=r.width,H=r.height, data=S.history.slice(-12);
@@ -837,7 +921,7 @@ $("coachNext").onclick=()=>{ S.tut=99; updateTutorial(); SFX.goal(); };
 // ============================================================
 function css(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
 let colors={};
-function readColors(){ ["--land","--land2","--water","--sea","--sand","--mount","--mount2","--label","--halo","--accent","--gold","--bad","--ink","--f","--panel","--line","--bld","--bld2"].forEach(k=>colors[k]=css(k)); }
+function readColors(){ ["--land","--land2","--water","--sea","--sand","--mount","--mount2","--label","--halo","--accent","--gold","--bad","--ink","--f","--panel","--line","--bld","--bld2","--bld3","--road"].forEach(k=>colors[k]=css(k)); townCache.clear(); }
 function resize(){
   const r=cv.parentElement.getBoundingClientRect(); if(!r.width||!r.height) return; view.dpr=devicePixelRatio||1;
   cv.width=Math.round(r.width*view.dpr); cv.height=Math.round(r.height*view.dpr); view.w=r.width; view.h=r.height;
@@ -898,11 +982,25 @@ function drawLinePath(l,k,progress=1){
     ctx.beginPath(); ctx.moveTo(a.x+ox,a.y+oy); ctx.lineTo(a.x+ox+(b.x-a.x)*f,a.y+oy+(b.y-a.y)*f); ctx.stroke(); }
 }
 let previewCache={key:"",text:""};
-// 町並みの建物の位置（町ごとに固定の乱数で決める）
-const SPRAWL_MAX=110, sprawlCache=new Map();
-function sprawl(c){ let a=sprawlCache.get(c.id); if(a) return a; const r=mulberry((S.seed^(c.id*7919))>>>0); a=[];
-  for(let i=0;i<SPRAWL_MAX;i++){ const ang=r()*Math.PI*2, d=18+Math.sqrt(i)*9+r()*10, w=5+r()*7, h=5+r()*7; a.push([Math.cos(ang)*d-w/2,Math.sin(ang)*d-h/2,w,h]); }
-  sprawlCache.set(c.id,a); return a; }
+// 町並み：人口に合わせて建物が広がる。大都市は中心にビル街、放射状の道路
+// 建物の配置は町ごとに固定の乱数で決め、絵は町ごとに画像（スプライト）にしておいて1回で描く（軽い）
+const TOWN_MAX=300, townLayoutCache=new Map(), townCache=new Map();
+function bldCount(c){ return Math.min(TOWN_MAX,Math.floor(c.pop/1000)); }
+function townLayout(c){ let L=townLayoutCache.get(c.id); if(L) return L; const r=mulberry((S.seed^(c.id*7919))>>>0);
+  const b=[]; for(let i=0;i<TOWN_MAX;i++){ const ang=r()*Math.PI*2, d=12+Math.sqrt(i)*8.2+r()*7, big=i<36; const w=big?7+r()*8:4+r()*5, h=big?7+r()*8:4+r()*5; b.push([Math.cos(ang)*d-w/2,Math.sin(ang)*d-h/2,w,h,big]); }
+  const roads=[]; const n0=r()*Math.PI; for(let i=0;i<8;i++) roads.push(n0+i*Math.PI/4+(r()-.5)*.35);
+  L={b,roads}; townLayoutCache.set(c.id,L); return L; }
+function townSprite(c){
+  const n=bldCount(c), ti=tierOf(c.pop), key=Math.floor(n/4)+":"+ti; const cur=townCache.get(c.id); if(cur&&cur.key===key) return cur;
+  const L=townLayout(c), R=Math.ceil(26+Math.sqrt(Math.max(1,n))*8.2), res=1.25, cv2=document.createElement("canvas"); cv2.width=cv2.height=Math.ceil(R*2*res);
+  const g=cv2.getContext("2d"); g.scale(res,res); g.translate(R,R);
+  if(ti>=1){ g.strokeStyle=colors["--road"]; g.lineCap="round"; g.lineWidth=ti>=3?5:3.5; const nr=Math.min(8,2+ti*2);
+    for(let i=0;i<nr;i++){ const a=L.roads[i]; g.beginPath(); g.moveTo(0,0); g.lineTo(Math.cos(a)*(R-6),Math.sin(a)*(R-6)); g.stroke(); }
+    if(ti>=2){ g.lineWidth=2.5; g.beginPath(); g.arc(0,0,(R-6)*0.55,0,7); g.stroke(); } }   // 環状道路
+  for(let i=n-1;i>=0;i--){ const q=L.b[i], tower=q[4]&&ti>=2;
+    g.fillStyle=tower?colors["--bld3"]:colors["--bld"]; g.fillRect(q[0],q[1],q[2],q[3]);
+    if(tower||i%3===0){ g.fillStyle=colors["--bld2"]; g.fillRect(q[0],q[1]+q[3]*0.6,q[2],q[3]*0.4); } }   // 影で立体感
+  const sp={key,canvas:cv2,R}; townCache.set(c.id,sp); return sp; }
 function draw(time){
   ctx.setTransform(view.dpr,0,0,view.dpr,0,0); ctx.clearRect(0,0,view.w,view.h);
   const sh=shake>0?(Math.random()-.5)*8*shake/.25:0, sv=shake>0?(Math.random()-.5)*8*shake/.25:0;
@@ -942,9 +1040,7 @@ function draw(time){
   ctx.globalAlpha=1;
   // 町並み（人口に応じて建物が広がる）
   const x0w=-view.ox/view.scale-120, y0w=-view.oy/view.scale-120, x1w=x0w+view.w/view.scale+240, y1w=y0w+view.h/view.scale+240;
-  for(const c of S.cities){ if(c.x<x0w||c.x>x1w||c.y<y0w||c.y>y1w) continue; const n=Math.min(SPRAWL_MAX,Math.floor(c.pop/9000)), sp=sprawl(c);
-    ctx.fillStyle=colors["--bld"]; for(let i=0;i<n;i++){ const b=sp[i]; ctx.fillRect(c.x+b[0],c.y+b[1],b[2],b[3]); }
-    ctx.fillStyle=colors["--bld2"]; for(let i=0;i<n;i+=3){ const b=sp[i]; ctx.fillRect(c.x+b[0],c.y+b[1],b[2],b[3]*0.45); } }
+  for(const c of S.cities){ if(c.x<x0w-200||c.x>x1w+200||c.y<y0w-200||c.y>y1w+200||c.pop<3000) continue; const sp=townSprite(c); ctx.drawImage(sp.canvas,c.x-sp.R,c.y-sp.R,sp.R*2,sp.R*2); }
   // 駅・町
   const tut=tutStep(), tutTarget= tut===1?tutA : tut===2?tutB : null;
   const lowZoom=view.scale<0.45;
@@ -1086,7 +1182,7 @@ function offlineEarnings(){
 }
 function afterLoad(){
   geomCache.clear(); invalidateNet(); buildAnim.clear(); floaters.length=0; particles.length=0; pulses.length=0; selected=null; lastTut=-1;
-  sprawlCache.clear();
+  townCache.clear(); townLayoutCache.clear();
   for(const l of S.lines){ l.st=l.st||freshLineSt(); }
   for(const c of S.cities){ c.pop0=c.pop0||c.pop; c.wait=c.wait||{}; c.xw=c.xw||{}; c.st=c.st||freshCitySt(); }
   dispMoney=S.money; pickTutorialPair(); setMode("select"); readColors(); resize();
