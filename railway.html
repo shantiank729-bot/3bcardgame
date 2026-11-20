@@ -175,7 +175,7 @@ a{color:var(--accent)}
       <li><b>見きわめる</b>：「路線」タブで路線ごとの利益と乗車率がわかります。満員続きなら列車を追加、ガラガラなら減らしましょう。</li>
       <li><b>取りこぼしに注意</b>：駅の待ち客（青い輪）が赤くなると、乗れずに帰る客が出ます。路線カードと駅の情報に「取りこぼし」と逃した売上が出ます。</li>
       <li><b>環状線</b>：3駅以上つないだあと、<b>最初の駅をもう一度タップ</b>すると輪が閉じて環状線になります。列車は外回り・内回りが交互に走り、終点で折り返さないので効率よく回ります。</li>
-      <li><b>乗り換え</b>：客は路線を乗り換えて、つながっているどの町へも行きます。路線が集まるハブ駅には乗り換え客があふれます。乗り換えると基本料金がもう1回かかります。行ける駅が多いほど客も増えます（1駅ごとに+8%）。</li>
+      <li><b>乗り換え・通し運賃</b>：客は路線を乗り換えて、つながっているどの町へも行きます。同じ会社なので運賃は<b>乗った距離だけ</b>（乗り換えても高くならない）。<b>乗り換えなしで行ける町ほど客がたくさん乗る</b>ので、多くの駅を通る長い路線が強い。町を1つつなぐと、つながっている<b>全部の駅で客が増えます</b>。</li>
       <li><b>経営</b>：駅をタップして<b>駅ナカ</b>（通る人・乗り換え客が買い物）や<b>沿線開発</b>（家賃収入＋人口の上限アップ）。財務タブで<b>運賃</b>を設定（満員なら値上げ、空いていれば値下げ）。</li>
       <li><b>町が増える</b>：最初は45の町。鉄道が通ると、駅の近くにときどき新しい村が生まれます（最大70町）。新しい村もつないで育てよう。</li>
       <li><b>都市を育てる</b>：客をさばけている町は人口が増え、村→町→市→大都市→巨大都市へ。上限は沿線開発と駅の改良で上がります。</li>
@@ -213,10 +213,11 @@ const CFG = {
   trackUpkeepPerPx: 2_000,                   // 線路の保守費（月額・1pxあたり）
   inflationPerYear: 0,                       // 維持費・保守費の年ごとの値上がり（0＝ずっと同じ）
   fareRisePerYear: 0,                        // 運賃の年ごとの値上がり（0＝ずっと同じ）
-  fareBase: 500, farePerPx: 8,               // 運賃＝基本料金×乗った路線の数＋距離（乗り換えると基本料金がもう1回かかる）
+  fareBase: 500, farePerPx: 8,               // 運賃＝基本料金＋乗った距離（同じ会社なので乗り換えても通しの運賃）
   transferPenaltyPx: 150,                    // 経路選び：乗り換え1回は150px分の遠回りと同じくらい嫌われる
   genPerPop: 1/1800, waitCapPerPop: 1/150,     // 客の発生（人口あたり／日）と、駅の待合室の広さ
-  netBonus: 0.08, netBonusMax: 2.5,          // 乗り換え込みで行ける駅が1つ増えるごとに乗客+8%（最大2.5倍）
+  refPop: 100000, demandSat: 8,              // 行き先の魅力：人口10万の町に乗り換えなしで行けると1。行き先が増えるほど客が増える（増え方はだんだんゆるやか）
+  legFactor: [0,1,0.5,0.3],                  // 乗り換えなし=1、1回乗り換え=0.5、2回以上=0.3（乗り換えが少ないほど客が乗る）
   growthPerDay: 0.0022, popCapMul: 2.5,      // 人口の上限は最初の2.5倍＋開発・駅の改良で上がる
   devCapMul: 0.6, levelCapMul: 0.3,
   rentPerPop: 25,                            // 沿線開発1段階あたり 人口×25円/月 の家賃収入
@@ -355,9 +356,13 @@ function net(){ if(netCache) return netCache;
 function connected(cid){ return net().conn.has(cid); }
 function destCount(cid){ const r=net().route.get(cid); return r?r.size:0; }
 function linesAtCount(cid){ const a=net().linesAt.get(cid); return a?a.length:0; }
-function netMul(cid){ return Math.min(CFG.netBonusMax, 1+CFG.netBonus*Math.max(0,destCount(cid)-1)); }
+// 行き先の魅力：人口が多く、乗り換えが少ない行き先ほど、そこへ行きたい客が多い
+function attract(d,h){ return Math.sqrt(S.cities[d].pop/CFG.refPop)*CFG.legFactor[Math.min(3,h.legs)]; }
+// 駅の「行き先の多さ」による客の倍率（町を1つつなぐと、つながっている全部の駅で客が増える）
+function netMul(cid){ const r=net().route.get(cid); if(!r) return 0; let G=0; for(const [d,h] of r) G+=attract(d,h); return G/(1+G/CFG.demandSat)*(1+1/CFG.demandSat); }
+function directCount(cid){ const r=net().route.get(cid); let n=0; if(r) for(const [,h] of r) if(h.legs===1) n++; return n; }
 function demandMul(){ return Math.pow(S.fareLevel,-CFG.fareElasticity); }
-function fareFor(dist,legs=1){ return (CFG.fareBase*legs+dist*CFG.farePerPx)*fareMul()*S.fareLevel; }
+function fareFor(dist){ return (CFG.fareBase+dist*CFG.farePerPx)*fareMul()*S.fareLevel; }
 function popCap(c){ return c.pop0*(CFG.popCapMul+CFG.devCapMul*c.dev+CFG.levelCapMul*(c.level-1)); }
 function devCost(c){ return Math.round(10_000_000*Math.pow(2,c.dev)*(0.5+c.pop0/100000)/1e5)*1e5; }
 function upCost(c){ return Math.round(CFG.stationUpgradeBase*Math.pow(2.2,c.level-1)*(c.pop/40000)/10000)*10000; }
@@ -467,12 +472,20 @@ function arrive(line,t,si){
     else if(floaters.length<CFG.maxFloaters) floaters.push({city:city.id,x:city.x,y:city.y,amount:income,text:"+"+yen(income),life:1.6});
     const n=particles.length>CFG.maxParticles?0:Math.min(6,2+Math.floor((off+xfer)/20)); for(let i=0;i<n;i++){ const a=-Math.PI/2+(Math.random()-.5)*2.2, v=60+Math.random()*90; particles.push({x:city.x,y:city.y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,life:.9,color:"#F2C14E",size:4}); }
     if(pulses.length<40) pulses.push({x:city.x,y:city.y,life:.6,color:line.color}); SFX.coin(off+xfer); bumpMoney(); }
-  let dir=t.dir; if(!line.loop){ if(si===0) dir=1; if(si===line.stops.length-1) dir=-1; } t.dir=dir;
+  let dir=t.dir; if(!line.loop){ if(si===0) dir=1; if(si===line.stops.length-1) dir=-1; }
   // 乗車：この駅で待つ客のうち「次に乗るのがこの路線のこの向き」の客だけ
-  const r=net().route.get(city.id), free=spec.cap-t.n;
+  const r=net().route.get(city.id), free=spec.cap-t.n; city.xw=city.xw||{};
+  const candsFor=dd=>{ const cs=[]; let tt=0; if(!r) return [cs,0];
+    for(const m of [city.xw,city.wait]) for(const d in m){ const e=m[d]; if(e[0]<1) continue; const h=r.get(+d); if(!h||h.hop.line!==line.id||h.hop.dir!==dd) continue; cs.push([+d,e,h.hop.toIdx,m]); tt+=e[0]; }
+    return [cs,tt]; };
+  let [cands,tot]=candsFor(dir);
+  // かしこい折り返し（区間運転）：途中駅で空になり、この先に待つ客もほとんどいなければ、ここで折り返す
+  if(!line.loop && t.n<1 && si>0 && si<line.stops.length-1){
+    let ahead=tot; for(let j=si+dir;j>=0&&j<line.stops.length;j+=dir){ const c2=S.cities[line.stops[j]]; ahead+=(c2.wl&&c2.wl[line.id])||0; }
+    if(ahead<spec.cap*0.3){ dir=-dir; [cands,tot]=candsFor(dir); }
+  }
+  t.dir=dir;
   if(free>0 && r){
-    const cands=[]; let tot=0; city.xw=city.xw||{};
-    for(const m of [city.xw,city.wait]) for(const d in m){ const e=m[d]; if(e[0]<1) continue; const h=r.get(+d); if(!h||h.hop.line!==line.id||h.hop.dir!==dir) continue; cands.push([+d,e,h.hop.toIdx,m]); tot+=e[0]; }
     const take=Math.min(free,Math.floor(tot));
     if(take>0){ let left=take, local=0;
       cands.forEach(([d,e,toIdx,m],k)=>{ const n=k===cands.length-1?left:Math.min(left,Math.floor(take*e[0]/tot)); if(n<=0) return;
@@ -490,17 +503,18 @@ function simulate(dtReal){
     if(!r||!r.size){ c.waiting=0; c.wait={}; c.xw={}; continue; }
     // 乗客の発生：人口×駅のレベル×（乗り換え込みで行ける駅の多さ）×運賃の高さ
     const gen=c.pop*CFG.genPerPop*c.level*(c.boost>0?2:1)*netMul(c.id)*dm*days;
-    let sw=0; for(const [d] of r) sw+=Math.sqrt(S.cities[d].pop);
+    let sw=0; for(const [d,h] of r) sw+=attract(d,h);
     // 路線ごとに「乗りたい客」を集計し、そのホームの空きの分だけ受け入れる（あふれた分はその路線の取りこぼし）
     c.wl=c.wl||{}; const want={}, platCap=waitCap(c);
-    for(const [d,h] of r){ const w=Math.sqrt(S.cities[d].pop)/sw; want[h.hop.line]=(want[h.hop.line]||0)+gen*w; }
+    for(const [d,h] of r){ const w=attract(d,h)/sw; want[h.hop.line]=(want[h.hop.line]||0)+gen*w; }
     const okRate={}; for(const ln in want){ const space=Math.max(0,platCap-(c.wl[ln]||0)); okRate[ln]=Math.min(1,space/want[ln]); }
-    for(const [d,h] of r){ const w=Math.sqrt(S.cities[d].pop)/sw, f=fareFor(h.dist,h.legs), n=gen*w, ok=n*okRate[h.hop.line], lost=n-ok;
+    for(const [d,h] of r){ const w=attract(d,h)/sw, f=fareFor(h.dist), n=gen*w, ok=n*okRate[h.hop.line], lost=n-ok;
       if(ok>0){ addWait(c,d,ok,f,h.dist); c.wl[h.hop.line]=(c.wl[h.hop.line]||0)+ok; }
       if(lost>0){ c.st.lost+=lost; c.st.lostRev+=lost*f; const L=lineById.get(h.hop.line); if(L){ L.st.lost+=lost; L.st.lostRev+=lost*f; } } }
     // 町の成長：客をさばけている（取りこぼしが少ない）ほど育つ。上限は開発と駅の改良で上がる
     const cap=popCap(c);
-    if(c.svc>0.35 && c.pop<cap) c.pop=Math.min(cap, c.pop*(1+CFG.growthPerDay*days*Math.min(1,(c.svc-0.35)/0.45)*(0.5+c.level*0.5)*Math.min(1,dm)));  // 客をさばけているほど育つ。運賃が高いと育ちにくい
+    // 町の成長：鉄道がつながっていれば育つ。行ける駅が多いほど速く、取りこぼしが多い・運賃が高いと少しゆっくり
+    if(c.pop<cap) c.pop=Math.min(cap, c.pop*(1+CFG.growthPerDay*days*(0.5+0.5*c.svc)*Math.min(1.8,0.8+0.04*r.size)*(0.5+c.level*0.5)*Math.min(1,0.5+0.5*dm)));
     if(c.boost>0) c.boost-=days;
   }
   for(const line of S.lines){ const g=geom(line);
@@ -741,8 +755,8 @@ function renderStation(){
   sp.innerHTML=`<div class="card"><div class="row between"><b style="font-size:17px">${c.name}${conn?"駅":"（未開通）"}</b><span class="muted">${TIERS[tierOf(c.pop)][1]}・駅Lv.${c.level}${lines.length>1?`・${lines.length}路線の乗換駅`:""}</span></div>
     <div class="kv" style="margin-top:4px"><span>人口</span><span>${Math.round(c.pop).toLocaleString()}人 ${c.boost>0?"🎆":""}</span><span>人口の上限</span><span>${Math.round(pc).toLocaleString()}人</span></div>
     <div class="bar"><i style="width:${Math.min(100,c.pop/pc*100)}%;background:#2BA36B"></i></div>
-    ${conn?`<div class="tip">${c.pop>=pc*0.98?"🏗️ 人口が上限です。<b>沿線開発</b>や<b>駅の改良</b>で上限を上げよう":c.svc>0.35?"🌱 客をさばけているので町が育っています":"⚠️ 客を取りこぼしていて町が育ちません。列車を足そう"}</div>
-      <div class="kv" style="margin-top:6px"><span>乗り換え込みで行ける駅</span><span>${destCount(c.id)}駅（乗客×${netMul(c.id).toFixed(2)}）</span>
+    ${conn?`<div class="tip">${c.pop>=pc*0.98?"🏗️ 人口が上限です。<b>沿線開発</b>や<b>駅の改良</b>で上限を上げよう":c.svc>0.7?"🌱 鉄道のおかげで町が育っています":"🌱 町は育っていますが、客の取りこぼしで少しゆっくり。列車を足すと速く育つ"}</div>
+      <div class="kv" style="margin-top:6px"><span>行ける駅（乗り換えなし／あり）</span><span>${directCount(c.id)}駅／${destCount(c.id)-directCount(c.id)}駅</span><span>行き先の多さによる客の倍率</span><span>×${netMul(c.id).toFixed(2)}</span>
       <span>次の列車を待つ客</span><span>${Math.floor(c.waiting)}人</span><span>いちばん混んでいるホーム</span><span>${Math.floor(maxPlatform(c))} / ${Math.floor(cap)}</span>
       ${L?`<span>先月 乗った客</span><span>${Math.round(L.board).toLocaleString()}人</span><span>先月 乗り換え客</span><span>${Math.round(L.xfer).toLocaleString()}人</span>
       <span>先月 取りこぼし</span><span class="${L.lost>L.board*0.15?"neg":""}">${Math.round(L.lost).toLocaleString()}人（${yen(L.lostRev)}）</span>
