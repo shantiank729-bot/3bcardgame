@@ -64,6 +64,7 @@ body.building .news{display:none}
 .zoom{position:absolute;right:10px;bottom:10px;display:flex;flex-direction:column;gap:6px}
 .zoom button{width:40px;height:40px;padding:0;font-size:20px;background:var(--panel);box-shadow:0 1px 4px rgba(0,0,0,.15)}
 body.nomini #mini{display:none}
+.modechip{position:absolute;right:60px;bottom:12px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:4px 10px;font-size:12px;box-shadow:0 1px 4px rgba(0,0,0,.15)}
 body:not(.nomini) #miniToggle{background:var(--soft)}
 #mini{position:absolute;left:10px;bottom:10px;width:180px;height:120px;border:2px solid var(--panel);border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.2);cursor:pointer;touch-action:none;background:var(--land)}
 .banner{position:absolute;left:50%;top:38%;transform:translate(-50%,-50%);background:var(--panel);border:3px solid var(--gold);border-radius:16px;padding:14px 24px;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.25);pointer-events:none;animation:pop 2.6s cubic-bezier(.34,1.56,.64,1) forwards;min-width:240px}
@@ -148,7 +149,8 @@ a{color:var(--accent)}
         <div class="coach" id="coach" hidden><div><div class="step" id="coachStep"></div><div id="coachText"></div></div><button id="coachNext" hidden>OK</button><button id="coachSkip" title="チュートリアルを閉じる">✕</button></div>
         <div class="news" id="news"></div>
       </div>
-      <div class="zoom"><button id="zoomIn" aria-label="拡大">＋</button><button id="zoomOut" aria-label="縮小">－</button><button id="zoomFit" aria-label="全体を表示">⤢</button><button id="miniToggle" aria-label="ミニマップを出す／隠す" title="ミニマップを出す／隠す">🗺️</button></div>
+      <div class="zoom"><button id="zoomIn" aria-label="拡大">＋</button><button id="zoomOut" aria-label="縮小">－</button><button id="zoomFit" aria-label="全体を表示">⤢</button><button id="miniToggle" aria-label="ミニマップを出す／隠す" title="ミニマップを出す／隠す">🗺️</button><button id="viewBtn" aria-label="表示の切り替え" title="表示の切り替え（通常／満足度／人口）">👁️</button></div>
+      <div class="modechip" id="modeChip" hidden></div>
       <div id="bannerHost"></div>
     </div>
   </div>
@@ -176,9 +178,10 @@ a{color:var(--accent)}
       <li><b>取りこぼしに注意</b>：客は電車がなかなか来ないと<b>待ちきれずに帰って</b>しまいます。駅の輪が赤いほど客がたまっている合図。列車を足して本数を増やそう。路線カードと駅の情報に取りこぼしと逃した売上が出ます。</li>
       <li><b>環状線</b>：3駅以上つないだあと、<b>最初の駅をもう一度タップ</b>すると輪が閉じて環状線になります。列車は外回り・内回りが交互に走り、終点で折り返さないので効率よく回ります。</li>
       <li><b>乗り換え・通し運賃</b>：客は路線を乗り換えて、つながっているどの町へも行きます。同じ会社なので運賃は<b>乗った距離だけ</b>（乗り換えても高くならない）。<b>乗り換えなしで行ける町ほど客がたくさん乗る</b>ので、多くの駅を通る長い路線が強い。町を1つつなぐと、つながっている<b>全部の駅で客が増えます</b>。</li>
-      <li><b>経営</b>：駅をタップして<b>駅ナカ</b>（通る人・乗り換え客が買い物）や<b>沿線開発</b>（町の人口の上限を上げる）。財務タブで<b>運賃</b>を設定（満員なら値上げ、空いていれば値下げ）。</li>
+      <li><b>経営</b>：駅をタップして<b>駅ナカ</b>（通る人・乗り換え客が買い物）や<b>沿線開発</b>（まちづくり：住宅地・商業地・オフィス街）。財務タブで<b>運賃</b>を設定（満員なら値上げ、空いていれば値下げ）。</li>
       <li><b>町が増える</b>：最初は45の町。鉄道が通ると、駅の近くにときどき新しい村が生まれます（最大70町）。新しい村もつないで育てよう。</li>
-      <li><b>0から都市を育てる</b>：最初はどの町も小さな村。鉄道がつながると育ち、村→町→市→大都市→巨大都市へ。人口の上限は2万人＋<b>沿線開発1レベルごとに3万人</b>（レベルの上限なし）。行ける駅が多いほど、駅を改良するほど速く育ちます。</li>
+      <li><b>0から都市を育てる</b>：最初はどの町も小さな村。鉄道がつながると育ち、村→町→市→大都市→巨大都市へ。町の育ち方は<b>満足度</b>（仕事・買い物・交通の便・運賃）で決まります。</li>
+      <li><b>まちづくり</b>：駅をタップして<b>住宅地</b>（人口の上限+3万）・<b>商業地</b>（お店。町で解禁）・<b>オフィス街</b>（仕事。市で解禁）を開発（レベルの上限なし）。仕事やお店は、<b>鉄道で通える町にあれば</b>足りることになるので、住宅の町とオフィスの町を鉄道で結ぼう。大きな町には<b>ランドマーク</b>（スタジアム・大学・展望タワー）も建てられます。地図右下の👁️で満足度・人口の表示に切り替え。町の上のアイコンは足りないもの。</li>
     </ol>
     <p class="muted">操作：ドラッグで移動／ピンチ・ホイールで拡大／左下のミニマップでジャンプ。キー：Space=一時停止、N=新路線、Esc=取消、+/-=拡大縮小。<br><b>難易度：高</b>　列車・線路の維持費は高めです。列車は何編成でも足せますが、客の数以上は乗らないので、足しすぎると乗車率が下がって赤字になります。<b>10年以内に借金ゼロで資金100億円</b>でクリア。資金がマイナスのまま3か月続くと倒産。ゲームを閉じている間も、最大6か月分まで半分の効率で稼ぎます。</p>
     <div class="row" style="justify-content:flex-end"><button class="primary" id="helpClose">OK</button></div>
@@ -218,7 +221,9 @@ const CFG = {
   genScale: 0.03,                            // 1日の客の発生＝0.03×人口^0.8（小さな村でも客がいて、大都市ほど多い）
   refPop: 100000, demandSat: 8,              // 行き先の魅力：人口10万の町に乗り換えなしで行けると1。行き先が増えるほど客が増える（増え方はだんだんゆるやか）
   legFactor: [0,1,0.5,0.3],                  // 乗り換えなし=1、1回乗り換え=0.5、2回以上=0.3（乗り換えが少ないほど客が乗る）
-  growthK: 0.02,                             // 町の成長：1日に 0.02×人口^0.75 人ほど（人口の上限まで）
+  growthK: 0.02,                             // 町の成長：1日に 0.02×人口^0.75 人ほど（人口の上限まで）×満足度
+  jobsPerLevel: 20000, shopsPerLevel: 15000, // オフィス街・商業地1レベルあたり
+  workerShare: 0.5, shopperShare: 0.3,       // 住民のうち働く人・買い物する人の割合（地元の仕事は人口の40%、お店は25%）
   popBase: 20000, popPerDev: 30000,          // 人口の上限＝2万人＋沿線開発1レベルごとに3万人（レベルの上限なし）
   patienceDays: 6,                           // 客は平均6日待っても電車が来ないと帰ってしまう（取りこぼし）
 
@@ -242,6 +247,18 @@ const SHOPS = [
   {name:"駅ナカ", cost:80_000_000, upkeep:3_000_000, spend:400},
   {name:"駅ビル", cost:500_000_000, upkeep:15_000_000, spend:1000},
 ];
+// まちづくり：3種類の開発（どれもレベルの上限なし）。町の大きさで解禁
+const ZONES = {
+  res:{name:"住宅地", icon:"🏠", cost:10_000_000, unlock:0, desc:"人口の上限 +3万人"},
+  com:{name:"商業地", icon:"🛍️", cost:12_000_000, unlock:1, desc:"お店 +1.5万人分。買い物客を呼び、駅ナカの売上も増える"},
+  job:{name:"オフィス街", icon:"🏢", cost:15_000_000, unlock:2, desc:"仕事 +2万人分。まわりの町から通勤客を呼ぶ"},
+};
+// ランドマーク：1つの町に1つ。たくさんの客を呼ぶ
+const LANDMARKS = {
+  stadium:{name:"スタジアム", icon:"🏟️", cost:300_000_000, tier:2, attract:60000, desc:"試合の日には遠くからも客が来る（行き先として人気に）"},
+  univ:{name:"大学", icon:"🎓", cost:400_000_000, tier:2, attract:30000, jobs:20000, growth:0.25, desc:"学生と仕事が増え、町の成長+25%"},
+  tower:{name:"展望タワー", icon:"🗼", cost:800_000_000, tier:3, attract:100000, shopMul:1.5, desc:"観光客がたくさん来る。この駅の駅ナカ売上×1.5"},
+};
 const TIERS = [[0,"村"],[30000,"町"],[100000,"市"],[300000,"大都市"],[800000,"巨大都市"]];
 function tierOf(pop){ return TIERS.reduce((a,t,i)=>pop>=t[0]?i:a,0); }
 const RANKS = [[0,"町の鉄道"],[2e8,"地方鉄道"],[1e9,"中堅私鉄"],[5e9,"大手私鉄"],[2e10,"鉄道王"]];
@@ -346,7 +363,7 @@ function newGame(){
     if(!landOK(x,y)) continue;
     if(cities.some(c=>Math.hypot(c.x-x,c.y-y)<CFG.cityMinDist)) continue;
     const i=cities.length, pop = i<4? 9000+r()*3000 : 2000+r()*8000;   // 最初はみんな小さな村。鉄道で育てていく
-    cities.push({id:i,name:CITY_NAMES[i],x,y,pop:Math.round(pop),pop0:Math.round(pop),waiting:0,level:1,boost:0,shop:0,dev:0,wait:{},st:freshCitySt(),last:null,svc:1,tier:tierOf(pop)});
+    cities.push({id:i,name:CITY_NAMES[i],x,y,pop:Math.round(pop),pop0:Math.round(pop),waiting:0,level:1,boost:0,shop:0,dev:0,com:0,job:0,lm:null,wait:{},st:freshCitySt(),last:null,svc:1,tier:tierOf(pop)});
   }
   invalidateNet();
   S={v:4,fareLevel:1,seed,money:CFG.startMoney,day:0,riders:0,earned:0,cities,lines:[],trainsBought:0,loan:0,negMonths:0,
@@ -362,7 +379,7 @@ function geom(line){ let g=geomCache.get(line.id); if(!g){ const pts=pathStops(l
   g={pts,cum,total:cum[cum.length-1]}; geomCache.set(line.id,g);} return g; }
 // 路線網のキャッシュ：接続済みの駅・経路（乗り換え込み）・区間の重なり。路線が変わったら invalidateNet()
 let netCache=null;
-function invalidateNet(){ netCache=null; }
+function invalidateNet(){ netCache=null; needsDirty=true; }
 function net(){ if(netCache) return netCache;
   const conn=new Set(); for(const l of S.lines) for(const id of l.stops) conn.add(id);
   const segs=new Map(); for(const l of S.lines){ const ps=pathStops(l); for(let i=1;i<ps.length;i++){ const a=ps[i-1],b=ps[i],key=a<b?a+"-"+b:b+"-"+a; if(!segs.has(key)) segs.set(key,[]); segs.get(key).push(l); } }
@@ -390,7 +407,28 @@ function connected(cid){ return net().conn.has(cid); }
 function destCount(cid){ const r=net().route.get(cid); return r?r.size:0; }
 function linesAtCount(cid){ const a=net().linesAt.get(cid); return a?a.length:0; }
 // 行き先の魅力：人口が多く、乗り換えが少ない行き先ほど、そこへ行きたい客が多い
-function attract(d,h){ return Math.sqrt(S.cities[d].pop/CFG.refPop)*CFG.legFactor[Math.min(3,h.legs)]; }
+// 町の「人を呼ぶ力」：人口＋仕事＋お店＋ランドマーク（オフィス街や商業地のある町は通勤・買い物の行き先になる）
+function attractMass(c){ return c.pop + 1.5*CFG.jobsPerLevel*(c.job||0) + 1.2*CFG.shopsPerLevel*(c.com||0) + (c.lm?LANDMARKS[c.lm].attract:0); }
+function attract(d,h){ return Math.sqrt(attractMass(S.cities[d])/CFG.refPop)*CFG.legFactor[Math.min(3,h.legs)]; }
+// 仕事とお店：地元の分＋鉄道で通える町の「余っている分」
+function jobsOf(c){ return 0.4*c.pop + CFG.jobsPerLevel*(c.job||0) + (c.lm&&LANDMARKS[c.lm].jobs||0); }
+function shopsOf(c){ return 0.25*c.pop + CFG.shopsPerLevel*(c.com||0); }
+// 満足度＝仕事35%＋買い物25%＋交通30%＋運賃10%。月末や路線・開発が変わったときに計算し直す
+let needsDirty=true;
+function computeNeeds(){
+  const jobSur=new Map(), shopSur=new Map();
+  for(const c of S.cities){ jobSur.set(c.id,Math.max(0,jobsOf(c)-CFG.workerShare*c.pop)); shopSur.set(c.id,Math.max(0,shopsOf(c)-CFG.shopperShare*c.pop)); }
+  const dmv=Math.min(1,demandMul());
+  for(const c of S.cities){ const r=net().route.get(c.id); let w=jobsOf(c), sh=shopsOf(c);
+    if(r) for(const [d,h] of r){ const f=CFG.legFactor[Math.min(3,h.legs)]*0.5; w+=jobSur.get(d)*f; sh+=shopSur.get(d)*f; }
+    const work=Math.min(1.2,w/Math.max(1,CFG.workerShare*c.pop)), shop=Math.min(1.2,sh/Math.max(1,CFG.shopperShare*c.pop));
+    const transit= r&&r.size? clamp(0.4*c.svc+0.6*Math.min(1,r.size/12),0,1) : 0;
+    const happy=0.35*Math.min(1,work)+0.25*Math.min(1,shop)+0.3*transit+0.1*dmv;
+    c.need={work,shop,transit,fare:dmv,happy}; }
+  needsDirty=false; }
+function needOf(c){ if(needsDirty||!c.need) computeNeeds(); return c.need; }
+// いちばん足りないもの（地図のアイコンと「攻略」タブ用）
+function topNeed(c){ const n=needOf(c), a=[["res",c.pop>=popCap(c)*0.95?0.5:1],["job",n.work],["com",n.shop]].sort((x,y)=>x[1]-y[1])[0]; return a[1]<0.9? a[0] : null; }   // いちばん深刻なもの
 // 駅の「行き先の多さ」による客の倍率（町を1つつなぐと、つながっている全部の駅で客が増える）
 function netMul(cid){ const r=net().route.get(cid); if(!r) return 0; let G=0; for(const [d,h] of r) G+=attract(d,h); return G/(1+G/CFG.demandSat)*(1+1/CFG.demandSat); }
 function directCount(cid){ const r=net().route.get(cid); let n=0; if(r) for(const [,h] of r) if(h.legs===1) n++; return n; }
@@ -400,9 +438,13 @@ function fareFor(dist){ return (CFG.fareBase+dist*CFG.farePerPx)*fareMul()*S.far
 function growthPerDay(c){ const r=net().route.get(c.id), dm=demandMul(), base=CFG.growthK*Math.pow(Math.max(1000,c.pop),0.75);
   if(!r||!r.size) return c.pop<popCap(c)? base*0.1 : 0;   // 鉄道がない村はほとんど育たない
   const room=clamp((popCap(c)-c.pop)/(popCap(c)*0.15),0,1);   // 上限に近づくとゆっくり、上限で止まる
-  return base*room*(0.5+0.5*c.svc)*Math.min(2,0.6+0.06*r.size)*(0.5+0.5*c.level)*Math.min(1,0.5+0.5*dm); }
+  const n=needOf(c), lm=c.lm&&LANDMARKS[c.lm].growth||0;
+  return base*room*(0.2+1.2*n.happy)*(0.5+0.5*c.level)*(1+lm); }   // 満足度が高い町ほど速く育つ
 function popCap(c){ return CFG.popBase+CFG.popPerDev*c.dev; }
-function devCost(c){ return Math.round(10_000_000*Math.pow(1.12,c.dev)/1e5)*1e5; }   // レベルが上がるほど少しずつ高くなる
+function zoneLv(c,z){ return z==='res'? c.dev : (c[z]||0); }
+function zoneCost(c,z){ return Math.round(ZONES[z].cost*Math.pow(1.12,zoneLv(c,z))/1e5)*1e5; }   // レベルが上がるほど少しずつ高くなる
+function devCost(c){ return zoneCost(c,'res'); }
+function buildZone(c,z){ const cost=zoneCost(c,z); if(S.money<cost||tierOf(c.pop)<ZONES[z].unlock) return false; S.money-=cost; S.m.invest+=cost; if(z==='res') c.dev++; else c[z]=(c[z]||0)+1; needsDirty=true; townCache.delete(c.id); return true; }
 function upCost(c){ return Math.round(CFG.stationUpgradeBase*Math.pow(2.2,c.level-1)*(c.pop/40000)/10000)*10000; }
 // 待ち客：wait＝この町から乗る客、xw＝乗り換え客。c.wl[路線id]＝その路線を待つ客（折り返しの判断に使う）
 // 待合室の定員はない。そのかわり、なかなか電車が来ないと客は帰ってしまう（取りこぼし）
@@ -433,8 +475,12 @@ const GOALS = [
   {id:"shop", text:"「駅ナカ」以上の店を開く", reward:2e7, prog:()=>S.cities.some(c=>c.shop>=2)?1:0},
   {id:"profit", text:"月の利益 3,000万円", reward:2e7, prog:()=>Math.max(0,lastProfit()||0)/3e7},
   {id:"loop", text:"環状線をつくる", reward:3e7, prog:()=>S.lines.some(l=>l.loop)?1:0},
+  {id:"com", text:"商業地をつくる（町になったら解禁）", reward:1e7, prog:()=>S.cities.some(c=>c.com>0)?1:0},
+  {id:"office", text:"オフィス街をつくる（市になったら解禁）", reward:3e7, prog:()=>S.cities.some(c=>c.job>0)?1:0},
+  {id:"happy", text:"満足度80%以上の「市」を育てる", reward:5e7, prog:()=>Math.max(0,...S.cities.filter(c=>tierOf(c.pop)>=2&&connected(c.id)).map(c=>needOf(c).happy/0.8))},
   {id:"bigcity", text:"人口30万人の大都市を育てる", reward:5e7, prog:()=>Math.max(...S.cities.map(c=>c.pop))/3e5},
   {id:"riders100k", text:"累計乗客 10万人", reward:8e7, unlock:"express", unlockText:"特急列車", prog:()=>S.riders/1e5},
+  {id:"landmark", text:"ランドマークを建てる", reward:1e8, prog:()=>S.cities.some(c=>c.lm)?1:0},
   {id:"hub", text:"4路線が集まるハブ駅をつくる", reward:1e8, prog:()=>Math.max(0,...S.cities.map(c=>linesAtCount(c.id)))/4},
   {id:"st20", text:"20の駅を接続する", reward:2e8, prog:()=>connCount()/20},
   {id:"all", text:"40の駅を接続する", reward:5e8, prog:()=>connCount()/40},
@@ -604,7 +650,7 @@ function spawnTown(){
     // 線路の真上には生まれない（駅でもないのに路線が通っているように見えてしまうため）
     if(S.lines.some(l=>{ const g=geom(l); for(let i=1;i<g.pts.length;i++) if(distSeg(x,y,g.pts[i-1].x,g.pts[i-1].y,g.pts[i].x,g.pts[i].y)<60) return true; return false; })) continue;
     const pop=Math.round(3000+Math.random()*6000+Math.min(20000,base.pop*0.03));   // 大きな町の近くほど大きめの村
-    S.cities.push({id:S.cities.length,name,x,y,pop,pop0:pop,waiting:0,level:1,boost:0,shop:0,dev:0,wait:{},xw:{},st:freshCitySt(),last:null,svc:1,tier:tierOf(pop)});
+    S.cities.push({id:S.cities.length,name,x,y,pop,pop0:pop,waiting:0,level:1,boost:0,shop:0,dev:0,com:0,job:0,lm:null,wait:{},xw:{},st:freshCitySt(),last:null,svc:1,tier:tierOf(pop)});
     invalidateNet(); pulses.push({x,y,life:.6,color:"#2BA36B"});
     news(`🌱 ${base.name}の近くに新しい村「${name}」が生まれました（人口${pop.toLocaleString()}）`); return;
   }
@@ -615,11 +661,11 @@ function monthEnd(){
   // 駅ナカ
   let shop=0, facility=0;
   for(const c of S.cities){ const sh=SHOPS[c.shop];
-    const sr=Math.round((c.st.foot+c.st.xfer*0.5)*sh.spend*fareMul()); shop+=sr; facility+=Math.round(sh.upkeep*inflation());
+    const sr=Math.round((c.st.foot+c.st.xfer*0.5)*sh.spend*fareMul()*(1+0.1*(c.com||0))*(c.lm&&LANDMARKS[c.lm].shopMul||1)); shop+=sr; facility+=Math.round(sh.upkeep*inflation());
     const served=c.st.board, tot=served+c.st.lost; if(connected(c.id)&&tot>1) c.svc=c.svc*0.5+0.5*(served/tot);
     c.last={...c.st,shopRev:sr}; c.st=freshCitySt();
     const ti=tierOf(c.pop); if(ti>(c.tier||0)){ c.tier=ti; if(ti>=2){ banner(`🏙️ ${c.name}が「${TIERS[ti][1]}」に！`,`人口 ${Math.round(c.pop).toLocaleString()}人`); confetti(); SFX.goal(); } } }
-  S.money+=shop-up-track-interest-facility;
+  S.money+=shop-up-track-interest-facility; needsDirty=true;
   Object.assign(S.m,{shop:S.m.shop+shop,upkeep:S.m.upkeep+up,track:S.m.track+track,interest:S.m.interest+interest,facility:S.m.facility+facility});
   const m=S.m, profit=m.fare+m.shop+m.other-m.upkeep-m.track-m.interest-m.facility;
   S.lastXfer=m.xfer||0;
@@ -786,14 +832,14 @@ function renderLines(){
 function renderStation(){
   const sp=$("tab-station");
   if(selected==null){ sp.innerHTML=`<div class="card muted">地図上の駅（町）をタップすると、ここに詳しい情報が出ます。</div>`; return; }
-  const c=S.cities[selected], conn=connected(c.id), L=c.last, pc=popCap(c);
+  const c=S.cities[selected], conn=connected(c.id), L=c.last, pc=popCap(c), N=needOf(c);
   const up=upCost(c), dc=devCost(c), nextShop=SHOPS[c.shop+1];
   const lines=S.lines.filter(l=>l.stops.includes(c.id)), ratio=conn?waitRatio(c):0, gm=growthPerDay(c)*CFG.daysPerMonth;
   const estShop=nextShop&&L? Math.round((L.foot+L.xfer*0.5)*nextShop.spend*fareMul()) : null;
   sp.innerHTML=`<div class="card"><div class="row between"><b style="font-size:17px">${c.name}${conn?"駅":"（未開通）"}</b><span class="muted">${TIERS[tierOf(c.pop)][1]}・駅Lv.${c.level}${lines.length>1?`・${lines.length}路線の乗換駅`:""}</span></div>
-    <div class="kv" style="margin-top:4px"><span>人口</span><span>${Math.round(c.pop).toLocaleString()}人 ${c.boost>0?"🎆":""}</span><span>人口の上限（開発Lv.${c.dev}）</span><span>${pc.toLocaleString()}人</span><span>成長の速さ</span><span class="pos">月+${Math.round(gm).toLocaleString()}人</span></div>
+    <div class="kv" style="margin-top:4px"><span>人口</span><span>${Math.round(c.pop).toLocaleString()}人 ${c.boost>0?"🎆":""}</span><span>人口の上限（住宅地Lv.${c.dev}）</span><span>${pc.toLocaleString()}人</span><span>成長の速さ</span><span class="pos">月+${Math.round(gm).toLocaleString()}人</span></div>
     <div class="bar"><i style="width:${Math.min(100,c.pop/pc*100)}%;background:#2BA36B"></i></div>
-    ${conn?`<div class="tip">${c.pop>=pc*0.97?"🏗️ 人口が上限です。下の<b>沿線開発</b>で上限を上げよう":c.svc>0.7?"🌱 鉄道のおかげで町が育っています":"🌱 町は育っていますが、客の取りこぼしで少しゆっくり。列車を足すと速く育つ"}</div>
+    ${conn?`<div class="tip">${needTip(c)}</div>
       <div class="kv" style="margin-top:6px"><span>行ける駅（乗り換えなし／あり）</span><span>${directCount(c.id)}駅／${destCount(c.id)-directCount(c.id)}駅</span><span>行き先の多さによる客の倍率</span><span>×${netMul(c.id).toFixed(2)}</span>
       <span>次の列車を待つ客</span><span>${Math.floor(c.waiting+(c.xwaiting||0))}人</span>
       ${L?`<span>先月 乗った客</span><span>${Math.round(L.board).toLocaleString()}人</span><span>先月 乗り換え客</span><span>${Math.round(L.xfer).toLocaleString()}人</span>
@@ -806,16 +852,29 @@ function renderStation(){
       <div class="muted">駅を通る人1人ごとに売上。乗り換え客は1.5倍買い物します。ハブ駅ほど儲かる。</div>
       ${nextShop?`<div class="row" style="margin-top:6px"><button data-act="shop" ${S.money<nextShop.cost?"disabled":""}>${nextShop.name}を開く ${yen(nextShop.cost)}</button>
         <span class="muted">維持費 月${yen(nextShop.upkeep)}${estShop!=null?`・先月の人数なら 月${yen(estShop)}`:""}</span></div>`:`<div class="muted">最高レベルです</div>`}</div>
-    <div class="card"><b>🏘️ 沿線開発（いま：Lv.${c.dev}）</b>
-      <div class="muted">住宅地を広げて、人口の上限を<b>+${CFG.popPerDev.toLocaleString()}人</b>。レベルの上限はありません。</div>
-      <div class="row" style="margin-top:6px"><button data-act="dev" ${S.money<dc?"disabled":""}>開発する ${yen(dc)}</button><span class="muted">上限 ${pc.toLocaleString()}→${(pc+CFG.popPerDev).toLocaleString()}人</span></div></div>
+    <div class="card"><b>🏙️ まちづくり</b>　<span class="muted">満足度 <b class="${N.happy>=0.7?"pos":N.happy<0.45?"neg":""}">${Math.round(N.happy*100)}%</b>（高いほど町が速く育つ）</span>
+      ${[["🏢 仕事",N.work],["🛍️ 買い物",N.shop],["🚃 交通の便",N.transit],["💴 運賃の安さ",N.fare]].map(([t,v])=>`<div class="row between" style="font-size:12px;margin-top:4px"><span>${t}</span><span>${Math.round(Math.min(1,v)*100)}%</span></div><div class="bar" style="margin-top:1px"><i style="width:${Math.min(100,v*100)}%;background:${v>=0.8?"#2BA36B":v>=0.5?"#F2C14E":"var(--bad)"}"></i></div>`).join("")}
+      <div class="muted" style="margin-top:6px">${needTip(c)}</div>
+      ${Object.entries(ZONES).map(([z,Z])=>{ const lv=zoneLv(c,z), cost=zoneCost(c,z), locked=tierOf(c.pop)<Z.unlock;
+        return `<div class="row between" style="margin-top:8px"><span>${Z.icon} <b>${Z.name}</b> Lv.${lv}<br><span class="muted">${Z.desc}</span></span>
+          <button data-zone="${z}" ${locked||S.money<cost?"disabled":""}>${locked?`「${TIERS[Z.unlock][1]}」で解禁`:`開発 ${yen(cost)}`}</button></div>`; }).join("")}
+      <div style="margin-top:10px"><b>ランドマーク</b> ${c.lm?`<span>${LANDMARKS[c.lm].icon} ${LANDMARKS[c.lm].name}（建設済み）</span><div class="muted">${LANDMARKS[c.lm].desc}</div>`:
+        Object.entries(LANDMARKS).map(([k,M])=>{ const locked=tierOf(c.pop)<M.tier; return `<div class="row between" style="margin-top:4px"><span>${M.icon} ${M.name}<br><span class="muted">${M.desc}</span></span><button data-lm="${k}" ${locked||S.money<M.cost?"disabled":""}>${locked?`「${TIERS[M.tier][1]}」で解禁`:yen(M.cost)}</button></div>`; }).join("")}</div></div>
     <div class="card"><b>🚉 駅の改良（Lv.${c.level}/5）</b><div class="muted">乗客の発生が増え、町の成長も速くなる</div>
       <div class="row" style="margin-top:6px"><button data-act="upst" ${S.money<up||c.level>=5?"disabled":""}>駅を改良 ${c.level>=5?"(最大)":yen(up)}</button></div></div>`:""}`;
   sp.querySelector('[data-act="upst"]')?.addEventListener("click",()=>{ if(S.money<up) return; S.money-=up; S.m.invest+=up; c.level++; pulses.push({x:c.x,y:c.y,life:.8,color:"#F2C14E"}); SFX.build(); news(`🏗️ ${c.name}駅を改良（Lv.${c.level}）`); renderSide(); });
   sp.querySelector('[data-act="shop"]')?.addEventListener("click",()=>{ const n=SHOPS[c.shop+1]; if(!n||S.money<n.cost) return; S.money-=n.cost; S.m.invest+=n.cost; c.shop++; pulses.push({x:c.x,y:c.y,life:.8,color:"#F2C14E"}); SFX.build(); banner("🏬 開店！",`${c.name}駅に「${n.name}」`); renderSide(); });
-  sp.querySelector('[data-act="dev"]')?.addEventListener("click",()=>{ if(S.money<dc) return; S.money-=dc; S.m.invest+=dc; c.dev++; pulses.push({x:c.x,y:c.y,life:.8,color:"#2BA36B"}); SFX.build(); news(`🏘️ ${c.name}を沿線開発（Lv.${c.dev}・人口の上限 ${popCap(c).toLocaleString()}人）`); renderSide(); });
+  sp.querySelectorAll("[data-zone]").forEach(b=>b.addEventListener("click",()=>{ const z=b.dataset.zone; if(!buildZone(c,z)) return; pulses.push({x:c.x,y:c.y,life:.8,color:"#2BA36B"}); SFX.build(); news(`${ZONES[z].icon} ${c.name}に${ZONES[z].name}（Lv.${zoneLv(c,z)}）`); renderSide(); }));
+  sp.querySelectorAll("[data-lm]").forEach(b=>b.addEventListener("click",()=>{ const M=LANDMARKS[b.dataset.lm]; if(c.lm||S.money<M.cost||tierOf(c.pop)<M.tier) return; S.money-=M.cost; S.m.invest+=M.cost; c.lm=b.dataset.lm; needsDirty=true; townCache.delete(c.id); banner(`${M.icon} ${M.name} 完成！`,`${c.name}に人が集まります`); confetti(); SFX.goal(); renderSide(); }));
   sp.querySelector('[data-act="from"]').addEventListener("click",()=>startBuildFrom(c.id));
 }
+function needTip(c){ const n=needOf(c), t=topNeed(c);
+  if(!connected(c.id)) return "鉄道がつながると、まちづくりが進みます。";
+  if(t==="res") return "🏠 人口が上限です → <b>住宅地</b>を開発しよう";
+  if(t==="job") return tierOf(c.pop)>=ZONES.job.unlock? "🏢 仕事が足りません → <b>オフィス街</b>を開発するか、仕事の多い町と鉄道でつなごう" : "🏢 仕事が足りません → オフィス街のある町と鉄道でつなごう（オフィス街は「市」で解禁）";
+  if(t==="com") return tierOf(c.pop)>=ZONES.com.unlock? "🛍️ お店が足りません → <b>商業地</b>を開発するか、お店の多い町とつなごう" : "🛍️ お店が足りません → お店の多い町と鉄道でつなごう（商業地は「町」で解禁）";
+  if(n.transit<0.6) return "🚃 交通が不便です → 列車を足すか、もっと多くの駅とつなごう";
+  return "😊 住みやすい町です"; }
 function renderFinance(){
   const fp=$("tab-finance"); const h=S.history[S.history.length-1];
   const next=RANKS[S.rank+1], fl=S.fareLevel;
@@ -857,8 +916,11 @@ function guideNow(){
     else if(L.load<0.35 && L.rev<L.upkeep && l.trains.length>1) out.push(["💤",`<b>${l.name}</b>は空席が多く赤字 → 列車を1編成売ろう`]);
     else if(L.rev<L.upkeep && l.trains.length===1) out.push(["📉",`<b>${l.name}</b>は赤字 → 1編成だけだと苦しい。2編成目を足すか、人の多い町へ延伸を`]); }
   const conn=S.cities.filter(c=>connected(c.id));
-  const dev=conn.filter(c=>c.pop>=popCap(c)*0.9).sort((a,b)=>b.pop-a.pop)[0];
-  if(dev && S.money>devCost(dev)+buffer) out.push(["🏘️",`<b>${dev.name}</b>の人口が上限（${popCap(dev).toLocaleString()}人）に近い → 沿線開発（${yen(devCost(dev))}）で上限+${CFG.popPerDev.toLocaleString()}人`]);
+  // まちづくり：足りないものがある大きな町から
+  const needy=conn.map(c=>[c,topNeed(c)]).filter(([c,t])=>t&&tierOf(c.pop)>=ZONES[t].unlock).sort((a,b)=>b[0].pop-a[0].pop)[0];
+  if(needy){ const [c,t]=needy, Z=ZONES[t], cost=zoneCost(c,t); if(S.money>cost+buffer) out.push([Z.icon,`<b>${c.name}</b>は${t==="res"?"人口が上限":t==="job"?"仕事が足りない":"お店が足りない"} → 駅をタップして「${Z.name}」を開発（${yen(cost)}）`]); }
+  const lmTown=conn.find(c=>!c.lm&&Object.values(LANDMARKS).some(M=>tierOf(c.pop)>=M.tier&&S.money>M.cost+buffer*2));
+  if(lmTown && !S.cities.some(c=>c.lm)) out.push(["🏟️",`<b>${lmTown.name}</b>にランドマークを建てられます（客をたくさん呼ぶ・目標の報酬 1億円）`]);
   for(const c of conn){ const n=SHOPS[c.shop+1]; if(!n||!c.last) continue; const flow=c.last.foot+c.last.xfer*0.5, gain=flow*(n.spend-SHOPS[c.shop].spend)-(n.upkeep-SHOPS[c.shop].upkeep);
     if(gain>0 && gain*12>n.cost && S.money>n.cost+buffer){ out.push(["🏬",`<b>${c.name}駅</b>に「${n.name}」（${yen(n.cost)}）→ 月+${yen(gain)}の見込み`]); break; } }
   const hub=conn.map(c=>[c,linesAtCount(c.id)]).sort((a,b)=>b[1]-a[1])[0];
@@ -885,7 +947,7 @@ const GUIDE_HTML=`
 <li>▶▶▶で月末まで進め、「路線」タブで<b>路線の利益がプラス</b>か確かめる。マイナスならもう1編成。</li></ol></details>
 <details><summary>第2段階：1年目（列車5編成・5駅）</summary><ol>
 <li>乗車率80%以上で取りこぼしが出ている間は列車を足す。<b>「列車を5編成もつ」で+1,500万＆快速解禁</b>。</li>
-<li>人口が上限（最初は2万人）に近づいた町は<b>沿線開発</b>（1,000万円〜）。1レベルで上限+3万人、レベルの上限はない。</li>
+<li>町をタップして<b>まちづくり</b>。人口が上限（最初は2万人）なら🏠住宅地、仕事が足りなければ🏢オフィス街、お店が足りなければ🛍️商業地。地図の町の上に出るアイコンが「足りないもの」。</li>
 <li>大きな町へ延伸して「5つの駅を接続」（+1,000万）。</li>
 <li>人の多い駅に<b>売店</b>。駅カードの「先月の人数なら 月◯円」が維持費を大きく超えていればOK（目安：通る人 月1万人〜）。</li></ol></details>
 <details><summary>第3段階：1〜3年目（ハブ駅）</summary><ol>
@@ -895,7 +957,7 @@ const GUIDE_HTML=`
 <li>満員で取りこぼしが多いなら<b>運賃110〜120%</b>。上げすぎると町が育たない。</li></ol></details>
 <details><summary>第4段階：3〜6年目（特急・大都市）</summary><ol>
 <li>累計乗客10万人で<b>特急</b>解禁。普通がたくさん走る混雑路線は「普通を売る→特急を買う」（1編成で運べる量 約6倍）。</li>
-<li>町は鉄道で育つ。<b>行ける駅が多い・取りこぼしが少ない・運賃が高すぎない</b>ほど速い。人口が上限に来たら<b>沿線開発</b>で上限+3万人（何レベルでもOK）。</li>
+<li>町は<b>満足度</b>が高いほど速く育つ（仕事35%・買い物25%・交通の便30%・運賃10%）。住宅の町とオフィス・お店の町を鉄道で結ぶと、通勤・買い物の客も増えて一石二鳥。市になったら<b>ランドマーク</b>で客を呼ぼう。</li>
 <li><b>駅の改良</b>は「列車に空席があるのに客が足りない」駅に。満員の路線の駅を改良しても客があふれるだけ。</li>
 <li>メインのハブを<b>駅ビル</b>に（目安：通る人 月9万人〜）。延伸と支線で「20駅」（+2億）。</li></ol></details>
 <details><summary>第5段階：6〜10年目（100億円へ）</summary><ol>
@@ -1091,12 +1153,12 @@ function townLayout(c){ let L=townLayoutCache.get(c.id); if(L) return L; const r
     if(i%4===0||j%4===0) continue;    // 道路の通るマス
     const lx=i*TOWN_CELL, ly=j*TOWN_CELL, ox=lx*co-ly*si, oy=lx*si+ly*co, d=Math.hypot(ox,oy);
     if(d>N*TOWN_CELL) continue; if(terrainAt(c.x+ox,c.y+oy)!=="flat"&&d>14) continue;   // 海・川・山には建てない
-    lots.push({ox,oy,d,pri:d+r()*22,w:TOWN_CELL*(0.5+r()*0.42),h:TOWN_CELL*(0.5+r()*0.42),col:Math.floor(r()*7),park:r()<0.05}); }
+    lots.push({ox,oy,d,pri:d+r()*22,w:TOWN_CELL*(0.5+r()*0.42),h:TOWN_CELL*(0.5+r()*0.42),col:Math.floor(r()*7),park:r()<0.05,zr:r()}); }
   lots.sort((a,b)=>a.pri-b.pri);
   L={th,lots}; townLayoutCache.set(c.id,L); return L; }
-const ROOFS_L=["#C9B5A0","#B99E87","#A8B2BC","#CCC5B7","#B98E7A","#9FAAA2","#C3A88F"], TOWERS_L=["#8B95A3","#7B8593","#99A2AD"];
+const ROOFS_L=["#C9B5A0","#B99E87","#A8B2BC","#CCC5B7","#B98E7A","#9FAAA2","#C3A88F"], TOWERS_L=["#8B95A3","#7B8593","#99A2AD"], COM_L=["#7EA6C8","#6C94BA","#93B7D0"], JOB_L=["#A59580","#8F959E","#B0A28C"];
 function townSprite(c){
-  const n=Math.min(bldCount(c), townLayout(c).lots.length), ti=tierOf(c.pop), dark=isDark(), key=Math.floor(n/5)+":"+ti+":"+dark; const cur=townCache.get(c.id); if(cur&&cur.key===key) return cur;
+  const n=Math.min(bldCount(c), townLayout(c).lots.length), ti=tierOf(c.pop), dark=isDark(), key=Math.floor(n/5)+":"+ti+":"+dark+":"+c.dev+":"+(c.com||0)+":"+(c.job||0); const cur=townCache.get(c.id); if(cur&&cur.key===key) return cur;
   const L=townLayout(c), lots=L.lots.slice(0,n); let R=20; for(const q of lots) R=Math.max(R,q.d+TOWN_CELL*1.2);
   const res=1.4, cv2=document.createElement("canvas"); cv2.width=cv2.height=Math.ceil(R*2*res);
   const g=cv2.getContext("2d"); g.scale(res,res); g.translate(R,R);
@@ -1112,7 +1174,10 @@ function townSprite(c){
     if(q.park){ g.fillStyle=dark?"#2E4A2E":"#B2D39A"; g.fillRect(-TOWN_CELL*0.45,-TOWN_CELL*0.45,TOWN_CELL*0.9,TOWN_CELL*0.9); g.restore(); continue; }
     const w=q.w*big, hh=q.h*big, off=downtown?(ti>=3?2.6:1.8):0.9;
     g.fillStyle="rgba(0,0,0,.20)"; g.fillRect(-w/2+off,-hh/2+off,w,hh);                 // 影（高いビルほど長い）
-    g.fillStyle=shade(downtown?TOWERS_L[q.col%3]:ROOFS_L[q.col]); g.fillRect(-w/2,-hh/2,w,hh);
+    // 区画の用途：住宅（屋根の色いろいろ）／お店（青系）／オフィス・工場（灰・茶系）。中心部はお店とオフィスが多い
+    const wr=downtown?0.2:1+0.3*c.dev, wc=0.25+0.9*(c.com||0)+(downtown?0.6:0), wj=0.15+0.9*(c.job||0)+(downtown?0.5:0), roll=q.zr*(wr+wc+wj);
+    const zone= roll<wr? "res" : roll<wr+wc? "com" : "job";
+    g.fillStyle=shade(zone==="res"?(downtown?TOWERS_L[q.col%3]:ROOFS_L[q.col]): zone==="com"?COM_L[q.col%3]:JOB_L[q.col%3]); g.fillRect(-w/2,-hh/2,w,hh);
     if(downtown){ g.fillStyle="rgba(255,255,255,.18)"; g.fillRect(-w/2,-hh/2,w,hh*0.28); }  // 屋上のふち
     g.restore(); }
   const sp={key,canvas:cv2,R}; townCache.set(c.id,sp); return sp; }
@@ -1156,6 +1221,10 @@ function draw(time){
   // 町並み（人口に応じて建物が広がる）
   const x0w=-view.ox/view.scale-120, y0w=-view.oy/view.scale-120, x1w=x0w+view.w/view.scale+240, y1w=y0w+view.h/view.scale+240;
   for(const c of S.cities){ if(c.x<x0w-200||c.x>x1w+200||c.y<y0w-200||c.y>y1w+200) continue; const sp=townSprite(c); ctx.drawImage(sp.canvas,c.x-sp.R,c.y-sp.R,sp.R*2,sp.R*2); }
+  // 表示切替：満足度（赤→黄→緑）／人口（青い円）
+  if(viewMode!=="normal") for(const c of S.cities){ if(c.x<x0w||c.x>x1w||c.y<y0w||c.y>y1w) continue;
+    if(viewMode==="happy"){ if(!connected(c.id)) continue; const h=needOf(c).happy; ctx.fillStyle=`hsla(${Math.round(h*120)},75%,48%,.38)`; ctx.beginPath(); ctx.arc(c.x,c.y,Math.max(36,Math.sqrt(c.pop)/4),0,7); ctx.fill(); }
+    else { ctx.fillStyle="rgba(42,127,219,.32)"; ctx.beginPath(); ctx.arc(c.x,c.y,Math.max(8,Math.sqrt(c.pop)/3.2),0,7); ctx.fill(); } }
   // 駅・町
   const tut=tutStep(), tutTarget= tut===1?tutA : tut===2?tutB : null;
   const lowZoom=view.scale<0.45;
@@ -1177,6 +1246,9 @@ function draw(time){
     if(showLabel){ ctx.textAlign="center"; ctx.lineWidth=4*k; ctx.strokeStyle=colors["--halo"]; ctx.fillStyle=colors["--label"];
       const ti=tierOf(c.pop), fs=(ti>=3?17:ti>=2?15:13)*k; ctx.font=`bold ${fs}px ${colors["--f"]}`; const label=c.name+(c.boost>0?"🎆":"");
       ctx.strokeText(label,c.x,c.y-r-7*k); ctx.fillText(label,c.x,c.y-r-7*k);
+      // 足りないもののアイコン（🏠住宅／🛍️お店／🏢仕事）とランドマーク
+      if(conn){ const t=topNeed(c), icons=(t?ZONES[t].icon:"")+(c.lm?LANDMARKS[c.lm].icon:""); if(icons){ ctx.font=`${14*k}px sans-serif`; ctx.fillText(icons,c.x,c.y-r-7*k-fs-2*k); }
+        if(viewMode==="happy"){ ctx.font=`bold ${12*k}px ${colors["--f"]}`; const t2=`満足度${Math.round(needOf(c).happy*100)}%`; ctx.strokeText(t2,c.x,c.y+r+27*k); ctx.fillText(t2,c.x,c.y+r+27*k); } }
       if(!lowZoom||c.id===hover){ ctx.font=`${11*k}px ${colors["--f"]}`; const sub=`${TIERS[ti][1]} ${c.pop>=1e5?(c.pop/1e4).toFixed(1)+"万":Math.round(c.pop/1000)+"千"}人`; ctx.strokeText(sub,c.x,c.y+r+13*k); ctx.fillText(sub,c.x,c.y+r+13*k); } }
   }
   // パーティクル・収入ポップ
@@ -1250,6 +1322,10 @@ $("zoomFit").onclick=()=>flyTo(CFG.W/2,CFG.H/2,1);
 // ミニマップの表示切り替え（スマホは最初は隠す。選んだ状態はこのブラウザに覚えておく）
 function setMini(show){ document.body.classList.toggle("nomini",!show); try{ localStorage.setItem("rosen-ou-mini",show?"1":"0"); }catch(e){} if(show) requestAnimationFrame(()=>{ resize(); drawMini(); }); }
 $("miniToggle").onclick=()=>setMini(document.body.classList.contains("nomini"));
+// 表示切替：通常 → 満足度 → 人口
+let viewMode="normal";
+const VIEW_LABEL={normal:"",happy:"満足度：緑＝住みやすい／赤＝不満（町をタップで内訳）",pop:"人口：青い円が大きいほど人が多い"};
+$("viewBtn").onclick=()=>{ viewMode= viewMode==="normal"?"happy": viewMode==="happy"?"pop":"normal"; const chip=$("modeChip"); chip.hidden=viewMode==="normal"; chip.textContent=VIEW_LABEL[viewMode]; SFX.click(); };
 { let v=null; try{ v=localStorage.getItem("rosen-ou-mini"); }catch(e){} document.body.classList.toggle("nomini", v===null? innerWidth<820 : v==="0"); }
 $("newLineBtn").onclick=()=>{ if(mode==="build") return; setMode("build"); };
 $("buildCancel").onclick=()=>setMode("select");
@@ -1303,7 +1379,7 @@ function afterLoad(){
   geomCache.clear(); invalidateNet(); buildAnim.clear(); floaters.length=0; particles.length=0; pulses.length=0; selected=null; lastTut=-1;
   townCache.clear(); townLayoutCache.clear();
   for(const l of S.lines){ l.st=l.st||freshLineSt(); }
-  for(const c of S.cities){ c.pop0=c.pop0||c.pop; c.wait=c.wait||{}; c.xw=c.xw||{}; c.st=c.st||freshCitySt(); }
+  for(const c of S.cities){ c.pop0=c.pop0||c.pop; c.com=c.com||0; c.job=c.job||0; c.lm=c.lm||null; c.wait=c.wait||{}; c.xw=c.xw||{}; c.st=c.st||freshCitySt(); }
   dispMoney=S.money; pickTutorialPair(); setMode("select"); readColors(); resize();
   // 最初は全体の半分くらいを拡大して表示（町が見やすい）
   const c=S.lines.length? geom(S.lines[0]).pts[0] : S.cities[tutA];
