@@ -14,7 +14,7 @@ async function questMenu(){
   const act=activeQuests(), done=Object.keys(S.q||{}).filter(k=>S.q[k]==='done'&&QUESTS[k]);
   const list=[...act.map(k=>({k,label:QUESTS[k].t,right:'すすめちゅう'})),...done.map(k=>({k,label:QUESTS[k].t,right:'たっせい'}))];
   if(!list.length){msgClear(); await say('まだ クエストを うけていない。 まちの ひとの こまりごとに みみを かたむけよう。'); msgClose(); return;}
-  const m=new Menu({title:`クエスト（たっせい ${done.length}／${Object.keys(QUESTS).length}）`,items:list,style:{left:'6%',top:'30%',width:'88%'},
+  const m=new Menu({title:`クエスト（たっせい ${done.length}／${Object.keys(QUESTS).length}）`,items:list,style:{left:'6%',top:'5%',width:'88%'},
     desc:i=>{const q=QUESTS[list[i].k], st=S.q[list[i].k]; return `${q.g}（${q.area}）：${st==='done'?'たっせい！':q.steps[Math.min(st,q.steps.length-1)]}`;}});
   await m.pick(); m.close();
 }
@@ -71,7 +71,7 @@ function bagList(filter){return Object.keys(S.items).filter(id=>IT[id]&&(!filter
 async function bagMenu(){
   let list=bagList(it=>!it.slot);
   if(!list.length){msgClear(); await say('どうぐを なにも もっていない。'); msgClose(); return;}
-  const m=new Menu({items:list,style:{left:'14%',top:'34%',width:'60%'},title:'どうぐ',desc:i=>IT[list[i].id].d});
+  const m=new Menu({items:list,style:{left:'14%',top:'5%',width:'62%'},title:'どうぐ',desc:i=>IT[list[i].id].d});
   try{
     while(true){
       const i=await m.pick(); if(i<0) return;
@@ -126,7 +126,7 @@ async function spellMenuField(){
   const c=casters.length>1?await pickMember('だれが となえる？',m=>casters.includes(m)):casters[0];
   if(!c) return;
   const ks=learned(c);
-  const m=new Menu({items:ks.map(k=>({label:SP[k].n,right:SP[k].mp,disabled:!SP[k].field})),style:{left:'12%',top:'31%',width:'64%'},title:`${c.name}の じゅもん（MP ${c.mp}）`,desc:i=>SP[ks[i]].d});
+  const m=new Menu({items:ks.map(k=>({label:SP[k].n,right:SP[k].mp,disabled:!SP[k].field})),style:{left:'12%',top:'5%',width:'64%'},title:`${c.name}の じゅもん（MP ${c.mp}）`,desc:i=>SP[ks[i]].d});
   try{
     while(true){
       const i=await m.pick(); if(i<0) return;
@@ -154,7 +154,7 @@ async function equipMenu(p){
       const i=await m.pick(); if(i<0) return;
       const s=slots[i]; const own=Object.keys(S.items).filter(id=>IT[id]&&IT[id].slot===s&&canEquip(p,id));
       const opts=[...own.map(id=>({id,label:IT[id].n,right:s==='w'?'こう+'+IT[id].atk:'しゅ+'+IT[id].def})),{id:null,label:'はずす',right:''}];
-      const sub=new Menu({items:opts,style:{left:'20%',top:'46%',width:'66%'},title:SLOTN[s]+'を えらぶ'});
+      const sub=new Menu({items:opts,style:{left:'20%',top:'8%',width:'66%'},title:SLOTN[s]+'を えらぶ'});
       const j=await sub.pick(); sub.close();
       if(j>=0){equip(p,opts[j].id,s); sfx.ok();}
       m.setItems(lab());

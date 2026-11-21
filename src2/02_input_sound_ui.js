@@ -179,10 +179,16 @@ class Menu{
   render(){
     const o=this.o, cols=o.cols||1;
     let h=o.title?`<div class="wt">${o.title}</div>`:'';
+    // ながい リストは 6ぎょうずつ みせて スクロール（▲▼）
+    const R=o.rows||6, total=Math.ceil(this.items.length/cols), row=Math.floor(this.i/cols);
+    this.top=clamp(this.top||0,Math.max(0,row-R+1),row); this.top=Math.min(this.top,Math.max(0,total-R));
+    const k0=this.top*cols, k1=Math.min(this.items.length,(this.top+R)*cols), more=total>R;
+    if(more) h+=`<div class="scr">${this.top>0?'▲':'&nbsp;'}</div>`;
     h+=`<div class="grid" style="grid-template-columns:repeat(${cols},minmax(0,1fr))">`;
-    this.items.forEach((it,k)=>{const x=typeof it==='string'?{label:it}:it;
+    this.items.slice(k0,k1).forEach((it,j)=>{const k=k0+j, x=typeof it==='string'?{label:it}:it;
       h+=`<div class="it${k===this.i?' sel':''}${x.disabled?' dis':''}"><span class="cur">${k===this.i?'▶':''}</span><span class="lb">${x.label}</span><span class="rt">${x.right??''}</span></div>`;});
     h+='</div>';
+    if(more) h+=`<div class="scr">${this.top+R<total?'▼':'&nbsp;'}<small>${this.i+1}／${this.items.length}</small></div>`;
     if(o.desc){const d=o.desc(this.i); if(d) h+=`<div class="desc">${d}</div>`;}
     this.el.innerHTML=h; this.el.classList.toggle('active',!!this.active);
   }
@@ -195,6 +201,7 @@ class Menu{
         else if(b==='down') j=(this.i+cols)%n;
         else if(b==='left'&&cols>1) j=(this.i-1+n)%n;
         else if(b==='right'&&cols>1) j=(this.i+1)%n;
+        else if((b==='left'||b==='right')&&cols===1&&n>(this.o.rows||6)) j=clamp(this.i+(b==='right'?1:-1)*(this.o.rows||6),0,n-1);
         else if(b==='a'){popH(h); this.active=false; this.render(); sfx.ok(); res(this.i); return;}
         else if(b==='b'||b==='menu'){if(this.o.cancel===false) return; popH(h); this.active=false; this.render(); sfx.blip(); res(-1); return;}
         if(j!==this.i){this.i=j; sfx.blip(); this.render(); this.o.onMove&&this.o.onMove(j);}
