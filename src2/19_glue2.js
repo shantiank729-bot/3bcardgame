@@ -68,6 +68,17 @@ function makeWorldMap(){
   MAPS.world={id:'world',name:'あおばの せかい',rows:makeWorld().map(r=>r.join('')),out:'~',kind:'world',bgm:'field',enc:(x,y)=>worldZone(x,y),links:{},npcs:[],chests:[],objs:[],hid:[],dyn:{}};
 }
 
+/* ---------- ボスの いやらしい わざ（9しょう いこうの しょうボス） ----------
+   ・きょうかけし：かならず 1ターン まえに よこくする（そのあいだに こうげきを あてる・ぼうぎょする）
+   ・じゅもんふうじ：3ターン じゅもんが つかえない（じょうか・めざましベルで なおる） */
+function addBossTricks(){
+  for(const [id,m] of Object.entries(MON)){
+    if(!m.boss||!m.phases||m.phases.length<2||(m.ml||0)<24) continue;
+    m.phases[0].moves.push(M_('silence',1,'%sは ことばを うばう のろいを はなった！',{ch:.45,all:(m.ml||0)>=44}));
+    m.phases[m.phases.length-1].moves.push(M_('prep',1.5,'%sの まわりに つめたい ひかりが あつまっていく…',{next:M_('dispel',0,'%sは かきけしの ひかりを はなった！')}));
+  }
+}
+
 /* ---------- ボス・ちゅうボス ---------- */
 async function dungeonMid(D,mid,flag){
   msgClear(); for(const t of mid.intro||[]) await say(t); msgClose();
@@ -250,7 +261,7 @@ function initWorld(){
   defineCh1(); defineCh2(); defineCh3(); defineCh4(); defineCh5(); defineCh6(); defineCh7(); defineCh8();
   defineCh9(); defineCh10(); defineCh11(); defineCh12(); defineCh13(); defineCh14(); defineCh15(); defineCh16();
   defineCh17(); defineCh18(); defineCh19(); defineCh20(); defineCh21(); defineCh22(); defineCh23(); definePost();
-  glueFix(); defineSideQuests(); buildDungeons(); placeIcons(); placeWorldFrags(); fixLinks(); applyTune();
+  glueFix(); defineSideQuests(); addBossTricks(); buildDungeons(); placeIcons(); placeWorldFrags(); fixLinks(); applyTune();
 }
 initWorld();
 requestAnimationFrame(frame);

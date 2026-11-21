@@ -59,7 +59,7 @@ async function encounterFx(boss){
   for(let i=0;i<(boss?2:3);i++){fadeEl.style.transitionDuration='0ms'; fadeEl.style.background='#fff'; fadeEl.style.opacity='.85'; await sleep(55); fadeEl.style.opacity='0'; await sleep(55);}
   fadeEl.style.background='#000'; await fadeOut(180);
 }
-function clearBuffs(){for(const p of S.party){p.sleep=false; p.defend=false; p.atkUp=false; p.defUp=false; p.covering=false; p.counter=false;}}
+function clearBuffs(){for(const p of S.party){p.silence=0; p.sleep=false; p.defend=false; p.atkUp=false; p.defUp=false; p.covering=false; p.counter=false;}}
 async function battle(ids,opt={}){
   await encounterFx(opt.boss);
   B={en:ids.map(id=>mkEnemy(id,opt.zone)),area:opt.area||'field',zone:opt.zone,boss:!!opt.boss,guard:false,hi:-1,act:-1,lastCmd:[],turn:0};
@@ -92,7 +92,7 @@ async function battle(ids,opt={}){
       }
       res=check();
     }
-    S.party.forEach(p=>{p.defend=false; p.covering=false; p.counter=false;});
+    S.party.forEach(p=>{p.defend=false; p.covering=false; p.counter=false; if(p.silence) p.silence--;});
     if(opt.limit&&B.turn>=opt.limit&&!res) res='timeout';
     if(B.turn>200&&!res) res='lose';
   }
@@ -131,6 +131,7 @@ async function memberCommand(p,i,canBack){
         const sm=new Menu({items:ks.map(k=>({label:SP[k].n,right:SP[k].mp,disabled:p.mp<SP[k].mp})),title:`${WAZA?'わざ':'じゅもん'}（MP ${p.mp}）`,style:{left:'26%',bottom:'3%',right:'3%'},desc:j=>SP[ks[j]].d});
         const j=await sm.pick(); sm.close(); if(j<0) continue;
         const sp=SP[ks[j]];
+        if(p.silence&&isMagic(sp)){await flash2('じゅもんを ふうじられている！'); continue;}
         if(p.mp<sp.mp){await flash2('MPが たりない！'); continue;}
         const tg=await pickFor(sp.tg,i); if(tg===undefined) continue;
         return {t:'spell',k:ks[j],target:tg};
@@ -166,14 +167,15 @@ const OFFENSE={hero:['dawn','judge','starrain','lsword'],mio:['secret','nova','m
   riri:['flash','storm','needle','triple','shadowcut','double'],olga:['curse'],jin:['starcut','first','musou','steel','swallow','iai'],mumei:['mlight']};
 function autoCmd(p){
   const al=aliveP(), dead=S.party.filter(m=>m.hp<=0), en=alive(), idx=m=>S.party.indexOf(m);
-  const ks=learned(p).filter(k=>SP[k].battle&&p.mp>=SP[k].mp), can=k=>ks.includes(k);
+  const ks=learned(p).filter(k=>SP[k].battle&&p.mp>=SP[k].mp&&!(p.silence&&isMagic(SP[k]))), can=k=>ks.includes(k);
   const low=al.filter(m=>m.hp<m.mhp*.5).sort((a,b)=>a.hp/a.mhp-b.hp/b.mhp);
   const healer=p.cls==='olga'||(p.cls==='hero'&&!S.party.some(m=>m.cls==='olga'&&m.hp>0&&!m.sleep));
   if(dead.length){const k=['ofull','orev','revive'].find(can); if(k) return {t:'spell',k,target:idx(dead[0])}; if(has('life')&&(healer||p.cls==='garm')) return {t:'item',id:'life',target:idx(dead[0])};}
   if(low.length>=2){const k=['witch','oallbig','hheal','oall','mheal'].find(can); if(k) return {t:'spell',k};}
   if(low.length&&(healer||low[0].hp<low[0].mhp*.3)){const k=['obig','heal2','oheal','heal'].find(can); if(k) return {t:'spell',k,target:idx(low[0])};
     if(low[0].hp<low[0].mhp*.3){for(const it of ['herb3','herb2','herb']) if(has(it)) return {t:'item',id:it,target:idx(low[0])};}}
-  const sleeper=al.find(m=>m.sleep); if(sleeper&&can('purify')) return {t:'spell',k:'purify',target:idx(sleeper)};
+  const sleeper=al.find(m=>m.sleep||(m.silence&&['olga','mio','hero'].includes(m.cls))); if(sleeper&&can('purify')) return {t:'spell',k:'purify',target:idx(sleeper)};
+  if(sleeper&&sleeper.silence&&has('bell')&&p!==sleeper) return {t:'item',id:'bell',target:idx(sleeper)};
   if(B.boss&&!B.guard){const k=['wall','guard'].find(can); if(k&&(p.cls==='garm'||p.cls==='hero'&&!S.party.some(m=>m.cls==='garm'&&m.hp>0))) return {t:'spell',k};}
   if(!B.boss&&AUTO==='trash'){const tgt=en.slice().sort((a,b)=>a.hp-b.hp)[0]; return {t:'attack',target:B.en.indexOf(tgt)};}
   if(B.boss&&can('power')){const t=al.find(m=>['garm','jin','hero','riri'].includes(m.cls)&&!m.atkUp); if(t) return {t:'spell',k:'power',target:idx(t)};}
@@ -219,6 +221,7 @@ async function memberAct(p,cmd){
   }
   if(cmd.t==='spell'){
     const sp=SP[cmd.k];
+    if(p.silence&&isMagic(sp)){await say(`${n}は ${sp.n}を となえようとした。 しかし じゅもんを ふうじられている！`,{wait:'auto'}); return null;}
     if(p.mp<sp.mp){await say(`${n}は ${sp.n}を つかおうとした。 しかし MPが たりない！`,{wait:'auto'}); return null;}
     // かさねがけは できない：もう かかっていれば MPを つかわずに おしえる
     {const bt=S.party[cmd.target];
@@ -360,7 +363,8 @@ async function genAct(e){
   }
   const P=d.phases[ph];
   await genMove(e,P);
-  if(P.acts&&Math.random()<P.acts&&aliveP().length&&e.hp>0) await genMove(e,P);
+  const acts=ph>=1&&(d.ml||0)>=10?1:(P.acts||0);   // こうはん（HP はんぶん いか）は まいターン 2かい こうどう
+  if(acts&&Math.random()<acts&&aliveP().length&&e.hp>0) await genMove(e,P);
 }
 async function genMove(e,P){
   if(e.prep){const mv=e.prep; e.prep=null; return doMove(e,mv);}
@@ -381,6 +385,19 @@ async function doMove(e,mv){
     case 'breath': await say(msg,{wait:'auto',ms:380}); sfx.fire(); flash(mv.f>.25?'#ffffff':'#ff8a3a',mv.f>.25?400:220); if(mv.f>.25) shake(); for(const p of aliveP()) await hurtMember(p,dm()); return;
     case 'poison': {const p=randAlly(); await say(msg,{wait:'auto',ms:380}); await enemyAttack(e,1,true,p); return poisonMember(p);}
     case 'sleep1': await say(msg,{wait:'auto',ms:380}); flash('#c0a0ff',200); return sleepMember(randAlly(),.5);
+    case 'dispel': {
+      await say(msg,{wait:'auto',ms:420}); flash('#c0f0ff',360); shake();
+      const had=B.guard||S.party.some(p=>p.atkUp||p.defUp);
+      B.guard=false; for(const p of S.party){p.atkUp=false; p.defUp=false;} updStatus();
+      return say(had?'なかまたちに かかっていた ちからが すべて かきけされた！':'しかし なにも おこらなかった。',{wait:'auto'});
+    }
+    case 'silence': {
+      await say(msg,{wait:'auto',ms:400}); flash('#8080c0',240);
+      const tg=mv.all?aliveP():[aliveP().filter(p=>p.mmp>10).sort(()=>Math.random()-.5)[0]||randAlly()];
+      for(const p of tg){ if(!p||p.hp<=0) continue; if(p.silence){await say(`${p.name}は もう じゅもんを ふうじられている。`,{wait:'auto',ms:350}); continue;}
+        if(Math.random()<(mv.ch||.5)){p.silence=3; updStatus(); await say(`${p.name}は じゅもんを ふうじられた！`,{wait:'auto',ms:450});} else await say(`${p.name}は のろいを はねかえした！`,{wait:'auto',ms:380}); }
+      return;
+    }
     case 'sleepAll': await say(msg,{wait:'auto',ms:380}); flash('#ffc0e0',240); for(const p of aliveP()) await sleepMember(p,mv.ch||.35); return;
     case 'mist': await say(msg,{wait:'auto',ms:380}); flash('rgba(120,255,80,.4)',260); for(const p of aliveP()){await hurtMember(p,dm()); await poisonMember(p,.35);} return;
     case 'summon': {
@@ -434,3 +451,6 @@ async function defeat(){
 }
 
 function stealItem(e){const L=(e.d.ml||10); return L<15?pickR(['herb','herb','antidote','herb2']):L<35?pickR(['herb2','herb2','antidote','drop','bell']):pickR(['herb3','herb2','drop','life']);}
+
+// ぶつりの わざ（ふうじられても つかえる）か どうか
+const isMagic=sp=>!['phys','multi','steal','cover','counter','roar'].includes(sp.t)&&!['garm','riri','jin'].includes(sp.cls);

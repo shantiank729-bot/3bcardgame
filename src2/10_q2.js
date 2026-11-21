@@ -85,8 +85,8 @@ function applyTo(src,eff,pow,tgt){
   if(eff==='heal'){if(tgt.hp<=0) return null; if(tgt.hp>=tgt.mhp) return 'full'; const v=Math.min(rnd(...pow),tgt.mhp-tgt.hp); tgt.hp+=v; sfx.heal(); return `${tgt.name}の HPが ${v}ポイント かいふくした！`;}
   if(eff==='mp'){if(tgt.hp<=0) return null; if(tgt.mp>=tgt.mmp) return 'full'; const v=Math.min(rnd(...pow),tgt.mmp-tgt.mp); tgt.mp+=v; sfx.heal(); return `${tgt.name}の MPが ${v}ポイント かいふくした！`;}
   if(eff==='cure'){if(tgt.hp<=0||!tgt.poison) return 'none'; tgt.poison=false; sfx.heal(); return `${tgt.name}の からだから どくが きえた！`;}
-  if(eff==='purify'){if(tgt.hp<=0||(!tgt.poison&&!tgt.sleep)) return 'none'; tgt.poison=false; tgt.sleep=false; sfx.heal(); return `${tgt.name}の からだが きよめられた！`;}
-  if(eff==='wake'){if(tgt.hp<=0||!tgt.sleep) return 'none'; tgt.sleep=false; sfx.ok(); return `${tgt.name}は めを さました！`;}
+  if(eff==='purify'){if(tgt.hp<=0||(!tgt.poison&&!tgt.sleep&&!tgt.silence)) return 'none'; tgt.poison=false; tgt.sleep=false; tgt.silence=0; sfx.heal(); return `${tgt.name}の からだが きよめられた！`;}
+  if(eff==='wake'){if(tgt.hp<=0||(!tgt.sleep&&!tgt.silence)) return 'none'; const was=tgt.sleep; tgt.sleep=false; tgt.silence=0; sfx.ok(); return was?`${tgt.name}は めを さました！`:`${tgt.name}は こえを とりもどした！`;}
   if(eff==='seed'){tgt[src.stat]+=src.v; if(src.stat==='mhp') tgt.hp+=src.v; if(src.stat==='mmp') tgt.mp+=src.v; sfx.lvl(); return `${tgt.name}の ${{str:'ちから',mhp:'さいだいHP',mmp:'さいだいMP',agi:'すばやさ'}[src.stat]}が ${src.v} あがった！`;}
   if(eff==='revive'){if(tgt.hp>0) return 'none'; tgt.hp=src.full?tgt.mhp:Math.ceil(tgt.mhp/2); tgt.poison=false; tgt.sleep=false; sfx.heal(); flash('#fff8c0',300); return `${tgt.name}は いきかえった！`;}
   return null;

@@ -12,8 +12,8 @@ for(const [id,r] of Object.entries(M)){
   let hp=t.hp*Math.pow(Math.min(2.5,Math.max(.5,tgt/Math.max(1,r.turns))),.85);
   let dmg=t.dmg;
   const wr=r.win/r.n;
-  if(wr<.6) dmg*=.85; else if(wr<.8) dmg*=.93;
-  else if(r.minHp>.6) dmg*=1.15; else if(r.minHp>.45) dmg*=1.07; else if(r.minHp<.15) dmg*=.95;
+  if(wr<.2) dmg*=.72; else if(wr<.4) dmg*=.8; else if(wr<.6) dmg*=.87; else if(wr<.7) dmg*=.94;
+  else if(wr<.8) dmg*=1; else if(r.minHp>.6) dmg*=1.15; else if(r.minHp>.45) dmg*=1.07; else if(r.minHp<.15) dmg*=.95;
   out[id]={hp:+hp.toFixed(2),dmg:+dmg.toFixed(2)};
   console.error(id.padEnd(12),'ch'+r.ch,'turns',r.turns.toFixed(1),'->',tgt,'win',wr.toFixed(2),'minHp',r.minHp.toFixed(2),' =>',JSON.stringify(out[id]));
 }

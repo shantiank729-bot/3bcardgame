@@ -73,7 +73,7 @@ spell('storm','みだれうち','riri',48,14,'phys',{mult:1.2,tg:'all',d:'てき
 spell('flash','ぎんの ひらめき','riri',60,20,'phys',{mult:4,tg:'one',d:'めにも とまらない いちげき。'});
 // オルガ（まじょ）
 spell('oheal','まじょの いやし','olga',1,4,'heal',{tg:'ally',field:1,pow:[40,55],d:'HPを かいふくする。'});
-spell('purify','じょうか','olga',4,3,'purify',{tg:'ally',field:1,d:'どくと ねむりを なおす。'});
+spell('purify','じょうか','olga',4,3,'purify',{tg:'ally',field:1,d:'どく・ねむり・じゅもんふうじを なおす。'});
 spell('oall','みんなの いやし','olga',10,9,'healAll',{field:1,d:'なかま ぜんいんを かいふくする。'});
 spell('bless','まもりの まじない','olga',14,6,'buffDef',{tg:'ally',d:'なかま ひとりの うける ダメージを へらす。'});
 spell('orev','よみがえりの まじない','olga',20,14,'revive',{tg:'dead',field:1,d:'ちからつきた なかまを いきかえらせる。'});
@@ -102,7 +102,7 @@ const IT={
   herb2:{n:'げんきのみ',price:40,t:'heal',pow:[80,100],tg:'ally',d:'なかま ひとりの HPを たっぷり かいふくする。'},
   herb3:{n:'たいようのみ',price:200,t:'heal',pow:[250,300],tg:'ally',d:'なかま ひとりの HPを おおきく かいふくする。'},
   antidote:{n:'げどくのみ',price:10,t:'cure',tg:'ally',d:'どくを なおす。'},
-  bell:{n:'めざましベル',price:30,t:'wake',tg:'ally',d:'せんとうちゅう ねむっている なかまを おこす。'},
+  bell:{n:'めざましベル',price:30,t:'wake',tg:'ally',d:'せんとうちゅう ねむりと じゅもんふうじを なおす。'},
   drop:{n:'まりょくのしずく',price:150,t:'mp',pow:[20,30],tg:'ally',d:'MPを かいふくする。'},
   life:{n:'いのちのはね',price:300,t:'revive',tg:'dead',d:'ちからつきた なかまを いきかえらせる。'},
   wing:{n:'もどりのはね',price:25,t:'return',d:'いちど いった まちへ いっしゅんで もどる。'},

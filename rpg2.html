@@ -961,7 +961,7 @@ spell('storm','みだれうち','riri',48,14,'phys',{mult:1.2,tg:'all',d:'てき
 spell('flash','ぎんの ひらめき','riri',60,20,'phys',{mult:4,tg:'one',d:'めにも とまらない いちげき。'});
 // オルガ（まじょ）
 spell('oheal','まじょの いやし','olga',1,4,'heal',{tg:'ally',field:1,pow:[40,55],d:'HPを かいふくする。'});
-spell('purify','じょうか','olga',4,3,'purify',{tg:'ally',field:1,d:'どくと ねむりを なおす。'});
+spell('purify','じょうか','olga',4,3,'purify',{tg:'ally',field:1,d:'どく・ねむり・じゅもんふうじを なおす。'});
 spell('oall','みんなの いやし','olga',10,9,'healAll',{field:1,d:'なかま ぜんいんを かいふくする。'});
 spell('bless','まもりの まじない','olga',14,6,'buffDef',{tg:'ally',d:'なかま ひとりの うける ダメージを へらす。'});
 spell('orev','よみがえりの まじない','olga',20,14,'revive',{tg:'dead',field:1,d:'ちからつきた なかまを いきかえらせる。'});
@@ -990,7 +990,7 @@ const IT={
   herb2:{n:'げんきのみ',price:40,t:'heal',pow:[80,100],tg:'ally',d:'なかま ひとりの HPを たっぷり かいふくする。'},
   herb3:{n:'たいようのみ',price:200,t:'heal',pow:[250,300],tg:'ally',d:'なかま ひとりの HPを おおきく かいふくする。'},
   antidote:{n:'げどくのみ',price:10,t:'cure',tg:'ally',d:'どくを なおす。'},
-  bell:{n:'めざましベル',price:30,t:'wake',tg:'ally',d:'せんとうちゅう ねむっている なかまを おこす。'},
+  bell:{n:'めざましベル',price:30,t:'wake',tg:'ally',d:'せんとうちゅう ねむりと じゅもんふうじを なおす。'},
   drop:{n:'まりょくのしずく',price:150,t:'mp',pow:[20,30],tg:'ally',d:'MPを かいふくする。'},
   life:{n:'いのちのはね',price:300,t:'revive',tg:'dead',d:'ちからつきた なかまを いきかえらせる。'},
   wing:{n:'もどりのはね',price:25,t:'return',d:'いちど いった まちへ いっしゅんで もどる。'},
@@ -1351,36 +1351,36 @@ function scaledMon(id,L,ch,zone){
 const EXPMUL={};
 // tools2/story.js で ボスごとに 5〜6かい たたかわせ、 めやすの ターンすう・しょうりつに あわせた ばいりつ
 const TUNE={
-  kobun:{hp:0.78,dmg:1.64},
-  morinushi:{hp:0.49,dmg:1.22},
-  minegolem:{hp:0.64,dmg:1.52},
-  iwakui:{hp:0.52,dmg:1.34},
-  jin1:{hp:1.01,dmg:1.34},
-  suimon:{hp:0.83,dmg:0.94},
-  kinko:{hp:1.37,dmg:1.15},
-  kanebourei:{hp:1.06,dmg:1.14},
-  taichou:{hp:1.29,dmg:0.98},
-  shogun:{hp:1.15,dmg:0.95},
-  majuu:{hp:1.89,dmg:0.79},
-  jin2:{hp:1.71,dmg:1.41},
-  fakeking2:{hp:2.17,dmg:1.32},
-  kinshoban:{hp:2.12,dmg:1.23},
-  dokugumo:{hp:2.16,dmg:1.11},
-  kanashimi:{hp:1.63,dmg:1.14},
-  yoganryu:{hp:2.2,dmg:1.23},
-  jin3:{hp:2.15,dmg:1.43},
-  bunshin:{hp:1.98,dmg:1.03},
-  maryu:{hp:2.12,dmg:1.22},
-  mirrorme:{hp:2.33,dmg:1.22},
-  truecaptain:{hp:2.28,dmg:1.32},
-  oyakata:{hp:2.23,dmg:1.15},
-  kyojin:{hp:2.21,dmg:1.23},
-  gen1:{hp:2.39,dmg:1.45},
-  gen2:{hp:2.66,dmg:1.45},
-  gen3:{hp:2.72,dmg:1.35},
-  oblivion:{hp:1.7,dmg:0.83},
-  mumei:{hp:2.44,dmg:1.03},
-  phantom:{hp:1.88,dmg:1.02}};
+  kobun:{hp:0.77,dmg:1.77},
+  morinushi:{hp:0.55,dmg:1.13},
+  minegolem:{hp:0.61,dmg:1.25},
+  iwakui:{hp:0.51,dmg:1.03},
+  jin1:{hp:0.95,dmg:0.96},
+  suimon:{hp:0.80,dmg:0.73},
+  kinko:{hp:1.04,dmg:0.92},
+  kanebourei:{hp:0.92,dmg:1.14},
+  taichou:{hp:1.21,dmg:0.93},
+  shogun:{hp:1.28,dmg:0.83},
+  majuu:{hp:1.40,dmg:0.85},
+  jin2:{hp:1.22,dmg:1.51},
+  fakeking2:{hp:1.65,dmg:1.23},
+  kinshoban:{hp:1.71,dmg:0.95},
+  dokugumo:{hp:1.55,dmg:0.86},
+  kanashimi:{hp:1.22,dmg:0.88},
+  yoganryu:{hp:1.89,dmg:0.95},
+  jin3:{hp:1.82,dmg:1.10},
+  bunshin:{hp:1.49,dmg:0.74},
+  maryu:{hp:1.78,dmg:1.13},
+  mirrorme:{hp:1.77,dmg:1.15},
+  truecaptain:{hp:2.02,dmg:1.15},
+  oyakata:{hp:1.60,dmg:0.92},
+  kyojin:{hp:2.01,dmg:1.09},
+  gen1:{hp:1.78,dmg:1.45},
+  gen2:{hp:1.82,dmg:1.45},
+  gen3:{hp:1.72,dmg:1.35},
+  oblivion:{hp:1.45,dmg:0.74},
+  mumei:{hp:1.64,dmg:0.90},
+  phantom:{hp:1.53,dmg:0.64}};
 // むずかしさ（ボス・ざこ ぜんたいの ばいりつ）。 めやすレベルで ボスの しょうりつ 7〜8わり を ねらう
 const HARD={bossHp:1.0,bossDmg:1.2,mobHp:1.1,mobAtk:1.15};
 function applyTune(){for(const [id,m] of Object.entries(MON)){ if(!m.boss) continue; const t=TUNE[id]||{}; m.base=m.base||{hp:m.hp,atk:m.atk};
@@ -1528,7 +1528,7 @@ function buildDungeons(){
 let statusBox=null;
 function showStatus(style){hideStatus(); statusBox=document.createElement('div'); statusBox.className='party'; Object.assign(statusBox.style,style||{}); ui.appendChild(statusBox); updStatus();}
 function hideStatus(){if(statusBox){statusBox.remove(); statusBox=null;}}
-function stLine(m){if(m.hp<=0) return 'しに'; if(m.sleep) return 'ねむり'; if(m.poison) return 'どく'; return 'Lv '+m.lv;}
+function stLine(m){if(m.hp<=0) return 'しに'; if(m.sleep) return 'ねむり'; if(m.silence) return 'ふうじ'; if(m.poison) return 'どく'; return 'Lv '+m.lv;}
 function updStatus(){
   if(!statusBox) return;
   statusBox.innerHTML=S.party.map((m,i)=>{
@@ -1933,8 +1933,8 @@ function applyTo(src,eff,pow,tgt){
   if(eff==='heal'){if(tgt.hp<=0) return null; if(tgt.hp>=tgt.mhp) return 'full'; const v=Math.min(rnd(...pow),tgt.mhp-tgt.hp); tgt.hp+=v; sfx.heal(); return `${tgt.name}の HPが ${v}ポイント かいふくした！`;}
   if(eff==='mp'){if(tgt.hp<=0) return null; if(tgt.mp>=tgt.mmp) return 'full'; const v=Math.min(rnd(...pow),tgt.mmp-tgt.mp); tgt.mp+=v; sfx.heal(); return `${tgt.name}の MPが ${v}ポイント かいふくした！`;}
   if(eff==='cure'){if(tgt.hp<=0||!tgt.poison) return 'none'; tgt.poison=false; sfx.heal(); return `${tgt.name}の からだから どくが きえた！`;}
-  if(eff==='purify'){if(tgt.hp<=0||(!tgt.poison&&!tgt.sleep)) return 'none'; tgt.poison=false; tgt.sleep=false; sfx.heal(); return `${tgt.name}の からだが きよめられた！`;}
-  if(eff==='wake'){if(tgt.hp<=0||!tgt.sleep) return 'none'; tgt.sleep=false; sfx.ok(); return `${tgt.name}は めを さました！`;}
+  if(eff==='purify'){if(tgt.hp<=0||(!tgt.poison&&!tgt.sleep&&!tgt.silence)) return 'none'; tgt.poison=false; tgt.sleep=false; tgt.silence=0; sfx.heal(); return `${tgt.name}の からだが きよめられた！`;}
+  if(eff==='wake'){if(tgt.hp<=0||(!tgt.sleep&&!tgt.silence)) return 'none'; const was=tgt.sleep; tgt.sleep=false; tgt.silence=0; sfx.ok(); return was?`${tgt.name}は めを さました！`:`${tgt.name}は こえを とりもどした！`;}
   if(eff==='seed'){tgt[src.stat]+=src.v; if(src.stat==='mhp') tgt.hp+=src.v; if(src.stat==='mmp') tgt.mp+=src.v; sfx.lvl(); return `${tgt.name}の ${{str:'ちから',mhp:'さいだいHP',mmp:'さいだいMP',agi:'すばやさ'}[src.stat]}が ${src.v} あがった！`;}
   if(eff==='revive'){if(tgt.hp>0) return 'none'; tgt.hp=src.full?tgt.mhp:Math.ceil(tgt.mhp/2); tgt.poison=false; tgt.sleep=false; sfx.heal(); flash('#fff8c0',300); return `${tgt.name}は いきかえった！`;}
   return null;
@@ -2185,7 +2185,7 @@ async function encounterFx(boss){
   for(let i=0;i<(boss?2:3);i++){fadeEl.style.transitionDuration='0ms'; fadeEl.style.background='#fff'; fadeEl.style.opacity='.85'; await sleep(55); fadeEl.style.opacity='0'; await sleep(55);}
   fadeEl.style.background='#000'; await fadeOut(180);
 }
-function clearBuffs(){for(const p of S.party){p.sleep=false; p.defend=false; p.atkUp=false; p.defUp=false; p.covering=false; p.counter=false;}}
+function clearBuffs(){for(const p of S.party){p.silence=0; p.sleep=false; p.defend=false; p.atkUp=false; p.defUp=false; p.covering=false; p.counter=false;}}
 async function battle(ids,opt={}){
   await encounterFx(opt.boss);
   B={en:ids.map(id=>mkEnemy(id,opt.zone)),area:opt.area||'field',zone:opt.zone,boss:!!opt.boss,guard:false,hi:-1,act:-1,lastCmd:[],turn:0};
@@ -2218,7 +2218,7 @@ async function battle(ids,opt={}){
       }
       res=check();
     }
-    S.party.forEach(p=>{p.defend=false; p.covering=false; p.counter=false;});
+    S.party.forEach(p=>{p.defend=false; p.covering=false; p.counter=false; if(p.silence) p.silence--;});
     if(opt.limit&&B.turn>=opt.limit&&!res) res='timeout';
     if(B.turn>200&&!res) res='lose';
   }
@@ -2257,6 +2257,7 @@ async function memberCommand(p,i,canBack){
         const sm=new Menu({items:ks.map(k=>({label:SP[k].n,right:SP[k].mp,disabled:p.mp<SP[k].mp})),title:`${WAZA?'わざ':'じゅもん'}（MP ${p.mp}）`,style:{left:'26%',bottom:'3%',right:'3%'},desc:j=>SP[ks[j]].d});
         const j=await sm.pick(); sm.close(); if(j<0) continue;
         const sp=SP[ks[j]];
+        if(p.silence&&isMagic(sp)){await flash2('じゅもんを ふうじられている！'); continue;}
         if(p.mp<sp.mp){await flash2('MPが たりない！'); continue;}
         const tg=await pickFor(sp.tg,i); if(tg===undefined) continue;
         return {t:'spell',k:ks[j],target:tg};
@@ -2292,14 +2293,15 @@ const OFFENSE={hero:['dawn','judge','starrain','lsword'],mio:['secret','nova','m
   riri:['flash','storm','needle','triple','shadowcut','double'],olga:['curse'],jin:['starcut','first','musou','steel','swallow','iai'],mumei:['mlight']};
 function autoCmd(p){
   const al=aliveP(), dead=S.party.filter(m=>m.hp<=0), en=alive(), idx=m=>S.party.indexOf(m);
-  const ks=learned(p).filter(k=>SP[k].battle&&p.mp>=SP[k].mp), can=k=>ks.includes(k);
+  const ks=learned(p).filter(k=>SP[k].battle&&p.mp>=SP[k].mp&&!(p.silence&&isMagic(SP[k]))), can=k=>ks.includes(k);
   const low=al.filter(m=>m.hp<m.mhp*.5).sort((a,b)=>a.hp/a.mhp-b.hp/b.mhp);
   const healer=p.cls==='olga'||(p.cls==='hero'&&!S.party.some(m=>m.cls==='olga'&&m.hp>0&&!m.sleep));
   if(dead.length){const k=['ofull','orev','revive'].find(can); if(k) return {t:'spell',k,target:idx(dead[0])}; if(has('life')&&(healer||p.cls==='garm')) return {t:'item',id:'life',target:idx(dead[0])};}
   if(low.length>=2){const k=['witch','oallbig','hheal','oall','mheal'].find(can); if(k) return {t:'spell',k};}
   if(low.length&&(healer||low[0].hp<low[0].mhp*.3)){const k=['obig','heal2','oheal','heal'].find(can); if(k) return {t:'spell',k,target:idx(low[0])};
     if(low[0].hp<low[0].mhp*.3){for(const it of ['herb3','herb2','herb']) if(has(it)) return {t:'item',id:it,target:idx(low[0])};}}
-  const sleeper=al.find(m=>m.sleep); if(sleeper&&can('purify')) return {t:'spell',k:'purify',target:idx(sleeper)};
+  const sleeper=al.find(m=>m.sleep||(m.silence&&['olga','mio','hero'].includes(m.cls))); if(sleeper&&can('purify')) return {t:'spell',k:'purify',target:idx(sleeper)};
+  if(sleeper&&sleeper.silence&&has('bell')&&p!==sleeper) return {t:'item',id:'bell',target:idx(sleeper)};
   if(B.boss&&!B.guard){const k=['wall','guard'].find(can); if(k&&(p.cls==='garm'||p.cls==='hero'&&!S.party.some(m=>m.cls==='garm'&&m.hp>0))) return {t:'spell',k};}
   if(!B.boss&&AUTO==='trash'){const tgt=en.slice().sort((a,b)=>a.hp-b.hp)[0]; return {t:'attack',target:B.en.indexOf(tgt)};}
   if(B.boss&&can('power')){const t=al.find(m=>['garm','jin','hero','riri'].includes(m.cls)&&!m.atkUp); if(t) return {t:'spell',k:'power',target:idx(t)};}
@@ -2345,6 +2347,7 @@ async function memberAct(p,cmd){
   }
   if(cmd.t==='spell'){
     const sp=SP[cmd.k];
+    if(p.silence&&isMagic(sp)){await say(`${n}は ${sp.n}を となえようとした。 しかし じゅもんを ふうじられている！`,{wait:'auto'}); return null;}
     if(p.mp<sp.mp){await say(`${n}は ${sp.n}を つかおうとした。 しかし MPが たりない！`,{wait:'auto'}); return null;}
     // かさねがけは できない：もう かかっていれば MPを つかわずに おしえる
     {const bt=S.party[cmd.target];
@@ -2486,7 +2489,8 @@ async function genAct(e){
   }
   const P=d.phases[ph];
   await genMove(e,P);
-  if(P.acts&&Math.random()<P.acts&&aliveP().length&&e.hp>0) await genMove(e,P);
+  const acts=ph>=1&&(d.ml||0)>=10?1:(P.acts||0);   // こうはん（HP はんぶん いか）は まいターン 2かい こうどう
+  if(acts&&Math.random()<acts&&aliveP().length&&e.hp>0) await genMove(e,P);
 }
 async function genMove(e,P){
   if(e.prep){const mv=e.prep; e.prep=null; return doMove(e,mv);}
@@ -2507,6 +2511,19 @@ async function doMove(e,mv){
     case 'breath': await say(msg,{wait:'auto',ms:380}); sfx.fire(); flash(mv.f>.25?'#ffffff':'#ff8a3a',mv.f>.25?400:220); if(mv.f>.25) shake(); for(const p of aliveP()) await hurtMember(p,dm()); return;
     case 'poison': {const p=randAlly(); await say(msg,{wait:'auto',ms:380}); await enemyAttack(e,1,true,p); return poisonMember(p);}
     case 'sleep1': await say(msg,{wait:'auto',ms:380}); flash('#c0a0ff',200); return sleepMember(randAlly(),.5);
+    case 'dispel': {
+      await say(msg,{wait:'auto',ms:420}); flash('#c0f0ff',360); shake();
+      const had=B.guard||S.party.some(p=>p.atkUp||p.defUp);
+      B.guard=false; for(const p of S.party){p.atkUp=false; p.defUp=false;} updStatus();
+      return say(had?'なかまたちに かかっていた ちからが すべて かきけされた！':'しかし なにも おこらなかった。',{wait:'auto'});
+    }
+    case 'silence': {
+      await say(msg,{wait:'auto',ms:400}); flash('#8080c0',240);
+      const tg=mv.all?aliveP():[aliveP().filter(p=>p.mmp>10).sort(()=>Math.random()-.5)[0]||randAlly()];
+      for(const p of tg){ if(!p||p.hp<=0) continue; if(p.silence){await say(`${p.name}は もう じゅもんを ふうじられている。`,{wait:'auto',ms:350}); continue;}
+        if(Math.random()<(mv.ch||.5)){p.silence=3; updStatus(); await say(`${p.name}は じゅもんを ふうじられた！`,{wait:'auto',ms:450});} else await say(`${p.name}は のろいを はねかえした！`,{wait:'auto',ms:380}); }
+      return;
+    }
     case 'sleepAll': await say(msg,{wait:'auto',ms:380}); flash('#ffc0e0',240); for(const p of aliveP()) await sleepMember(p,mv.ch||.35); return;
     case 'mist': await say(msg,{wait:'auto',ms:380}); flash('rgba(120,255,80,.4)',260); for(const p of aliveP()){await hurtMember(p,dm()); await poisonMember(p,.35);} return;
     case 'summon': {
@@ -2560,6 +2577,9 @@ async function defeat(){
 }
 
 function stealItem(e){const L=(e.d.ml||10); return L<15?pickR(['herb','herb','antidote','herb2']):L<35?pickR(['herb2','herb2','antidote','drop','bell']):pickR(['herb3','herb2','drop','life']);}
+
+// ぶつりの わざ（ふうじられても つかえる）か どうか
+const isMagic=sp=>!['phys','multi','steal','cover','counter','roar'].includes(sp.t)&&!['garm','riri','jin'].includes(sp.cls);
 /* ===== 12_c1.js ===== */
 /* =========================================================
    だい1ぶ　わすれられた ひとびと（1〜8しょう）
@@ -3741,6 +3761,17 @@ function makeWorldMap(){
   MAPS.world={id:'world',name:'あおばの せかい',rows:makeWorld().map(r=>r.join('')),out:'~',kind:'world',bgm:'field',enc:(x,y)=>worldZone(x,y),links:{},npcs:[],chests:[],objs:[],hid:[],dyn:{}};
 }
 
+/* ---------- ボスの いやらしい わざ（9しょう いこうの しょうボス） ----------
+   ・きょうかけし：かならず 1ターン まえに よこくする（そのあいだに こうげきを あてる・ぼうぎょする）
+   ・じゅもんふうじ：3ターン じゅもんが つかえない（じょうか・めざましベルで なおる） */
+function addBossTricks(){
+  for(const [id,m] of Object.entries(MON)){
+    if(!m.boss||!m.phases||m.phases.length<2||(m.ml||0)<24) continue;
+    m.phases[0].moves.push(M_('silence',1,'%sは ことばを うばう のろいを はなった！',{ch:.45,all:(m.ml||0)>=44}));
+    m.phases[m.phases.length-1].moves.push(M_('prep',1.5,'%sの まわりに つめたい ひかりが あつまっていく…',{next:M_('dispel',0,'%sは かきけしの ひかりを はなった！')}));
+  }
+}
+
 /* ---------- ボス・ちゅうボス ---------- */
 async function dungeonMid(D,mid,flag){
   msgClear(); for(const t of mid.intro||[]) await say(t); msgClose();
@@ -3923,7 +3954,7 @@ function initWorld(){
   defineCh1(); defineCh2(); defineCh3(); defineCh4(); defineCh5(); defineCh6(); defineCh7(); defineCh8();
   defineCh9(); defineCh10(); defineCh11(); defineCh12(); defineCh13(); defineCh14(); defineCh15(); defineCh16();
   defineCh17(); defineCh18(); defineCh19(); defineCh20(); defineCh21(); defineCh22(); defineCh23(); definePost();
-  glueFix(); defineSideQuests(); buildDungeons(); placeIcons(); placeWorldFrags(); fixLinks(); applyTune();
+  glueFix(); defineSideQuests(); addBossTricks(); buildDungeons(); placeIcons(); placeWorldFrags(); fixLinks(); applyTune();
 }
 initWorld();
 requestAnimationFrame(frame);

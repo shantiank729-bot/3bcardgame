@@ -2,7 +2,7 @@
 let statusBox=null;
 function showStatus(style){hideStatus(); statusBox=document.createElement('div'); statusBox.className='party'; Object.assign(statusBox.style,style||{}); ui.appendChild(statusBox); updStatus();}
 function hideStatus(){if(statusBox){statusBox.remove(); statusBox=null;}}
-function stLine(m){if(m.hp<=0) return 'しに'; if(m.sleep) return 'ねむり'; if(m.poison) return 'どく'; return 'Lv '+m.lv;}
+function stLine(m){if(m.hp<=0) return 'しに'; if(m.sleep) return 'ねむり'; if(m.silence) return 'ふうじ'; if(m.poison) return 'どく'; return 'Lv '+m.lv;}
 function updStatus(){
   if(!statusBox) return;
   statusBox.innerHTML=S.party.map((m,i)=>{
