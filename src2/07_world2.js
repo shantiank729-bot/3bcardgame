@@ -136,6 +136,8 @@ function scaledMon(id,L,ch,zone){
   const d=MON[id], st=fstat(L,ch,d.arch||'norm'), zm=ZONE_MUL[zone]||ZM_DEFAULT;
   return Object.assign({},d,{hp:Math.round(st.hp*NMUL.hp*zm.hp*HARD.mobHp),atk:Math.round(st.atk*NMUL.atk*zm.atk*HARD.mobAtk),def:st.def,agi:st.agi,exp:st.exp,g:st.g,hpRef:st.hpRef,ml:L});
 }
+// ざこの けいけんちの ばいりつ（1さくめと おなじく おそめ。 1レベル あげるのに めやす 9〜13せん）
+const EXP_FIELD=.45;
 const EXPMUL={};
 // tools2/story.js で ボスごとに 5〜6かい たたかわせ、 めやすの ターンすう・しょうりつに あわせた ばいりつ
 const TUNE={

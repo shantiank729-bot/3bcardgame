@@ -416,7 +416,7 @@ async function doMove(e,mv){
   return enemyAttack(e);
 }
 async function victory(){
-  const km=B.boss?1:(EXPMUL[B.zone]??1);
+  const km=B.boss?1:(EXPMUL[B.zone]??EXP_FIELD);
   const exp=Math.round(B.en.filter(e=>!e.noexp).reduce((s,e)=>s+e.d.exp,0)*km), gold=Math.round(B.en.filter(e=>!e.noexp).reduce((s,e)=>s+e.d.g,0)*(km+1)/2);
   stopBgm(); const ms=sfx.win();
   await say(B.en.length>1?'まものたちを やっつけた！':`${B.en[0].name}を たおした！`,{wait:'auto',ms:Math.max(500,(ms||0)-200)});
