@@ -157,6 +157,8 @@
 
 章ボスは平均 9〜14 ターン、最終形態は約19ターン。目安レベルでの勝率はほぼ100%だが、戦闘後に一番減った仲間のHPは平均4〜6割まで減る（回復とぼうぎょを使わないと負ける）。
 
+**むずかしさ調整（2回目）**：遊んだ人から「もっと難しくていい」との声があり、全体の倍率 `HARD`（ボス攻撃×1.2、ざこHP×1.1・攻撃×1.15）を足して、勝率の極端なボスを個別に直した。目安レベルでの章ボス勝率は67〜100%（平均約9割）、戦闘後に一番減った仲間のHPは2〜4割。ざこ戦は1戦でHPの9〜23%を消耗。
+
 ## 参考資料
 
 - Wireframe「CityCraft: ten tips for building better game cities」 https://wireframe.raspberrypi.com/articles/citycraft-ten-tips-for-building-better-game-cities

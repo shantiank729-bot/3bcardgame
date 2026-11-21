@@ -1337,43 +1337,45 @@ const ZM_DEFAULT={hp:1.15,atk:1.3};
 const chOfLevel=L=>{const i=LV_OF_CH.findIndex(t=>t>=L); return i<1?25:i;};
 function scaledMon(id,L,ch,zone){
   const d=MON[id], st=fstat(L,ch,d.arch||'norm'), zm=ZONE_MUL[zone]||ZM_DEFAULT;
-  return Object.assign({},d,{hp:Math.round(st.hp*NMUL.hp*zm.hp),atk:Math.round(st.atk*NMUL.atk*zm.atk),def:st.def,agi:st.agi,exp:st.exp,g:st.g,hpRef:st.hpRef,ml:L});
+  return Object.assign({},d,{hp:Math.round(st.hp*NMUL.hp*zm.hp*HARD.mobHp),atk:Math.round(st.atk*NMUL.atk*zm.atk*HARD.mobAtk),def:st.def,agi:st.agi,exp:st.exp,g:st.g,hpRef:st.hpRef,ml:L});
 }
 const EXPMUL={};
 // tools2/story.js で ボスごとに 5〜6かい たたかわせ、 めやすの ターンすう・しょうりつに あわせた ばいりつ
 const TUNE={
-  kobun:{hp:0.78,dmg:1.52},
+  kobun:{hp:0.78,dmg:1.64},
   morinushi:{hp:0.49,dmg:1.22},
-  minegolem:{hp:0.64,dmg:1.41},
-  iwakui:{hp:0.52,dmg:1.22},
-  jin1:{hp:1.01,dmg:1.22},
-  suimon:{hp:0.83,dmg:1.07},
-  kinko:{hp:1.37,dmg:1.22},
+  minegolem:{hp:0.64,dmg:1.52},
+  iwakui:{hp:0.52,dmg:1.34},
+  jin1:{hp:1.01,dmg:1.34},
+  suimon:{hp:0.83,dmg:0.94},
+  kinko:{hp:1.37,dmg:1.15},
   kanebourei:{hp:1.06,dmg:1.14},
-  taichou:{hp:1.29,dmg:1.07},
+  taichou:{hp:1.29,dmg:0.98},
   shogun:{hp:1.15,dmg:0.95},
-  majuu:{hp:1.89,dmg:0.90},
+  majuu:{hp:1.89,dmg:0.79},
   jin2:{hp:1.71,dmg:1.41},
   fakeking2:{hp:2.17,dmg:1.32},
   kinshoban:{hp:2.12,dmg:1.23},
-  dokugumo:{hp:2.16,dmg:1.23},
+  dokugumo:{hp:2.16,dmg:1.11},
   kanashimi:{hp:1.63,dmg:1.14},
   yoganryu:{hp:2.2,dmg:1.23},
-  jin3:{hp:2.15,dmg:1.32},
-  bunshin:{hp:1.98,dmg:1.14},
+  jin3:{hp:2.15,dmg:1.43},
+  bunshin:{hp:1.98,dmg:1.03},
   maryu:{hp:2.12,dmg:1.22},
   mirrorme:{hp:2.33,dmg:1.22},
   truecaptain:{hp:2.28,dmg:1.32},
-  oyakata:{hp:2.23,dmg:1.22},
+  oyakata:{hp:2.23,dmg:1.15},
   kyojin:{hp:2.21,dmg:1.23},
-  gen1:{hp:2.39,dmg:1.32},
-  gen2:{hp:2.66,dmg:1.32},
-  gen3:{hp:2.72,dmg:1.23},
-  oblivion:{hp:1.7,dmg:0.87},
-  mumei:{hp:2.44,dmg:1.15},
-  phantom:{hp:1.88,dmg:1.07}};
-function applyTune(){for(const [id,t] of Object.entries(TUNE)){const m=MON[id]; if(!m) continue; m.base=m.base||{hp:m.hp,atk:m.atk};
-  m.hp=Math.round(m.base.hp*(t.hp||1)); m.atk=Math.round(m.base.atk*(t.dmg||1)); m.dmg=t.dmg||1;}}
+  gen1:{hp:2.39,dmg:1.45},
+  gen2:{hp:2.66,dmg:1.45},
+  gen3:{hp:2.72,dmg:1.35},
+  oblivion:{hp:1.7,dmg:0.83},
+  mumei:{hp:2.44,dmg:1.03},
+  phantom:{hp:1.88,dmg:1.02}};
+// むずかしさ（ボス・ざこ ぜんたいの ばいりつ）。 めやすレベルで ボスの しょうりつ 7〜8わり を ねらう
+const HARD={bossHp:1.0,bossDmg:1.2,mobHp:1.1,mobAtk:1.15};
+function applyTune(){for(const [id,m] of Object.entries(MON)){ if(!m.boss) continue; const t=TUNE[id]||{}; m.base=m.base||{hp:m.hp,atk:m.atk};
+  m.hp=Math.round(m.base.hp*(t.hp||1)*HARD.bossHp); m.atk=Math.round(m.base.atk*(t.dmg||1)*HARD.bossDmg); m.dmg=(t.dmg||1)*HARD.bossDmg;}}
 /* ===== 08_dgn2.js ===== */
 /* ---------- ダンジョン（しかけつき じどう せいせい） ----------
    ゼルダの カギの かんがえかた：ほんすじの つうろに カギの とびら（または こうし）を おき、
