@@ -1,0 +1,543 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>陣取りヘックス</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<style>
+/*
+  陣取りヘックス — 1画面のヘックス盤で「置く・挟んで奪う・要塞で守る・本城とつなぐ」を競う陣地取りゲーム。
+  設計の柱（エリアコントロール系ボードゲームの定石）:
+    1. 価値の違う地域（2点・3点マス、岩）で争点をつくる
+    2. 支配は奪い返せる → 守る目標が生まれる（要塞化は回数限定の資源）
+    3. 補給線: 本城とつながったマスだけが得点 → 分断が強力な戦術になる
+    4. 逆転の芽: 6点以上負けている側はその手番に2回行動
+    5. 先手有利をコミ0.5点で相殺（囲碁と同じ考え方）、盤は点対称で公平
+    6. 情報は全公開。手の結果（奪えるマス・点の増減）を置く前にプレビュー
+  CPU: アルファベータ法のミニマックス探索 + 影響力マップによる局面評価（ビーム幅で枝刈り）
+*/
+:root{
+  --bg:#F4F1EA; --panel:#FFFFFF; --ink:#1E2329; --muted:#646B73; --line:#D9D3C7;
+  --p1:#2E6BD1; --p1s:#C9DBF8; --p2:#D44A3A; --p2s:#F6CFC9;
+  --empty:#E8E3D7; --empty-h:#DCD5C4; --rock:#8C8578; --gold:#B98A10; --legal:#1F9A57;
+  --onp:#FFFFFF;
+  --f:"Zen Kaku Gothic New","Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#14161A; --panel:#1E2127; --ink:#E9ECF0; --muted:#9AA1AA; --line:#343841;
+    --p1:#5B92F0; --p1s:#203556; --p2:#F06A5B; --p2s:#552520;
+    --empty:#2A2D34; --empty-h:#353943; --rock:#5A564F; --gold:#E2B33C; --legal:#3CC47A;
+    --onp:#0F1115; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#14161A; --panel:#1E2127; --ink:#E9ECF0; --muted:#9AA1AA; --line:#343841;
+  --p1:#5B92F0; --p1s:#203556; --p2:#F06A5B; --p2s:#552520;
+  --empty:#2A2D34; --empty-h:#353943; --rock:#5A564F; --gold:#E2B33C; --legal:#3CC47A;
+  --onp:#0F1115; color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--f);line-height:1.6;-webkit-tap-highlight-color:transparent}
+.wrap{max-width:980px;margin:0 auto;padding:16px}
+h1{font-size:1.35rem;margin:0 0 4px;letter-spacing:.04em}
+.sub{color:var(--muted);font-size:.85rem;margin:0 0 14px}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;align-items:start}
+@media (max-width:820px){.layout{grid-template-columns:minmax(0,1fr)}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px}
+.scores{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:center;margin-bottom:10px}
+.pl{display:flex;flex-direction:column;gap:2px;padding:8px 10px;border-radius:10px;border:2px solid transparent}
+.pl.p2{text-align:right}
+.pl.active.p1{border-color:var(--p1)} .pl.active.p2{border-color:var(--p2)}
+.pl .nm{font-size:.8rem;color:var(--muted);font-weight:500}
+.pl .pt{font-size:1.7rem;font-weight:700;line-height:1.1;font-variant-numeric:tabular-nums}
+.pl.p1 .pt{color:var(--p1)} .pl.p2 .pt{color:var(--p2)}
+.pl .meta{font-size:.75rem;color:var(--muted)}
+.vs{font-size:.8rem;color:var(--muted);text-align:center}
+.bar{height:8px;border-radius:4px;background:var(--p2);overflow:hidden;margin-bottom:10px}
+.bar>i{display:block;height:100%;background:var(--p1);transition:width .35s}
+.status{min-height:3.2em;font-size:.92rem;padding:8px 10px;border-radius:10px;background:var(--bg);margin-bottom:10px}
+.status b{font-weight:700}
+.boardbox{position:relative}
+svg{display:block;width:100%;height:auto;touch-action:manipulation;user-select:none}
+.cell polygon{stroke:var(--bg);stroke-width:2;transition:fill .25s}
+.cell.e polygon{fill:var(--empty)}
+.cell.rock polygon{fill:var(--rock)}
+.cell.o1 polygon{fill:var(--p1)} .cell.o2 polygon{fill:var(--p2)}
+.cell.d1 polygon{fill:var(--p1s);stroke:var(--p1);stroke-dasharray:4 3}
+.cell.d2 polygon{fill:var(--p2s);stroke:var(--p2);stroke-dasharray:4 3}
+.cell.legal{cursor:pointer}
+.cell.legal polygon{fill:var(--empty-h)}
+.cell.legal .dot{fill:var(--legal)}
+.cell.ftarget{cursor:pointer}
+.cell.sel polygon{stroke:var(--ink);stroke-width:3}
+.cell.willflip polygon{stroke:var(--gold);stroke-width:4;stroke-dasharray:none}
+.cell.last polygon{stroke:var(--ink);stroke-width:2.5}
+.cell.flash polygon{animation:flash .7s ease-out}
+@keyframes flash{0%{filter:brightness(1.8)}100%{filter:none}}
+.cell text{font-weight:700;pointer-events:none;text-anchor:middle;dominant-baseline:central}
+.val{fill:var(--gold);font-size:15px}
+.cell.o1 .val,.cell.o2 .val{fill:var(--onp)}
+.base{fill:var(--onp);font-size:17px}
+.fort{fill:none;stroke:var(--gold);stroke-width:3}
+.ghost polygon{fill-opacity:.55}
+.controls{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+button,select{font:inherit;font-size:.9rem;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:8px 12px;cursor:pointer}
+button:disabled{opacity:.45;cursor:default}
+button.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+button.primary{background:var(--legal);border-color:var(--legal);color:#fff;font-weight:700}
+.side h2{font-size:1rem;margin:0 0 8px}
+.side section+section{margin-top:16px}
+.row{display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
+.row label{font-size:.85rem;color:var(--muted);min-width:4.5em}
+.row select{flex:1}
+ol.rules,ul.notes{padding-left:1.2em;margin:0;font-size:.85rem}
+ol.rules li,ul.notes li{margin-bottom:4px}
+.log{font-size:.8rem;color:var(--muted);max-height:180px;overflow:auto;margin:0;padding-left:1.2em}
+.log li.p1::marker{color:var(--p1)} .log li.p2::marker{color:var(--p2)}
+.legend{display:flex;flex-wrap:wrap;gap:10px;font-size:.78rem;color:var(--muted);margin-top:8px}
+.legend span{display:inline-flex;align-items:center;gap:4px}
+.sw{width:14px;height:14px;border-radius:3px;display:inline-block}
+.overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb,var(--bg) 70%,transparent);border-radius:12px}
+.overlay .card{text-align:center;max-width:300px}
+.overlay .big{font-size:1.5rem;font-weight:700;margin-bottom:4px}
+details summary{cursor:pointer;font-weight:700;font-size:.95rem}
+.thinking{display:inline-block;width:.6em;height:.6em;border-radius:50%;background:var(--muted);animation:pulse 1s infinite;margin-right:6px;vertical-align:middle}
+@keyframes pulse{50%{opacity:.2}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>陣取りヘックス</h1>
+  <p class="sub">陣を広げ、挟んで奪い、要塞で守る。最後に本城とつながっている陣地の点数が多い方の勝ち。</p>
+
+  <div class="layout">
+    <div class="card">
+      <div class="scores">
+        <div class="pl p1" id="pl1"><span class="nm" id="nm1">青</span><span class="pt" id="sc1">0</span><span class="meta" id="mt1"></span></div>
+        <div class="vs">VS</div>
+        <div class="pl p2" id="pl2"><span class="nm" id="nm2">赤</span><span class="pt" id="sc2">0</span><span class="meta" id="mt2"></span></div>
+      </div>
+      <div class="bar"><i id="bar" style="width:50%"></i></div>
+      <div class="status" id="status"></div>
+      <div class="boardbox">
+        <svg id="board" aria-label="ゲーム盤"></svg>
+        <div class="overlay" id="overlay" hidden>
+          <div class="card"><div class="big" id="resTitle"></div><div id="resText"></div>
+            <div class="controls" style="justify-content:center"><button class="primary" id="againBtn">もう一度</button></div></div>
+        </div>
+      </div>
+      <div class="controls">
+        <button id="modePlace" class="on">陣を置く</button>
+        <button id="modeFort">要塞化</button>
+        <button id="hintBtn">ヒント</button>
+        <button id="confirmBtn" class="primary" hidden>この手で決定</button>
+      </div>
+      <div class="legend">
+        <span><i class="sw" style="background:var(--p1)"></i>青の陣地</span>
+        <span><i class="sw" style="background:var(--p2)"></i>赤の陣地</span>
+        <span><i class="sw" style="background:var(--p1s);outline:1px dashed var(--p1)"></i>孤立（0点）</span>
+        <span><i class="sw" style="background:var(--rock)"></i>岩（置けない）</span>
+        <span><i class="sw" style="border:3px solid var(--gold)"></i>要塞</span>
+      </div>
+    </div>
+
+    <div class="card side">
+      <section>
+        <h2>対局設定</h2>
+        <div class="row"><label for="opp">相手</label>
+          <select id="opp">
+            <option value="easy">CPU よわい</option>
+            <option value="normal" selected>CPU ふつう</option>
+            <option value="hard">CPU つよい</option>
+            <option value="pvp">2人で対戦</option>
+          </select></div>
+        <div class="row"><label for="order">手番</label>
+          <select id="order"><option value="1">先手（青）</option><option value="2">後手（赤）</option></select></div>
+        <div class="row"><button id="newBtn" class="primary">新しい対局</button><button id="mapBtn">マップを変える</button></div>
+      </section>
+      <section>
+        <h2>ルール</h2>
+        <ol class="rules">
+          <li>手番では<b>1回行動</b>。自分の本城（城）とつながった陣地の隣の空きマスに陣を置く。</li>
+          <li><b>挟んで奪う</b>: 置いたマスに隣接する相手のマスは、周りの自分のマスが<b>3つ以上</b>かつ相手より多くなると自分のものになる。</li>
+          <li><b>要塞化</b>（各3回）: 自分のマス1つを要塞にすると、二度と奪われない。本城も奪われない。</li>
+          <li><b>補給線</b>: 本城とつながっていないマスは孤立して<b>0点</b>。相手の陣を切り離すのが強い。</li>
+          <li>マスの点数は基本1点、数字のマスは2点・3点。</li>
+          <li><b>逆転の芽</b>: 手番の開始時に6点以上負けていたら、その手番は2回行動できる。</li>
+          <li>各20手で終了。後手には<b>コミ0.5点</b>（引き分けなし）。</li>
+        </ol>
+      </section>
+      <section>
+        <h2>記録</h2>
+        <ol class="log" id="log" reversed></ol>
+      </section>
+      <section>
+        <details>
+          <summary>プロのゲーム設計から取り入れたこと</summary>
+          <ul class="notes" style="margin-top:8px">
+            <li><b>争点のある地図</b>: 価値の高いマスと岩で「取り合う場所」と「通り道」をつくる。</li>
+            <li><b>奪い返せる支配</b>: 取ったマスも守らないと失う → 攻めと守りの選択が毎手発生。要塞は回数限定の資源。</li>
+            <li><b>希望を残す</b>: 負けている側に追加行動（キャッチアップ）。最後まで逆転の可能性がある。</li>
+            <li><b>公平性</b>: 点対称の盤、先手有利をコミで調整。</li>
+            <li><b>判断材料の公開</b>: 置く前に奪えるマスと点数の変化をプレビュー。</li>
+            <li><b>CPU</b>: ミニマックス探索（αβ枝刈り）＋影響力マップで「まだ空いているが自陣になりそうな場所」を評価。強さは読みの深さで調整。</li>
+          </ul>
+        </details>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+// ===== 定数 =====
+const R = 4, TURNS = 20, GAP = 6, KOMI = 0.5, FORTS = 3;
+const DIRS = [[1,0],[1,-1],[0,-1],[-1,0],[-1,1],[0,1]];
+const NAME = ["", "青", "赤"];
+
+// ===== 盤の形（軸座標の六角形） =====
+const cells = [], key = new Map();
+for (let q = -R; q <= R; q++)
+  for (let r = Math.max(-R, -q - R); r <= Math.min(R, -q + R); r++) { key.set(q + "," + r, cells.length); cells.push({ q, r }); }
+const N = cells.length;
+const nbr = cells.map(({ q, r }) => DIRS.map(([dq, dr]) => key.get((q + dq) + "," + (r + dr))).filter(x => x !== undefined));
+const mirror = cells.map(({ q, r }) => key.get((-q) + "," + (-r)));
+const BASE = [0, key.get("-4,0"), key.get("4,0")];
+const CENTER = key.get("0,0");
+const hexDist = (a, b) => { const A = cells[a], B = cells[b]; return (Math.abs(A.q - B.q) + Math.abs(A.r - B.r) + Math.abs(A.q + A.r - B.q - B.r)) / 2; };
+
+// ===== マップ生成（点対称で公平に） =====
+let value = new Uint8Array(N), rock = new Uint8Array(N);
+function rng(seed) { return () => { seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function genMap(seed) {
+  const rand = rng(seed);
+  for (let tries = 0; tries < 100; tries++) {
+    value = new Uint8Array(N).fill(1); rock = new Uint8Array(N);
+    value[CENTER] = 3;
+    const cand = [];
+    for (let i = 0; i < N; i++) {
+      if (i === CENTER || i > mirror[i]) continue;
+      if (hexDist(i, BASE[1]) < 2 || hexDist(i, BASE[2]) < 2) continue;
+      cand.push(i);
+    }
+    for (let i = cand.length - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [cand[i], cand[j]] = [cand[j], cand[i]]; }
+    let k = 0;
+    const put = (n, f) => { for (let t = 0; t < n; t++) { const c = cand[k++]; f(c); f(mirror[c]); } };
+    put(2, c => rock[c] = 1);
+    // 3点マスは中央寄り、2点マスはどこでも
+    cand.splice(k, 0, ...cand.splice(k).sort((a, b) => (hexDist(a, CENTER) + rand() * 2) - (hexDist(b, CENTER) + rand() * 2)));
+    put(1, c => value[c] = 3);
+    for (let i = cand.length - 1; i > k; i--) { const j = k + Math.floor(rand() * (i - k + 1)); [cand[i], cand[j]] = [cand[j], cand[i]]; }
+    put(5, c => value[c] = 2);
+    // 岩で盤が分断されていないか確認
+    const seen = new Uint8Array(N), st = [BASE[1]]; seen[BASE[1]] = 1; let cnt = 1;
+    while (st.length) { const c = st.pop(); for (const n of nbr[c]) if (!seen[n] && !rock[n]) { seen[n] = 1; cnt++; st.push(n); } }
+    let free = 0; for (let i = 0; i < N; i++) if (!rock[i]) free++;
+    if (cnt === free) return;
+  }
+}
+
+// ===== ゲーム状態とルール =====
+function initState() {
+  const s = { owner: new Int8Array(N), fort: new Uint8Array(N), fortLeft: [0, FORTS, FORTS], turnsLeft: [0, TURNS, TURNS], toMove: 1, actions: 1, bonus: false, over: false };
+  s.owner[BASE[1]] = 1; s.owner[BASE[2]] = 2;
+  return s;
+}
+const clone = s => ({ owner: s.owner.slice(), fort: s.fort.slice(), fortLeft: s.fortLeft.slice(), turnsLeft: s.turnsLeft.slice(), toMove: s.toMove, actions: s.actions, bonus: s.bonus, over: s.over });
+function connected(s, p) {
+  const m = new Uint8Array(N), st = [BASE[p]]; m[BASE[p]] = 1;
+  while (st.length) { const c = st.pop(); for (const n of nbr[c]) if (!m[n] && s.owner[n] === p) { m[n] = 1; st.push(n); } }
+  return m;
+}
+function score(s, p, conn) { conn = conn || connected(s, p); let t = 0; for (let i = 0; i < N; i++) if (conn[i]) t += value[i]; return t + (p === 2 ? KOMI : 0); }
+function placements(s, p) {
+  const conn = connected(s, p), seen = new Uint8Array(N), out = [];
+  for (let i = 0; i < N; i++) if (conn[i]) for (const n of nbr[i]) if (!seen[n] && s.owner[n] === 0 && !rock[n]) { seen[n] = 1; out.push(n); }
+  return out;
+}
+function canFort(s, p, c) { return s.fortLeft[p] > 0 && s.owner[c] === p && !s.fort[c] && c !== BASE[p]; }
+function flipsFor(s, c, p) {
+  const o = 3 - p, out = [];
+  for (const n of nbr[c]) {
+    if (s.owner[n] !== o || s.fort[n] || n === BASE[o]) continue;
+    let mine = 0, theirs = 0;
+    for (const m of nbr[n]) { if (m === c || s.owner[m] === p) mine++; else if (s.owner[m] === o) theirs++; }
+    if (mine >= 3 && mine > theirs) out.push(n);
+  }
+  return out;
+}
+function hasAction(s, p) { if (placements(s, p).length) return true; if (s.fortLeft[p] > 0) for (let i = 0; i < N; i++) if (canFort(s, p, i)) return true; return false; }
+function startTurn(s, p) {
+  for (let k = 0; k < 2; k++, p = 3 - p) {
+    if (s.turnsLeft[p] > 0) {
+      s.toMove = p;
+      s.bonus = score(s, 3 - p) - score(s, p) >= GAP;
+      s.actions = s.bonus ? 2 : 1;
+      return;
+    }
+  }
+  s.over = true;
+}
+function apply(s, m) {
+  const ns = clone(s), p = s.toMove;
+  let flips = [];
+  if (m.t === "p") { flips = flipsFor(s, m.c, p); ns.owner[m.c] = p; for (const f of flips) ns.owner[f] = p; }
+  else if (m.t === "f") { ns.fort[m.c] = 1; ns.fortLeft[p]--; }
+  ns.actions--;
+  if (ns.actions <= 0 || m.t === "x") { ns.turnsLeft[p]--; startTurn(ns, 3 - p); }
+  ns.flips = flips;
+  return ns;
+}
+function genMoves(s, pruneForts) {
+  const p = s.toMove, ms = placements(s, p).map(c => ({ t: "p", c }));
+  if (s.fortLeft[p] > 0) for (let i = 0; i < N; i++) {
+    if (!canFort(s, p, i)) continue;
+    if (pruneForts) { // 狙われているマスだけ候補にする
+      let e = 0, emp = 0;
+      for (const n of nbr[i]) { if (s.owner[n] === 3 - p) e++; else if (s.owner[n] === 0 && !rock[n]) emp++; }
+      if (e < 2 || emp === 0) continue;
+    }
+    ms.push({ t: "f", c: i });
+  }
+  if (!ms.length) ms.push({ t: "x" });
+  return ms;
+}
+
+// ===== CPU: 影響力マップ評価 + αβミニマックス =====
+function evaluate(s, me) {
+  const op = 3 - me, c1 = connected(s, me), c2 = connected(s, op);
+  let sc = score(s, me, c1) - score(s, op, c2);
+  if (s.over) return sc * 100;
+  const remain = s.turnsLeft[1] + s.turnsLeft[2];
+  const w = Math.min(1, remain / 12) * 0.6;
+  let inf = new Float32Array(N);
+  for (let i = 0; i < N; i++) {
+    const o = s.owner[i];
+    if (o === me) { inf[i] = c1[i] ? 1 : 0.4; if (!c1[i]) sc += 0.3 * value[i]; }
+    else if (o === op) { inf[i] = c2[i] ? -1 : -0.4; if (!c2[i]) sc -= 0.3 * value[i]; }
+  }
+  for (let it = 0; it < 2; it++) {
+    const nx = inf.slice();
+    for (let i = 0; i < N; i++) if (s.owner[i] === 0 && !rock[i]) { let sum = 0; for (const n of nbr[i]) sum += inf[n]; nx[i] = sum * 0.35; }
+    inf = nx;
+  }
+  for (let i = 0; i < N; i++) {
+    const o = s.owner[i];
+    if (o === 0 && !rock[i]) sc += w * value[i] * Math.tanh(inf[i] * 1.5);
+    else if (o && !s.fort[i] && i !== BASE[o]) {
+      // 奪われそうなマス（相手が2つ以上隣接し、空きがある）
+      let e = 0, emp = 0;
+      for (const n of nbr[i]) { if (s.owner[n] === 3 - o) e++; else if (s.owner[n] === 0 && !rock[n]) emp++; }
+      if (e >= 2 && emp > 0) sc += (o === me ? -0.35 : 0.35) * value[i];
+    }
+  }
+  sc += (s.fortLeft[me] - s.fortLeft[op]) * 0.5 * w;
+  return sc;
+}
+function search(s, depth, alpha, beta, me, beam) {
+  if (s.over || depth === 0) return evaluate(s, me);
+  const maxi = s.toMove === me;
+  let ch = genMoves(s, true).map(m => { const ns = apply(s, m); return { ns, h: evaluate(ns, me) }; });
+  ch.sort((a, b) => maxi ? b.h - a.h : a.h - b.h);
+  if (depth === 1) return ch[0].h;
+  ch = ch.slice(0, beam);
+  let best = maxi ? -Infinity : Infinity;
+  for (const { ns } of ch) {
+    const v = search(ns, depth - 1, alpha, beta, me, beam);
+    if (maxi) { if (v > best) best = v; if (best > alpha) alpha = best; }
+    else { if (v < best) best = v; if (best < beta) beta = best; }
+    if (alpha >= beta) break;
+  }
+  return best;
+}
+const LEVELS = { easy: { d: 1, b: 99, noise: 2.5 }, normal: { d: 2, b: 12, noise: 0.2 }, hard: { d: 4, b: 12, noise: 0.05 } };
+function chooseMove(s, level) {
+  const me = s.toMove, cfg = LEVELS[level];
+  let ch = genMoves(s, true).map(m => { const ns = apply(s, m); return { m, ns, h: evaluate(ns, me) }; }).sort((a, b) => b.h - a.h);
+  if (cfg.d === 1) ch.forEach(c => c.v = c.h + (Math.random() - .5) * 2 * cfg.noise);
+  else {
+    ch = ch.slice(0, cfg.b);
+    let alpha = -Infinity;
+    for (const c of ch) { c.v = search(c.ns, cfg.d - 1, alpha - 1, Infinity, me, cfg.b) + Math.random() * cfg.noise; if (c.v > alpha) alpha = c.v; }
+  }
+  return ch.reduce((a, b) => b.v > a.v ? b : a).m;
+}
+
+// ===== 画面 =====
+const $ = id => document.getElementById(id);
+const SIZE = 30, SQ3 = Math.sqrt(3);
+const px = i => ({ x: SIZE * SQ3 * (cells[i].q + cells[i].r / 2), y: SIZE * 1.5 * cells[i].r });
+const hexPts = (cx, cy, s) => Array.from({ length: 6 }, (_, k) => { const a = Math.PI / 180 * (60 * k - 30); return (cx + s * Math.cos(a)).toFixed(1) + "," + (cy + s * Math.sin(a)).toFixed(1); }).join(" ");
+const board = $("board");
+{ const w = SIZE * SQ3 * (2 * R + 1) + 8, h = SIZE * (3 * R + 2) + 8; board.setAttribute("viewBox", `${-w / 2} ${-h / 2} ${w} ${h}`); }
+
+let state, mode = "place", opp = "normal", human = 1, seed = Date.now() % 100000, busy = false;
+let hover = null, selected = null, lastMove = null, flashSet = new Set(), hintCell = null, touchMode = false, logN = 0;
+
+const isHumanTurn = () => !state.over && !busy && (opp === "pvp" || state.toMove === human);
+function cellLabel(i) { const { q, r } = cells[i]; return String.fromCharCode(65 + r + R) + (q - Math.max(-R, -r - R) + 1); }
+
+function render() {
+  const s = state, p = s.toMove;
+  const c1 = connected(s, 1), c2 = connected(s, 2);
+  const legal = new Set(isHumanTurn() && mode === "place" ? placements(s, p) : []);
+  const focus = selected ?? hover;
+  let willFlip = new Set();
+  if (focus != null && legal.has(focus)) willFlip = new Set(flipsFor(s, focus, p));
+  let html = "";
+  for (let i = 0; i < N; i++) {
+    const { x, y } = px(i), o = s.owner[i];
+    let cls = "cell";
+    if (rock[i]) cls += " rock";
+    else if (o === 0) cls += " e";
+    else cls += ((o === 1 ? c1 : c2)[i] ? " o" : " d") + o;
+    if (legal.has(i)) cls += " legal";
+    if (isHumanTurn() && mode === "fort" && canFort(s, p, i)) cls += " ftarget";
+    if (willFlip.has(i)) cls += " willflip";
+    if (i === selected || i === hintCell) cls += " sel";
+    if (i === lastMove) cls += " last";
+    if (flashSet.has(i)) cls += " flash";
+    let inner = `<polygon points="${hexPts(x, y, SIZE - 1)}"/>`;
+    if (focus === i && legal.has(i)) inner = `<polygon points="${hexPts(x, y, SIZE - 1)}" style="fill:var(--p${p})" fill-opacity=".55"/>`;
+    if (s.fort[i]) inner += `<polygon class="fort" points="${hexPts(x, y, SIZE - 6)}"/>`;
+    if (i === BASE[1] || i === BASE[2]) inner += `<text class="base" x="${x}" y="${y}">城</text>`;
+    else if (!rock[i] && value[i] > 1) inner += `<text class="val" x="${x}" y="${y}">${value[i]}</text>`;
+    else if (legal.has(i) && focus !== i) inner += `<circle class="dot" cx="${x}" cy="${y}" r="3.5"/>`;
+    html += `<g class="${cls}" data-i="${i}">${inner}</g>`;
+  }
+  board.innerHTML = html;
+
+  const s1 = score(s, 1, c1), s2 = score(s, 2, c2);
+  $("sc1").textContent = s1; $("sc2").textContent = s2;
+  $("bar").style.width = (s1 / (s1 + s2) * 100) + "%";
+  for (const q of [1, 2]) {
+    $("pl" + q).classList.toggle("active", !s.over && p === q);
+    $("mt" + q).textContent = `残り${s.turnsLeft[q]}手・要塞${s.fortLeft[q]}`;
+    $("nm" + q).textContent = NAME[q] + (opp === "pvp" ? "" : q === human ? "（あなた）" : "（CPU）");
+  }
+  $("modeFort").textContent = `要塞化（残り${s.fortLeft[p]}）`;
+  $("modeFort").disabled = !isHumanTurn() || s.fortLeft[p] <= 0;
+  $("modePlace").disabled = $("hintBtn").disabled = !isHumanTurn();
+  $("modePlace").classList.toggle("on", mode === "place");
+  $("modeFort").classList.toggle("on", mode === "fort");
+  $("confirmBtn").hidden = selected == null;
+
+  // 状態表示
+  let msg;
+  if (s.over) msg = "対局終了";
+  else if (busy) msg = `<span class="thinking"></span>${NAME[p]}（CPU）が考え中…`;
+  else {
+    const who = opp === "pvp" ? NAME[p] + "の番" : "あなたの番";
+    msg = `<b>${who}</b>${s.bonus ? `　<b style="color:var(--gold)">逆転の芽: あと${s.actions}回行動</b>` : ""}<br>`;
+    if (focus != null && legal.has(focus)) {
+      const ns = apply(s, { t: "p", c: focus });
+      const d = score(ns, p) - score(s, p), d2 = score(ns, 3 - p) - score(s, 3 - p);
+      msg += `この手: 自分 ${d >= 0 ? "+" : ""}${d}点 / 相手 ${d2 >= 0 ? "+" : ""}${d2}点` + (willFlip.size ? `（${willFlip.size}マス奪取）` : "");
+      if (touchMode && selected != null) msg += "　もう一度タップで決定";
+    } else if (mode === "fort") msg += "要塞にする自分のマスを選んでください（奪われなくなります）";
+    else msg += touchMode ? "緑の点のマスをタップして手を確認" : "緑の点のマスに陣を置けます（マウスを乗せると結果を予告）";
+  }
+  $("status").innerHTML = msg;
+  flashSet = new Set();
+}
+
+function addLog(p, m, flips) {
+  let t;
+  if (m.t === "p") t = `${cellLabel(m.c)} に配置${flips.length ? `、${flips.length}マス奪取` : ""}`;
+  else if (m.t === "f") t = `${cellLabel(m.c)} を要塞化`;
+  else t = "パス";
+  const li = document.createElement("li"); li.className = "p" + p; li.textContent = `${NAME[p]}: ${t}`;
+  $("log").prepend(li); logN++;
+}
+
+function doMove(m) {
+  const p = state.toMove;
+  state = apply(state, m);
+  addLog(p, m, state.flips);
+  lastMove = m.c ?? null;
+  flashSet = new Set([...(state.flips || []), ...(m.c != null ? [m.c] : [])]);
+  selected = hover = hintCell = null;
+  mode = "place";
+  render();
+  if (state.over) return finish();
+  next();
+}
+
+function next() {
+  if (state.over) return finish();
+  // 打てる手がなければ自動パス
+  if (!hasAction(state, state.toMove)) { setTimeout(() => doMove({ t: "x" }), 400); return; }
+  if (opp !== "pvp" && state.toMove !== human) {
+    busy = true; render();
+    setTimeout(() => {
+      const m = chooseMove(state, opp);
+      busy = false;
+      doMove(m);
+    }, 350);
+  }
+}
+
+function finish() {
+  render();
+  const s1 = score(state, 1), s2 = score(state, 2), win = s1 > s2 ? 1 : 2;
+  let title;
+  if (opp === "pvp") title = `${NAME[win]}の勝ち！`;
+  else title = win === human ? "あなたの勝ち！" : "CPUの勝ち…";
+  $("resTitle").textContent = title;
+  $("resText").textContent = `青 ${s1}点 − 赤 ${s2}点`;
+  $("overlay").hidden = false;
+}
+
+function newGame(newMap) {
+  if (newMap) seed = (seed * 7919 + 13) % 1000003;
+  genMap(seed);
+  opp = $("opp").value; human = +$("order").value;
+  $("order").disabled = opp === "pvp";
+  state = initState(); startTurn(state, 1);
+  mode = "place"; selected = hover = hintCell = lastMove = null; busy = false;
+  $("log").innerHTML = ""; logN = 0; $("overlay").hidden = true;
+  render(); next();
+}
+
+// ===== 入力 =====
+board.addEventListener("pointerdown", e => { touchMode = e.pointerType !== "mouse"; });
+board.addEventListener("pointermove", e => {
+  if (touchMode) return;
+  const g = e.target.closest(".cell"); const i = g ? +g.dataset.i : null;
+  if (i !== hover) { hover = i; render(); }
+});
+board.addEventListener("pointerleave", () => { if (!touchMode && hover != null) { hover = null; render(); } });
+board.addEventListener("click", e => {
+  if (!isHumanTurn()) return;
+  const g = e.target.closest(".cell"); if (!g) return;
+  const i = +g.dataset.i, p = state.toMove;
+  if (mode === "fort") { if (canFort(state, p, i)) doMove({ t: "f", c: i }); return; }
+  if (!placements(state, p).includes(i)) { selected = null; render(); return; }
+  if (touchMode && selected !== i) { selected = i; render(); return; } // タッチは「選んで確認→もう一度で決定」
+  doMove({ t: "p", c: i });
+});
+$("confirmBtn").onclick = () => { if (selected != null && isHumanTurn()) doMove({ t: "p", c: selected }); };
+$("modePlace").onclick = () => { mode = "place"; selected = null; render(); };
+$("modeFort").onclick = () => { mode = mode === "fort" ? "place" : "fort"; selected = null; render(); };
+$("hintBtn").onclick = () => {
+  if (!isHumanTurn()) return;
+  const m = chooseMove(state, "normal");
+  mode = m.t === "f" ? "fort" : "place";
+  hintCell = m.c ?? null;
+  if (m.t === "p") selected = m.c;
+  render();
+  if (m.t === "f") $("status").innerHTML += "<br>ヒント: 枠のマスを要塞化すると良さそうです";
+};
+$("newBtn").onclick = () => newGame(false);
+$("mapBtn").onclick = () => newGame(true);
+$("againBtn").onclick = () => newGame(true);
+$("opp").onchange = () => { $("order").disabled = $("opp").value === "pvp"; };
+
+newGame(false);
+</script>
+</body>
+</html>
