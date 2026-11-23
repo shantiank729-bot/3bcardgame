@@ -147,6 +147,7 @@ details ul{margin:6px 0 0;padding-left:18px;color:#cfe0df;font-size:12.5px}
           <li>村は他の村から2辺以上離れた、自分の道につながる角にだけ建てられます。</li>
           <li>7が出ると嵐。資源が8枚以上の人は半分捨て、手番の人が嵐を動かして隣の相手から1枚奪います。嵐の島は資源を生みません。</li>
           <li>銀行とは同じ資源4枚で好きな資源1枚に交換。CPUとの交換も提案できます。</li>
+          <li>海岸の⚓港に村か町を建てると交換が有利になります。「3:1」の港はどの資源でも3枚で1枚、資源の絵がついた「2:1」の港はその資源2枚で1枚です。</li>
           <li>村1点、町2点、記念碑1点。道を5本以上つなげて最長だと「最長の街道」+2点、守り手を3枚以上使って最多だと「最強の守り手」+2点。</li>
         </ul>
         <div class="costs" id="costs"></div>
@@ -184,7 +185,7 @@ const PDEF=[
 const S=60, WIN=10;
 const DIE='⚀⚁⚂⚃⚄⚅';
 
-let hexes,vertices,edges,players,deck,G,logs,pending,TOKEN=0;
+let hexes,vertices,edges,harbors,players,deck,G,logs,pending,TOKEN=0;
 const $=id=>document.getElementById(id);
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 async function nap(ms){const t=TOKEN;await sleep(ms);if(t!==TOKEN)throw 'stale';}
@@ -225,10 +226,20 @@ function buildBoard(){
         vertices[a].edges.push(e.id);vertices[b].edges.push(e.id);vertices[a].adj.push(b);vertices[b].adj.push(a);}
     }
   }
+  // 港: 海岸の辺から9か所を等間隔に選ぶ（3:1が4つ、資源別2:1が5つ）
+  const coast=edges.filter(E=>vertices[E.a].hexes.filter(h=>vertices[E.b].hexes.includes(h)).length===1);
+  coast.forEach(E=>{const A=vertices[E.a],B=vertices[E.b];E.mx=(A.x+B.x)/2;E.my=(A.y+B.y)/2;E.ang=Math.atan2(E.my,E.mx);});
+  coast.sort((a,b)=>a.ang-b.ang);
+  const kinds=shuffle(['any','any','any','any',...RES]),off=Math.floor(Math.random()*3);
+  harbors=kinds.map((k,i)=>{const E=coast[(off+Math.round(i*coast.length/9))%coast.length];E.harbor=k;
+    const h=hexes[vertices[E.a].hexes.find(h=>vertices[E.b].hexes.includes(h))];return {edge:E.id,kind:k,hx:h.x,hy:h.y};});
   return hexes.find(h=>h.type==='desert').id;
 }
 
 /* ---------- ルール判定 ---------- */
+function harborAt(v){const e=vertices[v].edges.find(e=>edges[e].harbor);return e==null?null:edges[e].harbor;}
+function myHarbors(p){const s=new Set();vertices.forEach(V=>{if(V.b&&V.b.owner===p){const h=harborAt(V.id);if(h)s.add(h);}});return s;}
+function rate(p,r){const s=myHarbors(p);return s.has(r)?2:s.has('any')?3:4;}
 const afford=(P,c)=>RES.every(r=>P.res[r]>=(c[r]||0));
 const pay=(P,c)=>RES.forEach(r=>P.res[r]-=(c[r]||0));
 const missing=(P,c)=>RES.reduce((s,r)=>s+Math.max(0,(c[r]||0)-P.res[r]),0);
@@ -390,6 +401,8 @@ function vScore(v,p){
   vertices[v].hexes.forEach(hid=>{const h=hexes[hid];if(h.type==='desert')return;
     let k=pips(h.num);if(hid===G.storm)k*=.5;s+=k;
     if(!prod.has(h.type)&&!seen.has(h.type)){s+=1.2;seen.add(h.type);}});
+  const hb=harborAt(v);
+  if(hb){const mine=myHarbors(p);if(!mine.has(hb))s+=hb==='any'?1.2:(prod.has(hb)||vertices[v].hexes.some(h=>hexes[h].type===hb))?2:.6;}
   return s+Math.random()*.3;
 }
 function cpuSetupVillage(p){return best(setupSpots(),v=>vScore(v,p));}
@@ -414,8 +427,8 @@ function cpuGoal(p){
 function cpuTrade(p){
   const P=players[p],g=cpuGoal(p);if(!g)return false;const c=COST[g];
   const need=RES.find(r=>P.res[r]<(c[r]||0));if(!need)return false;
-  const give=RES.filter(r=>P.res[r]-(c[r]||0)>=4).sort((a,b)=>P.res[b]-P.res[a])[0];if(!give)return false;
-  P.res[give]-=4;P.res[need]++;log(`${P.name}は銀行で${RI[give].i}×4 を ${RI[need].i} に交換`);return true;
+  const give=RES.filter(r=>r!==need&&P.res[r]-(c[r]||0)>=rate(p,r)).sort((a,b)=>(P.res[b]-rate(p,b))-(P.res[a]-rate(p,a)))[0];if(!give)return false;
+  const k=rate(p,give);P.res[give]-=k;P.res[need]++;log(`${P.name}は${k<4?'港':'銀行'}で${RI[give].i}×${k} を ${RI[need].i} に交換`);return true;
 }
 function cpuDiscard(p,n){
   const P=players[p],g=cpuGoal(p),c=g?COST[g]:{};
@@ -537,20 +550,20 @@ function openTrade(){
   let msg='';
   const sum=o=>RES.reduce((s,r)=>s+o[r],0);
   const draw=()=>{
-    const bankOk=sum(give)>0&&RES.every(r=>give[r]%4===0)&&sum(give)/4===sum(get)&&RES.every(r=>!(give[r]&&get[r]));
+    const bankOk=sum(give)>0&&RES.every(r=>give[r]%rate(0,r)===0)&&RES.reduce((s,r)=>s+give[r]/rate(0,r),0)===sum(get)&&RES.every(r=>!(give[r]&&get[r]));
     const cpuOk=sum(give)>0&&sum(get)>0&&RES.every(r=>!(give[r]&&get[r]));
-    showModal(`<h3>交易</h3><p>出す資源と欲しい資源を決めます。銀行は同じ資源4枚で1枚。CPUには自由な枚数で提案できます。</p>
-      <h2 style="font-size:12px;color:var(--muted);margin:8px 0 0">出す</h2><div class="rows">${RES.map(r=>stepper('g_'+r,`${RI[r].i} ${RI[r].n} <small>所持${P.res[r]}</small>`,give[r])).join('')}</div>
+    showModal(`<h3>交易</h3><p>出す資源と欲しい資源を決めます。銀行は同じ資源4枚で1枚。港に村や町があれば、右の交換レートが下がります。CPUには自由な枚数で提案できます。</p>
+      <h2 style="font-size:12px;color:var(--muted);margin:8px 0 0">出す</h2><div class="rows">${RES.map(r=>stepper('g_'+r,`${RI[r].i} ${RI[r].n} <small>所持${P.res[r]}・${rate(0,r)}:1</small>`,give[r])).join('')}</div>
       <h2 style="font-size:12px;color:var(--muted);margin:8px 0 0">欲しい</h2><div class="rows">${RES.map(r=>stepper('w_'+r,`${RI[r].i} ${RI[r].n}`,get[r])).join('')}</div>
       <div class="msg">${msg}</div>
-      <div class="mbtns"><button id="mBank" ${bankOk?'':'disabled'}>銀行と交換<small>4:1</small></button><button class="primary" id="mCpu" ${cpuOk?'':'disabled'}>CPUに提案</button><button id="mClose">閉じる</button></div>`);
+      <div class="mbtns"><button id="mBank" ${bankOk?'':'disabled'}>銀行・港と交換<small>レートは各行に表示</small></button><button class="primary" id="mCpu" ${cpuOk?'':'disabled'}>CPUに提案</button><button id="mClose">閉じる</button></div>`);
     $('modal').querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{
       const [k,r]=b.dataset.s.split('_'),d=+b.dataset.d,o=k==='g'?give:get;
       if(d<0&&o[r]<=0)return;if(d>0&&k==='g'&&o[r]>=P.res[r])return;if(d>0&&k==='w'&&o[r]>=9)return;
       o[r]+=d;msg='';draw();});
     $('mClose').onclick=()=>{closeModal();render();};
     $('mBank').onclick=()=>{RES.forEach(r=>{P.res[r]+=get[r]-give[r];});
-      log(`あなたは銀行で ${costStr(give)} を ${costStr(get)} に交換`);RES.forEach(r=>{give[r]=0;get[r]=0;});msg='銀行と交換しました';render();draw();};
+      log(`あなたは銀行・港で ${costStr(give)} を ${costStr(get)} に交換`);RES.forEach(r=>{give[r]=0;get[r]=0;});msg='交換しました';render();draw();};
     $('mCpu').onclick=()=>{
       const who=[1,2,3].find(o=>cpuAccepts(o,give,get));
       if(who==null){msg='どのCPUも断りました。条件を変えてみましょう';draw();return;}
@@ -570,11 +583,18 @@ function cpuAccepts(p,give,get){
 /* ---------- 描画 ---------- */
 function hexPoly(h,k=1){return h.verts.map(v=>{const V=vertices[v];return `${(h.x+(V.x-h.x)*k).toFixed(1)},${(h.y+(V.y-h.y)*k).toFixed(1)}`;}).join(' ');}
 function renderBoard(){
-  const svg=$('board');const R=S*5.15;
+  const svg=$('board');const R=S*5.6;
   svg.setAttribute('viewBox',`${-R-6} ${-R*0.93-6} ${2*R+12} ${2*R*0.93+12}`);
   let o='';
   const frame=[...Array(6)].map((_,i)=>{const a=Math.PI/180*60*i;return `${(R*Math.cos(a)).toFixed(1)},${(R*Math.sin(a)*0.93).toFixed(1)}`;}).join(' ');
   o+=`<polygon points="${frame}" fill="#13394b" stroke="#2e6378" stroke-width="3"/>`;
+  for(const H of harbors){const E=edges[H.edge],A=vertices[E.a],B=vertices[E.b];
+    const dx=E.mx-H.hx,dy=E.my-H.hy,d=Math.hypot(dx,dy),px=E.mx+dx/d*30,py=E.my+dy/d*30;
+    const owned=[A,B].some(V=>V.b&&V.b.owner===0);
+    o+=`<line x1="${A.x}" y1="${A.y}" x2="${px}" y2="${py}" stroke="#c9a46a" stroke-width="4" stroke-linecap="round"/><line x1="${B.x}" y1="${B.y}" x2="${px}" y2="${py}" stroke="#c9a46a" stroke-width="4" stroke-linecap="round"/>`;
+    o+=`<circle cx="${px}" cy="${py}" r="17" fill="#0b2230" stroke="${owned?'#f4c95d':'#c9a46a'}" stroke-width="${owned?3:2}"/>`;
+    if(H.kind==='any')o+=`<text x="${px}" y="${py-4}" font-size="11" text-anchor="middle" dominant-baseline="middle">⚓</text><text x="${px}" y="${py+7}" font-size="10" font-weight="700" fill="#eaf2ef" text-anchor="middle" dominant-baseline="middle">3:1</text>`;
+    else o+=`<text x="${px}" y="${py-4}" font-size="12" text-anchor="middle" dominant-baseline="middle">${RI[H.kind].i}</text><text x="${px}" y="${py+8}" font-size="10" font-weight="700" fill="#f4c95d" text-anchor="middle" dominant-baseline="middle">2:1</text>`;}
   const pickHex=pending&&pending.kind==='storm';
   for(const h of hexes){
     const I=RI[h.type],cls=pickHex&&h.id!==G.storm?'hpick':'';
