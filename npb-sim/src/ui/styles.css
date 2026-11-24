@@ -371,3 +371,39 @@ input[type='date'], input[type='search'] { background: #0b2017; color: var(--tex
   .morebtn .ic { font-size: 1.15rem; line-height: 1.2; }
 }
 .newscard .paper { padding: 10px 12px; } .newscard .story.top .body { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+table.draft tr.taken { opacity: 0.45; }
+table.draft .note { color: var(--yellow); }
+.hype { display: inline-block; height: 8px; background: linear-gradient(90deg, #ffd84a, #ff6b5e); border-radius: 4px; min-width: 2px; max-width: 60px; }
+.lottery { background: #0b2017; border: 1px solid var(--yellow); border-radius: 8px; padding: 8px 12px; margin-top: 10px; }
+.draftgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); gap: 10px; }
+.dteam { background: #0b2017; border: 1px solid #1f4632; border-radius: 8px; padding: 8px; font-size: 0.85rem; }
+.dteam.me { border-color: var(--yellow); }
+.dteam ol { margin: 0; padding-left: 0; list-style: none; }
+.dteam small { color: var(--muted); }
+.stepper { display: flex; list-style: none; padding: 0; margin: 8px 0; gap: 4px; flex-wrap: wrap; counter-reset: s; }
+.stepper li { flex: 1; min-width: 90px; background: #0b2017; border: 1px solid #1f4632; border-radius: 6px; padding: 6px 8px; display: flex; flex-direction: column; font-size: 0.85rem; color: var(--muted); }
+.stepper li.done { color: #9fd0b0; }
+.stepper li.now { border-color: var(--yellow); color: var(--yellow); font-weight: 700; }
+.stepper small { font-size: 0.72rem; }
+tr.sel td { background: rgba(255, 107, 94, 0.12); }
+.tag.sug { background: #6b5b00; }
+.offer { display: inline-flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+.offer input { width: 7em; background: #0b2017; color: var(--text); border: 1px solid #3b6b52; border-radius: 6px; padding: 3px 6px; font: inherit; }
+.ok { color: #6fdc8c; } .warn { color: var(--red); }
+.trade { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; margin-top: 10px; }
+@media (max-width: 760px) { .trade { grid-template-columns: minmax(0, 1fr); } }
+.tside h4 { display: flex; gap: 6px; align-items: center; color: var(--text); }
+.tlist { max-height: 420px; overflow: auto; }
+.tlist tr { cursor: pointer; }
+.seg.small button { padding: 3px 8px; font-size: 0.78rem; }
+.tradebar { display: flex; flex-direction: column; gap: 4px; margin-top: 12px; padding: 10px; background: #0b2017; border-radius: 8px; border: 1px solid #1f4632; }
+.tradebar .btn { align-self: flex-start; }
+.btn.mini { padding: 1px 8px; font-size: 0.78rem; }
+tr.injured td { color: #e8a0a0; }
+.career { list-style: none; padding: 0; margin: 0 0 8px; font-size: 0.88rem; }
+.career li { display: flex; gap: 10px; padding: 3px 0; border-bottom: 1px solid #1c3d2c; }
+.career li span { color: var(--muted); min-width: 4em; }
+.inboxcard ul { list-style: none; padding: 0; margin: 0; font-size: 0.88rem; }
+.inboxcard li { padding: 4px 0; border-bottom: 1px solid #1c3d2c; display: flex; gap: 8px; }
+.inboxcard li small { color: var(--muted); min-width: 6em; }
+.inboxcard li.injury { color: #ffb3a8; }

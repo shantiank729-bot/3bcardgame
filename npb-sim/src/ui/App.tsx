@@ -17,6 +17,11 @@ import { Watch } from './pages/Watch';
 import { NewsPage } from './pages/News';
 import { PostPage } from './pages/Post';
 import { AwardsPage } from './pages/Awards';
+import { DraftPage } from './pages/Draft';
+import { OffPage } from './pages/Off';
+import { TradePage } from './pages/Trade';
+import { draftPending } from '../league/sim';
+import { STAGES } from '../league/offseason';
 import { useState } from 'preact/hooks';
 import { live } from './live';
 import { useRoute, useStore } from './store';
@@ -32,6 +37,9 @@ const NAV: [string, string, string, boolean][] = [
   ['saber', 'セイバー', '∑', false],
   ['post', 'ポストシーズン', '♛', false],
   ['awards', '表彰', '✪', false],
+  ['draft', 'ドラフト', '✎', false],
+  ['trade', 'トレード', '⇄', false],
+  ['off', 'オフ', '❄', false],
   ['team', 'チーム', '⚾', true],
   ['saves', 'セーブ', '⛁', false],
 ];
@@ -58,6 +66,9 @@ export function App() {
     case 'news': body = <NewsPage date={arg} key={arg} />; break;
     case 'post': body = <PostPage />; break;
     case 'awards': body = <AwardsPage />; break;
+    case 'draft': body = <DraftPage />; break;
+    case 'off': body = <OffPage />; break;
+    case 'trade': body = <TradePage />; break;
     default: body = <Home />;
   }
   const active = page ?? 'home';
@@ -67,12 +78,18 @@ export function App() {
       <header class="topbar">
         <a class="brand" href="#/home"><Logo team={me} size={30} /><span>{me.nickname}</span></a>
         <div class="date">{w.year}年 {fmtDate(w.date)}</div>
-        <div class="simbtns">
-          <button class="btn primary" disabled={!regular || !!s.busy} onClick={() => simOneDay()}>1日</button>
-          <button class="btn" disabled={!regular || !!s.busy} onClick={() => simSpan('week')}>1週間</button>
-          <button class="btn" disabled={!regular || !!s.busy} onClick={() => simSpan('month')}>月末</button>
-          <button class="btn" disabled={!regular || !!s.busy} onClick={() => simSpan('season')}>全日程</button>
-        </div>
+        {w.phase === 'offseason' && w.off ? (
+          <div class="simbtns"><a class="btn primary" href="#/off">オフシーズン: {STAGES.find((x) => x.key === w.off!.stage)?.label}</a></div>
+        ) : draftPending(w) ? (
+          <div class="simbtns"><a class="btn primary" href="#/draft">今日はドラフト会議です</a></div>
+        ) : (
+          <div class="simbtns">
+            <button class="btn primary" disabled={!regular || !!s.busy} onClick={() => simOneDay()}>1日</button>
+            <button class="btn" disabled={!regular || !!s.busy} onClick={() => simSpan('week')}>1週間</button>
+            <button class="btn" disabled={!regular || !!s.busy} onClick={() => simSpan('month')}>月末</button>
+            <button class="btn" disabled={!regular || !!s.busy} onClick={() => simSpan('season')}>全日程</button>
+          </div>
+        )}
       </header>
       <nav class={`nav ${more ? 'open' : ''}`} onClick={() => setMore(false)}>
         {NAV.filter(([k]) => k !== 'watch' || live).map(([k, label, icon, main]) => (

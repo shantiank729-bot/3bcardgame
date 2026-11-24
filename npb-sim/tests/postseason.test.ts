@@ -1,3 +1,4 @@
+import { runToOffseason } from '../src/league/auto';
 import { describe, expect, it } from 'vitest';
 import { newWorld } from '../src/league/world';
 import { simulateUntil } from '../src/league/sim';
@@ -86,7 +87,7 @@ describe('クライマックスシリーズのルール', () => {
 
 describe('1シーズン通し（オールスター・CS・日本シリーズ・表彰・新聞）', () => {
   const w = newWorld(21, 3);
-  simulateUntil(w, '2099-01-01');
+  runToOffseason(w);
   it('日本一が決まりオフシーズンへ', () => {
     expect(w.phase).toBe('offseason');
     expect(w.post!.champion).not.toBeNull();
@@ -119,7 +120,8 @@ describe('1シーズン通し（オールスター・CS・日本シリーズ・�
     const all = Object.values(w.news).flatMap((i) => i.stories);
     expect(all.some((s) => s.kind === 'clinch')).toBe(true);
     expect(all.some((s) => s.kind === 'jsWin')).toBe(true);
-    const lastIssue = w.news[Object.keys(w.news).sort().pop()!];
+    const lastGame = Object.values(w.results).map((g) => g.date).sort().pop()!;
+    const lastIssue = w.news[lastGame];
     expect(lastIssue.stories[0].kind).toBe('jsWin');
     // 見出しのバリエーション（同じ見出しばかりにならない）
     const heads = all.map((s) => s.headline);

@@ -23,7 +23,7 @@ export function runInWorker(w: World, until: string, onProgress?: (date: string,
     let cancelled = false;
     const promise = (async () => {
       while (!cancelled && isInSeason(w) && w.date <= until) {
-        simulateDay(w);
+        if (simulateDay(w).blocked) break;
         onProgress?.(w.date, 0);
         await new Promise((r) => setTimeout(r, 0));
       }

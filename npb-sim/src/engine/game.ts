@@ -101,6 +101,8 @@ export interface GameOptions {
   offenseShift?: number;
   /** オールスターなどの興行試合（投手は1イニングずつ、代打を多く使う） */
   exhibition?: boolean;
+  /** リーグ基準補正 */
+  norm?: import('./pa').RatingNorm;
 }
 
 /** 打席前の作戦（ユーザーやAIが指定） */
@@ -523,7 +525,7 @@ export class GameSim {
         {
           batter, pitcher, fatigue: this.pitcherFatigue(ps), timesFaced: Math.ceil(faced),
           park: this.park, defense: this.defenseMap(def), tuning: this.tuning,
-          hitAndRun: mode === 'HITRUN', infieldIn: this.infieldIn, offenseShift: this.opts.offenseShift,
+          hitAndRun: mode === 'HITRUN', infieldIn: this.infieldIn, offenseShift: this.opts.offenseShift, norm: this.opts.norm,
         },
         this.rng,
       );

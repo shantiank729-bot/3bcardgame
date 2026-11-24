@@ -1,7 +1,8 @@
+import { runToOffseason } from '../src/league/auto';
 import 'fake-indexeddb/auto';
 import { describe, expect, it } from 'vitest';
 import { newWorld, rosterOf } from '../src/league/world';
-import { simulateUntil, simulateDay } from '../src/league/sim';
+import { simulateDay } from '../src/league/sim';
 import { computeStandings, winPct } from '../src/league/standings';
 import { batterRows, contexts, pitcherRows } from '../src/stats/tables';
 import { fipOf, wobaOf } from '../src/stats/saber';
@@ -31,7 +32,7 @@ describe('新しいゲーム', () => {
 
 describe('1シーズン', () => {
   const w = newWorld(7, 1);
-  simulateUntil(w, '2099-01-01');
+  runToOffseason(w);
   it('全858試合を消化してレギュラーシーズン終了', () => {
     expect(Object.keys(w.results).filter((id) => Number(id) < 90000).length).toBe(858);
     expect(w.phase).toBe('offseason');

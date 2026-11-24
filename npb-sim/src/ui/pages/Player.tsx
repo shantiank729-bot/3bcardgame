@@ -4,6 +4,9 @@ import { teamById, type PlayerSeason, type World } from '../../league/world';
 import { batterMetrics, pitcherMetrics, type BatterMetrics, type LeagueContext, type PitcherMetrics } from '../../stats/saber';
 import { batterRows, contexts, pitcherRows } from '../../stats/tables';
 import { LineChart } from '../components/LineChart';
+import { domesticFA, overseasFA, SEASON_DAYS, yen } from '../../league/contracts';
+import { overall } from '../../players/development';
+import { careerTotals } from '../../news/daily';
 import { Logo } from '../components/Logo';
 import { f0, f1, f2, f3, grade, handStr, ipStr, pct1, POS_1, POS_JP } from '../format';
 import { useWorld } from '../store';
@@ -61,7 +64,7 @@ export function PlayerPage({ id }: { id: number }) {
   const rows = yearRows(w, id);
   const bats = rows.filter((r) => r.e.bat && r.e.bat.pa > 0);
   const pits = rows.filter((r) => r.e.pitch && r.e.pitch.bf > 0);
-  const statusJP = { active: '一軍', farm: '二軍', ikusei: '育成' }[p.status];
+  const statusJP = { active: '一軍', farm: '二軍', ikusei: '育成', fa: '自由契約', retired: '引退', mlb: '海外移籍' }[p.status];
   return (
     <div class="page">
       <section class="card hero-card" style={{ '--tc': t?.primary ?? '#333', '--tc2': t?.secondary ?? '#999' } as never}>
@@ -69,6 +72,8 @@ export function PlayerPage({ id }: { id: number }) {
         <div>
           <h2><span class="num">{p.number}</span> {p.name}{p.foreign && <em class="tag">外国人</em>}</h2>
           <p>{t ? t.city + t.nickname : 'フリー'}・{statusJP}・{POS_JP[p.primary]}・{p.age}歳・{handStr(p.bats, p.throws)}</p>
+          <p class="small">年俸 {yen(p.contract.salary)}（{p.contract.years > 1 ? `残り${p.contract.years}年` : '単年'}）・プロ{w.year - (p.debutYear ?? w.year) + (w.phase === 'offseason' ? 1 : 0)}年目・一軍登録 {(p.service / SEASON_DAYS).toFixed(1)}シーズン{domesticFA(p) ? (p.faUsed ? '・FA行使済' : '・国内FA権あり') : ''}{overseasFA(p) ? '・海外FA権あり' : ''}</p>
+          {p.injury && <p class="small warn">ケガ: {p.injury.desc}（復帰まで約{p.injury.days}日）</p>}
           <p class="small">調子: {(p.form ?? 0) > 0.4 ? '絶好調 ☀' : (p.form ?? 0) > 0.1 ? '好調 ⛅' : (p.form ?? 0) < -0.4 ? '絶不調 ☂' : (p.form ?? 0) < -0.1 ? '不調 ☁' : '普通'}</p>
         </div>
       </section>
@@ -78,7 +83,9 @@ export function PlayerPage({ id }: { id: number }) {
           <p class="muted small">現在はスカウト評価ではなく本当の能力を表示しています（スカウト機能はフェーズ6）。</p>
           {p.isPitcher && p.pit ? (
             <>
-              <Bar label="球速" v={(p.pit.velocity - 120) * 2.2} extra={p.pit.velocity + 'km'} />
+              <Bar label="総合" v={overall(p)} />
+              <Bar label="将来性" v={p.pot} />
+              <Bar label="球速" v={(p.pit.velocity - 120) * 2.2} extra={Math.round(p.pit.velocity) + 'km'} />
               <Bar label="球威" v={pitcherStuff(p.pit)} />
               <Bar label="制球" v={p.pit.control} />
               <Bar label="スタミナ" v={p.pit.stamina} />
@@ -88,6 +95,8 @@ export function PlayerPage({ id }: { id: number }) {
             </>
           ) : (
             <>
+              <Bar label="総合" v={overall(p)} />
+              <Bar label="将来性" v={p.pot} />
               <Bar label="ミート" v={p.bat.contact} />
               <Bar label="パワー" v={p.bat.power} />
               <Bar label="選球眼" v={p.bat.eye} />
@@ -154,7 +163,14 @@ export function PlayerPage({ id }: { id: number }) {
       )}
       <section class="card">
         <h3>経歴</h3>
-        <p class="muted">高校・大学時代の記録はフェーズ6で追加されます。</p>
+        <ul class="career">
+          {[...p.events].sort((a, b) => a.year - b.year).map((e, i) => <li key={i}><span>{e.year}年</span>{e.text}</li>)}
+        </ul>
+        {(() => {
+          const c = careerTotals(w, p.id);
+          return <p class="small">通算: {p.isPitcher ? `${c.pg}登板 ${c.w}勝${c.l}敗${c.sv}S${c.hld}H ${c.k}奪三振 ${Math.floor(c.outs / 3)}回` : `${c.g}試合 ${c.h}安打 ${c.hr}本塁打 ${c.rbi}打点 ${c.sb}盗塁`}{p.pre ? '（このゲーム開始前の記録を含む）' : ''}</p>;
+        })()}
+        <p class="muted small">高校・大学時代の記録はフェーズ6で追加されます。</p>
       </section>
     </div>
   );

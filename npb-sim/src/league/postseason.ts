@@ -41,6 +41,8 @@ export interface PostseasonState {
   series: Series[];
   champion: number | null;
   nextGameId: number;
+  /** ドラフト会議の日（CSと日本シリーズの間） */
+  draftDate?: string;
 }
 
 function firstWeekdayOnOrAfter(d: string, wd: number) {
@@ -151,6 +153,7 @@ function progress(w: World) {
       return { id: post.nextGameId++, no: i + 1, date, home, away: home === first ? second : first, played: false };
     });
     js.status = 'active';
+    post.draftDate = addDays(start, -2);
   }
   if (js.status === 'done') post.champion = js.winner;
 }

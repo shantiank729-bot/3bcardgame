@@ -26,8 +26,9 @@ self.onmessage = (ev: MessageEvent<WorkerRequest>) => {
         (self as unknown as Worker).postMessage({ type: 'done', json: serializeWorld(w), cancelled: cancel } satisfies WorkerResponse);
         return;
       }
-      simulateDay(w);
+      const r = simulateDay(w);
       days++;
+      if (r.blocked) cancel = false, (msg.until = '0000-00-00');
     }
     (self as unknown as Worker).postMessage({ type: 'progress', date: w.date, days } satisfies WorkerResponse);
     setTimeout(step, 0);

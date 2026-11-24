@@ -12,6 +12,9 @@ import { go, useWorld } from '../store';
 import { live, startLive } from '../live';
 import { StandingsTable } from './Standings';
 import { FrontPage } from './News';
+import { draftPending } from '../../league/sim';
+import { STAGES } from '../../league/offseason';
+import { DevReport } from './Off';
 
 export function Home() {
   const w = useWorld();
@@ -49,6 +52,25 @@ export function Home() {
         </div>
       </section>
 
+      {draftPending(w) && (
+        <section class="card playball">
+          <div><h3>今日はドラフト会議</h3><p>日本シリーズの前にドラフト会議が開かれます。指名を終えると日程が進みます。</p></div>
+          <div class="btns"><button class="btn primary big" onClick={() => go('draft')}>ドラフト会議へ</button></div>
+        </section>
+      )}
+      {w.phase === 'offseason' && w.off && (
+        <section class="card playball">
+          <div><h3>オフシーズン</h3><p>いまの段階: {STAGES.find((x) => x.key === w.off!.stage)?.label}</p></div>
+          <div class="btns"><button class="btn primary big" onClick={() => go('off')}>オフシーズンの手続きへ</button></div>
+        </section>
+      )}
+      {w.devReport && w.devReport.length > 0 && w.phase === 'regular' && w.date === w.calendar.opening && <DevReport w={w} />}
+      {(w.inbox ?? []).length > 0 && (
+        <section class="card inboxcard">
+          <h3>お知らせ</h3>
+          <ul>{w.inbox.slice(0, 6).map((m, i) => <li key={i} class={m.kind}><small>{fmtDate(m.date)}</small>{m.text}</li>)}</ul>
+        </section>
+      )}
       {ug && (() => {
         const opp = teamById(w, ug.away === me.id ? ug.home : ug.away);
         const watching = live && live.gameId === ug.id;
@@ -91,7 +113,7 @@ export function Home() {
         <div class="side">
           <section class="card">
             <h3>{today.length ? `今日の試合（${fmtDate(w.date)}）` : '今日の試合'}</h3>
-            {today.length === 0 && <p class="muted">{w.phase === 'offseason' ? 'シーズンは終了しました。次のシーズンへの移行（ドラフト・FA・契約更改）はフェーズ5で追加します。' : '今日は試合がありません'}</p>}
+            {today.length === 0 && <p class="muted">{w.phase === 'offseason' ? 'シーズンは終了しました。オフシーズンの手続きを進めると次のシーズンが始まります。' : '今日は試合がありません'}</p>}
             <ul class="games">
               {today.map((g) => {
                 const A = teamById(w, g.away), H = teamById(w, g.home);

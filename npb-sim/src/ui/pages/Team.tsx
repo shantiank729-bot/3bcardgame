@@ -6,23 +6,40 @@ import { rosterOf, teamById, type PlayerRecord } from '../../league/world';
 import { Logo } from '../components/Logo';
 import { LineupEditor, RotationEditor } from '../components/LineupEditor';
 import { grade, handStr, POS_1, POS_JP } from '../format';
-import { useWorld } from '../store';
+import { notify, toast, useWorld } from '../store';
+import { yen } from '../../league/contracts';
+import { cannotActivate, demote, fixRotation, promote, signToShihaika } from '../../league/rosterOps';
+import { payroll } from '../../league/offseason';
 
 export function Grade({ v }: { v: number }) {
   const g = grade(v);
   return <span class={`grade ${g.cls}`}>{g.g}<small>{Math.round(v)}</small></span>;
 }
 
+function Move({ p }: { p: PlayerRecord }) {
+  const w = useWorld();
+  if (p.teamId !== w.userTeamId) return null;
+  const today = dayIndex(w);
+  if (p.status === 'active') return <button class="btn mini" onClick={() => { demote(w, p, today); notify(); toast(`${p.name}の登録を抹消しました（10日間は再登録不可）`); }}>抹消</button>;
+  if (p.status === 'farm') {
+    const why = cannotActivate(w, p, today);
+    return <button class="btn mini" title={why ?? ''} disabled={!!why} onClick={() => { const e = promote(w, p, today); fixRotation(w, p.teamId!); notify(); toast(e ?? `${p.name}を一軍に登録しました`); }}>登録</button>;
+  }
+  if (p.status === 'ikusei') return <button class="btn mini" onClick={() => { const e = signToShihaika(w, p); notify(); toast(e ?? `${p.name}を支配下登録しました`); }}>支配下へ</button>;
+  return null;
+}
+
 function HitterRow({ p }: { p: PlayerRecord }) {
   const b = p.bat;
   return (
-    <tr>
+    <tr class={p.injury ? 'injured' : ''}>
       <td>{p.number}</td>
-      <td class="l"><a href={'#/player/' + p.id}>{p.name}</a>{p.foreign && <em class="tag">外</em>}</td>
+      <td class="l"><a href={'#/player/' + p.id}>{p.name}</a>{p.foreign && <em class="tag">外</em>}{p.injury && <em class="tag" title={p.injury.desc}>傷{p.injury.days}日</em>}</td>
       <td>{POS_1[p.primary]}</td><td>{p.age}</td><td>{handStr(p.bats, p.throws)}</td>
       <td><Grade v={b.contact} /></td><td><Grade v={b.power} /></td><td><Grade v={b.eye} /></td><td><Grade v={b.speed} /></td>
       <td><Grade v={b.fielding} /></td><td><Grade v={b.arm} /></td><td><Grade v={b.catching} /></td>
       <td class="l small">{Object.entries(b.positions).filter(([, v]) => (v ?? 0) >= 40).map(([k]) => POS_1[k]).join('')}</td>
+      <td class="small">{yen(p.contract.salary)}</td><td><Move p={p} /></td>
     </tr>
   );
 }
@@ -30,12 +47,13 @@ function HitterRow({ p }: { p: PlayerRecord }) {
 function PitcherRowView({ p, role }: { p: PlayerRecord; role?: string }) {
   const pt = p.pit!;
   return (
-    <tr>
+    <tr class={p.injury ? 'injured' : ''}>
       <td>{p.number}</td>
-      <td class="l"><a href={'#/player/' + p.id}>{p.name}</a>{p.foreign && <em class="tag">外</em>}</td>
+      <td class="l"><a href={'#/player/' + p.id}>{p.name}</a>{p.foreign && <em class="tag">外</em>}{p.injury && <em class="tag" title={p.injury.desc}>傷{p.injury.days}日</em>}</td>
       <td>{role ?? (p.role === 'SP' ? '先発' : '救援')}</td><td>{p.age}</td><td>{p.throws === 'R' ? '右' : '左'}</td>
-      <td>{pt.velocity}km</td><td><Grade v={pitcherStuff(pt)} /></td><td><Grade v={pt.control} /></td><td><Grade v={pt.stamina} /></td>
+      <td>{Math.round(pt.velocity)}km</td><td><Grade v={pitcherStuff(pt)} /></td><td><Grade v={pt.control} /></td><td><Grade v={pt.stamina} /></td>
       <td class="l small">{pt.pitches.map((x) => `${PITCH_NAMES[x.type]}${grade(x.quality).g}`).join(' ')}</td>
+      <td class="small">{yen(p.contract.salary)}</td><td><Move p={p} /></td>
     </tr>
   );
 }
@@ -53,13 +71,13 @@ export function TeamPage({ id }: { id: number }) {
   const pitchers = (ps: PlayerRecord[]) => ps.filter((p) => p.isPitcher).sort((a, b) => (a.role === b.role ? a.number - b.number : a.role === 'SP' ? -1 : 1));
   const hTable = (ps: PlayerRecord[]) => (
     <div class="tablewrap"><table class="data roster">
-      <thead><tr><th>#</th><th class="l">野手</th><th>位</th><th>齢</th><th>投打</th><th>ミ</th><th>パ</th><th>眼</th><th>走</th><th>守</th><th>肩</th><th>捕</th><th class="l">守備位置</th></tr></thead>
+      <thead><tr><th>#</th><th class="l">野手</th><th>位</th><th>齢</th><th>投打</th><th>ミ</th><th>パ</th><th>眼</th><th>走</th><th>守</th><th>肩</th><th>捕</th><th class="l">守備位置</th><th>年俸</th><th /></tr></thead>
       <tbody>{ps.map((p) => <HitterRow key={p.id} p={p} />)}</tbody>
     </table></div>
   );
   const pTable = (ps: PlayerRecord[], roles?: Map<number, string>) => (
     <div class="tablewrap"><table class="data roster">
-      <thead><tr><th>#</th><th class="l">投手</th><th>役割</th><th>齢</th><th>投</th><th>球速</th><th>球威</th><th>制球</th><th>スタ</th><th class="l">変化球</th></tr></thead>
+      <thead><tr><th>#</th><th class="l">投手</th><th>役割</th><th>齢</th><th>投</th><th>球速</th><th>球威</th><th>制球</th><th>スタ</th><th class="l">変化球</th><th>年俸</th><th /></tr></thead>
       <tbody>{ps.map((p) => <PitcherRowView key={p.id} p={p} role={roles?.get(p.id)} />)}</tbody>
     </table></div>
   );
@@ -76,7 +94,8 @@ export function TeamPage({ id }: { id: number }) {
         <div>
           <h2>{t.city}{t.nickname}</h2>
           <p>本拠地: {t.park.name}（両翼{t.park.lf}m・中堅{t.park.cf}m・{t.park.dome ? 'ドーム' : '屋外'}・{t.park.turf ? '人工芝' : '天然芝'}）</p>
-          <p>支配下 {active.length + farm.length}人（一軍 {active.length}人・外国人 {foreignActive}/4）・育成 {ikusei.length}人</p>
+          <p>支配下 {active.length + farm.length}/70人（一軍 {active.length}/31人・一軍の外国人 {foreignActive}/4）・育成 {ikusei.length}人</p>
+          <p class="small">年俸総額 {yen(payroll(w, id))}（予算 {yen(w.budget[id] ?? 0)}）</p>
         </div>
       </section>
       <div class="toolbar">

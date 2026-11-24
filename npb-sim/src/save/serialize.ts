@@ -1,4 +1,7 @@
 import { SAVE_VERSION, type World } from '../league/world';
+import { Rng } from '../engine/rng';
+import { rollPotential } from '../players/development';
+import { initContract, SEASON_DAYS } from '../league/contracts';
 
 export interface SaveMeta {
   slot: number;
@@ -32,7 +35,30 @@ function migrate(w: World): World {
   w.awards ??= {};
   w.news ??= {};
   w.flags ??= {};
-  w.version = 2;
+  // version 2 → 3: 契約・潜在能力・ケガ・登録日数・オフシーズン
+  if (w.version < 3) {
+    for (const p of Object.values(w.players)) {
+      const rng = new Rng(p.id * 7919 + 13);
+      if (p.pot === undefined) Object.assign(p, rollPotential(rng, p));
+      p.injury ??= null;
+      p.events ??= [];
+      p.entry ??= p.foreign ? 'FOR' : 'HS';
+      if (p.service === undefined) {
+        const yrs = Math.max(0, w.year - (p.debutYear ?? w.year) - 1);
+        p.service = Math.round(yrs * SEASON_DAYS * (p.status === 'active' ? 0.7 : 0.2));
+      }
+      p.contract ??= initContract(rng, p);
+    }
+    w.inbox ??= [];
+    w.draft ??= null;
+    w.off ??= null;
+    w.trades ??= [];
+    if (!w.budget) {
+      w.budget = {};
+      for (const t of w.teams) w.budget[t.id] = Math.round(Object.values(w.players).filter((p) => p.teamId === t.id).reduce((s2, p) => s2 + p.contract.salary, 0) * 1.08 / 1000) * 1000;
+    }
+  }
+  w.version = SAVE_VERSION;
   return w;
 }
 

@@ -3,11 +3,29 @@ import { Rng } from '../engine/rng';
 import type { FieldPos, Player } from '../engine/types';
 import { allocPlayerId, generateBatter, generatePitcher, setNextPlayerId } from '../players/generate';
 import { buildSchedule, type SeasonCalendar } from './schedule';
+import { initContract, MIN_SALARY, SEASON_DAYS } from './contracts';
+import { rollPotential } from '../players/development';
 import { ALLSTAR_TEAMS, TEAMS, type LeagueId, type TeamInfo } from './teams';
 
-export const SAVE_VERSION = 2;
+export const SAVE_VERSION = 3;
 
-export type RosterStatus = 'active' | 'farm' | 'ikusei';
+/** active=一軍 farm=二軍(支配下) ikusei=育成 fa=所属なし(自由契約) retired=引退 mlb=海外移籍 */
+export type RosterStatus = 'active' | 'farm' | 'ikusei' | 'fa' | 'retired' | 'mlb';
+
+/** 入団経路（FA権の年数判定に使う） HS=高卒 COL=大卒 SHA=社会人 FOR=外国人 */
+export type EntryRoute = 'HS' | 'COL' | 'SHA' | 'FOR';
+
+export interface Contract {
+  /** 年俸（万円） */
+  salary: number;
+  /** 今季を含む残り年数 */
+  years: number;
+}
+
+export interface CareerEvent {
+  year: number;
+  text: string;
+}
 
 /** プロ入り後、このゲームの開始前までの通算成績（記録達成の判定用） */
 export interface CareerBase {
@@ -29,6 +47,22 @@ export interface PlayerRecord extends Player {
   rookie?: boolean;
   /** プロ入り年 */
   debutYear?: number;
+  /** 潜在能力（総合値の上限の目安） */
+  pot: number;
+  /** 成長タイプ */
+  growth: 'early' | 'normal' | 'late';
+  /** ケガ（残り日数） */
+  injury: { days: number; desc: string } | null;
+  contract: Contract;
+  /** 一軍登録日数の累計（145日=1シーズン） */
+  service: number;
+  entry: EntryRoute;
+  /** 国内FA権を行使したことがある */
+  faUsed?: boolean;
+  /** 一軍登録を抹消された日（dayIndex）。10日間は再登録できない */
+  demotedDay?: number;
+  /** 経歴（ドラフト・移籍・タイトルなど） */
+  events: CareerEvent[];
 }
 
 export interface PlayerSeason {
@@ -132,6 +166,20 @@ export interface World {
   awards: Record<number, import('./awards').SeasonAwards>;
   /** スポーツ新聞（日付ごと） */
   news: Record<string, import('../news/types').NewsIssue>;
+  /** 自チームへのお知らせ（ケガ・入れ替え・オファーなど） */
+  inbox: import('./rosterOps').Inbox[];
+  /** ドラフト会議（今年） */
+  draft: import('./draft').DraftState | null;
+  /** オフシーズンの進行 */
+  off: import('./offseason').OffseasonState | null;
+  /** トレードの記録 */
+  trades: import('./trade').TradeRecord[];
+  /** リーグ基準補正（能力の平均のずれ） */
+  norm?: import('../engine/pa').RatingNorm;
+  /** 直近のキャンプでの成長（自チーム） */
+  devReport?: { pid: number; before: number; after: number }[];
+  /** 球団の予算（年俸総額の目安、万円） */
+  budget: Record<number, number>;
   /** 一度だけ記事にする出来事の記録（マジック点灯・記録達成など） */
   flags: Record<string, true>;
   /** 過去シーズンの選手成績（年 → 一覧） */
@@ -146,7 +194,10 @@ export interface World {
 export const emptyPark = (): ParkAcc => ({ homeGames: 0, homeRuns: 0, homeHR: 0, awayGames: 0, awayRuns: 0, awayHR: 0 });
 
 function rec(p: Player, teamId: number, status: RosterStatus, primary: FieldPos, role?: 'SP' | 'RP'): PlayerRecord {
-  return { ...p, teamId, status, number: 0, primary, role, form: 0 };
+  return {
+    ...p, teamId, status, number: 0, primary, role, form: 0, pot: 50, growth: 'normal', injury: null,
+    contract: { salary: MIN_SALARY, years: 1 }, service: 0, entry: p.foreign ? 'FOR' : 'HS', events: [],
+  };
 }
 
 /** 年齢と能力から、ゲーム開始前の通算成績をそれらしく作る */
@@ -184,6 +235,15 @@ export function seedCareer(rng: Rng, p: PlayerRecord, year: number) {
   }
   p.pre = c;
   p.debutYear = year - years;
+  if (!p.foreign) p.entry = entryAge === 18 ? 'HS' : entryAge === 22 ? 'COL' : 'SHA';
+  // 一軍登録日数（FA権）: 一軍定着度に応じて
+  const reg = p.status === 'active' ? 0.75 : p.status === 'farm' ? 0.2 : 0;
+  p.service = Math.round(Math.max(0, years - 1) * SEASON_DAYS * reg * (0.6 + rng.next() * 0.6));
+  const pr = rollPotential(rng, p);
+  p.pot = pr.pot;
+  p.growth = pr.growth;
+  p.contract = initContract(rng, p);
+  p.events = [{ year: p.debutYear ?? year, text: p.foreign ? '来日・入団' : `入団（${p.entry === 'HS' ? '高卒' : p.entry === 'COL' ? '大卒' : '社会人'}）` }];
   p.rookie = !p.foreign && (p.isPitcher ? c.outs < 90 : c.pa < 60) && years <= 5;
 }
 
@@ -194,25 +254,25 @@ export function generateFranchise(rng: Rng, team: TeamInfo): PlayerRecord[] {
   // 一軍野手 18: C3, 1B2, 2B2, 3B2, SS2, LF2, CF2, RF2, + 外国人野手2（1B/LF など）
   const activeBat: Exclude<FieldPos, 'P'>[] = ['C', 'C', 'C', '1B', '2B', '2B', '3B', '3B', 'SS', 'SS', 'LF', 'CF', 'CF', 'RF', 'RF', 'LF'];
   activeBat.forEach((pos, i) => {
-    const lvl = i < 12 ? 50 : 44;
+    const lvl = i < 12 ? 56 : 50;
     const reg = [0, 3, 4, 6, 8, 10, 11, 13].includes(i);
-    out.push(rec(generateBatter(rng, pos, { level: reg ? 52 : lvl - 3, age: age() }), team.id, 'active', pos));
+    out.push(rec(generateBatter(rng, pos, { level: reg ? 58 : lvl - 3, age: age() }), team.id, 'active', pos));
   });
   for (const pos of ['1B', 'LF'] as const) {
-    out.push(rec(generateBatter(rng, pos, { level: 55, age: rng.int(26, 33), foreign: true }), team.id, 'active', pos));
+    out.push(rec(generateBatter(rng, pos, { level: 61, age: rng.int(26, 33), foreign: true }), team.id, 'active', pos));
   }
   // 一軍投手 13: 先発6（外国人1）、救援7（外国人1）
-  for (let i = 0; i < 6; i++) out.push(rec(generatePitcher(rng, 'SP', { level: i === 0 ? 55 : 50, age: age(), foreign: i === 5 }), team.id, 'active', 'P', 'SP'));
-  for (let i = 0; i < 7; i++) out.push(rec(generatePitcher(rng, 'RP', { level: i < 3 ? 53 : 47, age: age(), foreign: i === 1 }), team.id, 'active', 'P', 'RP'));
+  for (let i = 0; i < 6; i++) out.push(rec(generatePitcher(rng, 'SP', { level: i === 0 ? 61 : 56, age: age(), foreign: i === 5 }), team.id, 'active', 'P', 'SP'));
+  for (let i = 0; i < 7; i++) out.push(rec(generatePitcher(rng, 'RP', { level: i < 3 ? 59 : 53, age: age(), foreign: i === 1 }), team.id, 'active', 'P', 'RP'));
   // 二軍
   const farmBat: Exclude<FieldPos, 'P'>[] = ['C', 'C', '1B', '2B', '3B', 'SS', 'SS', 'LF', 'CF', 'RF', '2B', '3B', 'CF', 'RF', 'LF', '1B'];
-  for (const pos of farmBat) out.push(rec(generateBatter(rng, pos, { level: 40, age: rng.int(19, 30) }), team.id, 'farm', pos));
-  out.push(rec(generateBatter(rng, 'RF', { level: 47, age: rng.int(25, 31), foreign: true }), team.id, 'farm', 'RF'));
-  for (let i = 0; i < 7; i++) out.push(rec(generatePitcher(rng, 'SP', { level: 41, age: rng.int(19, 30) }), team.id, 'farm', 'P', 'SP'));
-  for (let i = 0; i < 10; i++) out.push(rec(generatePitcher(rng, 'RP', { level: 41, age: rng.int(19, 31) }), team.id, 'farm', 'P', 'RP'));
+  for (const pos of farmBat) out.push(rec(generateBatter(rng, pos, { level: 46, age: rng.int(19, 30) }), team.id, 'farm', pos));
+  out.push(rec(generateBatter(rng, 'RF', { level: 53, age: rng.int(25, 31), foreign: true }), team.id, 'farm', 'RF'));
+  for (let i = 0; i < 7; i++) out.push(rec(generatePitcher(rng, 'SP', { level: 47, age: rng.int(19, 30) }), team.id, 'farm', 'P', 'SP'));
+  for (let i = 0; i < 10; i++) out.push(rec(generatePitcher(rng, 'RP', { level: 47, age: rng.int(19, 31) }), team.id, 'farm', 'P', 'RP'));
   // 育成
-  for (let i = 0; i < 4; i++) out.push(rec(generateBatter(rng, rng.pick(['C', 'SS', 'CF', '3B'] as const), { level: 30, age: rng.int(18, 23) }), team.id, 'ikusei', 'SS'));
-  for (let i = 0; i < 4; i++) out.push(rec(generatePitcher(rng, 'RP', { level: 30, age: rng.int(18, 23) }), team.id, 'ikusei', 'P', 'RP'));
+  for (let i = 0; i < 4; i++) out.push(rec(generateBatter(rng, rng.pick(['C', 'SS', 'CF', '3B'] as const), { level: 36, age: rng.int(18, 23) }), team.id, 'ikusei', 'SS'));
+  for (let i = 0; i < 4; i++) out.push(rec(generatePitcher(rng, 'RP', { level: 36, age: rng.int(18, 23) }), team.id, 'ikusei', 'P', 'RP'));
   for (const p of out) if (p.status === 'ikusei') p.primary = (Object.keys(p.bat.positions)[0] as FieldPos) ?? 'SS';
   assignNumbers(rng, out);
   return out;
@@ -264,7 +324,8 @@ export function newWorld(seed: number, userTeamId: number, year = 2027): World {
     version: SAVE_VERSION, seed, year, date: calendar.opening, phase: 'regular', userTeamId,
     teams: TEAMS.map((t) => ({ ...t, park: { ...t.park } })), teamState, players, nextPlayerId, calendar,
     results: {}, season: {}, runEnv: { C: emptyRunEnv(), P: emptyRunEnv() }, park, settings: defaultSettings(), history: {},
-    post: null, postStats: {}, allStar: null, awards: {}, news: {}, flags: {},
+    post: null, postStats: {}, allStar: null, awards: {}, news: {}, flags: {}, inbox: [], draft: null, off: null, trades: [],
+    budget: Object.fromEntries(TEAMS.map((t) => [t.id, Math.round((Object.values(players).filter((p) => p.teamId === t.id).reduce((s, p) => s + p.contract.salary, 0) * 1.08) / 1000) * 1000])),
   };
 }
 

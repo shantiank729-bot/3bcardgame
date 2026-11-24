@@ -88,7 +88,17 @@ export interface PAContext {
   infieldIn?: boolean;
   /** アマチュアなど能力スケールの違う世界で使う全体補正（ロジット加算） */
   offenseShift?: number;
+  /** リーグ基準補正（リーグ全体の能力の平均が基準からどれだけずれているか） */
+  norm?: RatingNorm;
 }
+
+/** リーグ全体の能力の平均と、調整の基準との差。エンジンはこの差を引いて計算する */
+export interface RatingNorm {
+  contact: number; power: number; eye: number; speed: number; fielding: number; stuff: number; control: number;
+}
+export const ZERO_NORM: RatingNorm = { contact: 0, power: 0, eye: 0, speed: 0, fielding: 0, stuff: 0, control: 0 };
+/** 調整（キャリブレーション）に使ったリーグのレギュラー・主力投手の能力平均 */
+export const NORM_REF: RatingNorm = { contact: 54.7, power: 58.6, eye: 53.9, speed: 51.5, fielding: 52.1, stuff: 50.8, control: 50.1 };
 
 export function battingSide(batter: Player, pitcherHand: Hand): Hand {
   if (batter.bats === 'S') return pitcherHand === 'R' ? 'L' : 'R';
@@ -97,7 +107,9 @@ export function battingSide(batter: Player, pitcherHand: Hand): Hand {
 
 /** 打席の各段階で使うロジット補正をまとめて計算（テストやUIの期待値表示にも使う） */
 export function paLogits(ctx: PAContext) {
-  const b = ctx.batter.bat;
+  const n = ctx.norm ?? ZERO_NORM;
+  const raw = ctx.batter.bat;
+  const b = { ...raw, contact: raw.contact - n.contact, power: raw.power - n.power, eye: raw.eye - n.eye, speed: raw.speed - n.speed };
   const pit = ctx.pitcher.pit!;
   const t = ctx.tuning;
   const side = battingSide(ctx.batter, ctx.pitcher.throws);
@@ -107,8 +119,8 @@ export function paLogits(ctx: PAContext) {
   const pl = (sameSide ? (side === 'L' ? 1.25 : 0.9) : -0.55) * platoonMag;
   const form = (ctx.batter.form ?? 0) - (ctx.pitcher.form ?? 0) * 0.8;
   const f = Math.min(ctx.fatigue, 2);
-  const stuff = pitcherStuff(pit) - 18 * f;
-  const control = pit.control - 15 * f;
+  const stuff = pitcherStuff(pit) - 18 * f - n.stuff;
+  const control = pit.control - 15 * f - n.control;
   const mix = pitchMix(pit);
   const tto = ctx.timesFaced >= 3 ? 0.06 * (ctx.timesFaced - 2) : 0;
   const shift = ctx.offenseShift ?? 0;
@@ -178,7 +190,8 @@ export function resolvePA(ctx: PAContext, rng: Rng): PAOutcome {
   else fielder = pickPos(rng, right ? OF_R : OF_L);
 
   const d = ctx.defense[fielder];
-  const b = ctx.batter.bat;
+  const nn = ctx.norm ?? ZERO_NORM;
+  const b = { ...ctx.batter.bat, power: ctx.batter.bat.power - nn.power, speed: ctx.batter.bat.speed - nn.speed };
   const baseHit = type === 'GB' ? t.hitGB : type === 'LD' ? t.hitLD : type === 'FB' ? t.hitFB : t.hitIFFB;
   let x = logit(baseHit) + L.hitAdj;
   if (type === 'GB') {
@@ -186,7 +199,7 @@ export function resolvePA(ctx: PAContext, rng: Rng): PAOutcome {
   }
   if (type !== 'IFFB') x += Math.log(ctx.park.hitFactor);
   if (type === 'LD' && !isOutfield(fielder)) x -= 0.9; // 内野へのライナーはほぼアウト
-  const defAdj = -0.008 * (d.range - 50) * (type === 'IFFB' ? 0.2 : 1);
+  const defAdj = -0.008 * (d.range - nn.fielding - 50) * (type === 'IFFB' ? 0.2 : 1);
   const pHitAvg = sigmoid(x);
   const pHit = sigmoid(x + defAdj);
   let hit: 0 | 1 | 2 | 3 = 0;

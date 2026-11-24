@@ -1,10 +1,10 @@
 import { addDays } from '../league/calendar';
-import { isInSeason, simulateDay } from '../league/sim';
+import { draftPending, isInSeason, simulateDay } from '../league/sim';
 import { newWorld, type World } from '../league/world';
 import { AUTO_SLOT, saveWorld } from '../save/db';
 import { runInWorker } from '../worker/client';
 import { clearLive } from './live';
-import { setBusy, setWorld, state, toast, notify } from './store';
+import { go, setBusy, setWorld, state, toast, notify } from './store';
 
 export async function autosave(w: World) {
   try {
@@ -28,6 +28,10 @@ export function simOneDay() {
   const r = simulateDay(w);
   notify();
   void autosave(w);
+  if (r.blocked === 'draft') {
+    toast('今日はドラフト会議です');
+    go('draft');
+  } else if (w.phase === 'offseason') go('off');
   return r;
 }
 
@@ -52,6 +56,10 @@ export async function simSpan(span: SimSpan) {
     const { world, cancelled } = await h.promise;
     setWorld(world);
     if (cancelled) toast('途中で止めました');
+    else if (draftPending(world)) {
+      toast('今日はドラフト会議です');
+      go('draft');
+    } else if (world.phase === 'offseason') go('off');
     void autosave(world);
   } catch (e) {
     toast('計算中にエラーが発生しました');

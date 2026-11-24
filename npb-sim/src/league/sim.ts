@@ -2,7 +2,13 @@ import { addLine, addField, emptyBat, emptyField, emptyPitch } from '../engine/b
 import { GameSim, simulateGame, type GameResult, type PAObserver } from '../engine/game';
 import type { TeamGameInput } from '../engine/types';
 import { Rng } from '../engine/rng';
-import { dayDiff, addDays } from './calendar';
+import { dayDiff, addDays, weekday } from './calendar';
+import { finalizeDraft, startDraft } from './draft';
+import { computeNorm } from './norm';
+import { addServiceDay, dailyInjuries, inbox, weeklyAiMoves } from './rosterOps';
+import { aiTrades } from './trade';
+import { startOffseason } from './offseason';
+import { shortName } from '../news/text';
 import { applySeriesResult, postseasonDone, postseasonGamesOn, seriesStatus, setupPostseason, type Series } from './postseason';
 import { gameHero, playAllStarGame } from './allstar';
 import { regularSeasonAwards } from './awards';
@@ -195,11 +201,6 @@ function updateForm(w: World, rng: Rng) {
   }
 }
 
-export interface DayReport {
-  date: string;
-  games: GameSummary[];
-  seasonOver: boolean;
-}
 
 export interface ScheduledGame {
   id: number;
@@ -230,6 +231,12 @@ export function findScheduled(w: World, id: number): ScheduledGame | null {
   return scheduledOn(w, w.date).find((g) => g.id === id) ?? null;
 }
 
+/** リーグ基準補正（なければ計算、月初に更新） */
+export function leagueNorm(w: World) {
+  if (!w.norm || w.date.endsWith('-01')) w.norm = computeNorm(w);
+  return w.norm;
+}
+
 /** その日の自チームの試合（未消化）*/
 export function userGameToday(w: World) {
   return scheduledOn(w, w.date).find((g) => g.away === w.userTeamId || g.home === w.userTeamId) ?? null;
@@ -238,7 +245,7 @@ export function userGameToday(w: World) {
 /** 観戦用に試合を準備する（自チームは手動采配が可能） */
 export function prepareLiveGame(w: World, gameId: number): GameSim {
   const g = findScheduled(w, gameId)!;
-  const sim = new GameSim(...gameInputs(w, g), { dh: dhFor(w, g), seed: hashSeed(w.seed, w.year, g.id, 991), log: true, maxInnings: g.maxInnings });
+  const sim = new GameSim(...gameInputs(w, g), { dh: dhFor(w, g), seed: hashSeed(w.seed, w.year, g.id, 991), log: true, maxInnings: g.maxInnings, norm: leagueNorm(w) });
   if (g.kind === 'L' || g.kind === 'I') sim.observer = runEnvObserver(w.runEnv[teamById(w, g.home).league]);
   sim.manualTeam = w.userTeamId;
   return sim;
@@ -344,6 +351,23 @@ function playAllStarDay(w: World, date: string): Played[] {
   return [{ summary, res, kind: 'AS' }];
 }
 
+/** 表彰などを選手の経歴に残す */
+function endOfSeasonEvents(w: World) {
+  const a = w.awards[w.year];
+  if (!a) return;
+  const ev = (pid: number | null, text: string) => pid && w.players[pid]?.events.push({ year: w.year, text });
+  for (const lg of ['C', 'P'] as const) {
+    ev(a.mvp[lg], `${LEAGUE_NAMES[lg]}MVP`);
+    ev(a.roy[lg], `${LEAGUE_NAMES[lg]}新人王`);
+    for (const t of a.titles[lg]) ev(t.pid, `${t.title}（${t.value}）`);
+    for (const b of a.bestNine[lg]) ev(b.pid, 'ベストナイン');
+    for (const g of a.goldenGlove[lg]) ev(g.pid, 'ゴールデングラブ賞');
+  }
+  ev(a.ace, '金剛賞（最優秀先発投手）');
+  ev(a.jsMvp, '日本シリーズMVP');
+  if (a.champion) for (const p of Object.values(w.players)) if (p.teamId === a.champion && p.status === 'active') p.events.push({ year: w.year, text: '日本一' });
+}
+
 function endRegularSeason(w: World, date: string) {
   w.awards[w.year] = regularSeasonAwards(w);
   w.post = setupPostseason(w);
@@ -360,6 +384,35 @@ export interface DayReport {
   date: string;
   games: GameSummary[];
   seasonOver: boolean;
+  /** ユーザーの操作待ちで止まった（ドラフト会議など） */
+  blocked?: 'draft';
+}
+
+/** 今日がドラフト会議でまだ終わっていないか */
+export function draftPending(w: World) {
+  return w.phase === 'postseason' && !!w.post?.draftDate && w.date === w.post.draftDate && (!w.draft || w.draft.stage !== 'done' || !w.flags[`draft-${w.year}`]);
+}
+
+/** ドラフトを確定し、新聞に載せる */
+export function completeDraft(w: World) {
+  const d = w.draft!;
+  if (w.flags[`draft-${w.year}`]) return;
+  finalizeDraft(w, d);
+  w.flags[`draft-${w.year}`] = true;
+  const byId = new Map(d.prospects.map((p) => [p.id, p]));
+  const hot = [...d.lotteries].sort((a, b) => b.bidders.length - a.bidders.length)[0];
+  const ones = d.picks.filter((p) => p.round === 1);
+  const desc = ones.map((p) => `${teamById(w, p.tid).short}=${byId.get(p.pid)!.player.name}（${byId.get(p.pid)!.school}）`).join('、');
+  const hp = hot ? byId.get(hot.pid)! : null;
+  addStory(w, w.date, {
+    id: `draft-${w.year}`, score: 65, kind: 'draft',
+    headline: hp ? `${shortName(hp.player.name)}に${hot!.bidders.length}球団競合 ${teamById(w, hot!.winner).nickname}が交渉権` : `${w.year}年ドラフト 12球団の1位決まる`,
+    sub: `${w.year}年ドラフト会議`,
+    body: `${w.year}年のドラフト会議が行われた。1位指名は${desc}。${d.lotteries.length ? `抽選は${d.lotteries.length}回行われた。` : ''}支配下${d.picks.filter((p) => !p.ikusei).length}人、育成${d.picks.filter((p) => p.ikusei).length}人が指名された。`,
+    scene: 'draft', tids: hot ? [hot.winner] : [], pids: hp ? [hp.id] : [],
+  });
+  const mine = d.picks.filter((p) => p.tid === w.userTeamId);
+  if (mine.length) inbox(w, `ドラフトで${mine.map((p) => `${p.label} ${byId.get(p.pid)!.player.name}`).join('、')}を指名しました`, 'roster');
 }
 
 /** 現在の日付の試合をすべて行い、日付を1日進める */
@@ -367,6 +420,10 @@ export function simulateDay(w: World): DayReport {
   const date = w.date;
   const today = dayIndex(w);
   if (!isInSeason(w)) return { date, games: [], seasonOver: true };
+  if (draftPending(w)) {
+    if (!w.draft) w.draft = startDraft(w, date);
+    return { date, games: [], seasonOver: false, blocked: 'draft' };
+  }
   const before = snapshot(w);
   const rng = new Rng(hashSeed(w.seed, w.year, today, 77));
   const live = (w as World & { _livePlayed?: Played[] })._livePlayed ?? [];
@@ -376,10 +433,16 @@ export function simulateDay(w: World): DayReport {
   for (const g of scheduledOn(w, date)) {
     const [ai, hi, park] = gameInputs(w, g);
     const obs = g.kind === 'L' || g.kind === 'I' ? runEnvObserver(w.runEnv[teamById(w, g.home).league]) : undefined;
-    const res = simulateGame(ai, hi, park, { dh: dhFor(w, g), seed: hashSeed(w.seed, w.year, g.id), log: true, maxInnings: g.maxInnings }, obs);
+    const res = simulateGame(ai, hi, park, { dh: dhFor(w, g), seed: hashSeed(w.seed, w.year, g.id), log: true, maxInnings: g.maxInnings, norm: leagueNorm(w) }, obs);
     played.push(applyResult(w, g, res));
   }
   updateForm(w, rng);
+  dailyInjuries(w, rng, played.flatMap((p) => [...p.res.appeared.values()].flat()), today);
+  if (w.phase === 'regular') {
+    addServiceDay(w);
+    if (weekday(date) === 1) weeklyAiMoves(w, today);
+    if (date.slice(5) === '07-15') aiTrades(w, rng, 20);
+  }
   // 古い登板記録を整理
   for (const ts of Object.values(w.teamState)) for (const pid in ts.pitchLog) {
     for (const d in ts.pitchLog[pid]) if (Number(d) < today - 7) delete ts.pitchLog[pid][d];
@@ -391,6 +454,7 @@ export function simulateDay(w: World): DayReport {
   } else if (w.phase === 'postseason' && postseasonDone(w)) {
     w.phase = 'offseason';
     seasonOver = true;
+    endOfSeasonEvents(w);
     const a = w.awards[w.year];
     if (a) {
       const nm = (id: number | null) => (id ? `${w.players[id].name}（${teamById(w, w.players[id].teamId!).nickname}）` : '該当者なし');
@@ -403,6 +467,7 @@ export function simulateDay(w: World): DayReport {
     }
   }
   if (!seasonOver) w.date = addDays(date, 1);
+  else startOffseason(w);
   return { date, games: played.map((p) => p.summary), seasonOver };
 }
 
@@ -411,6 +476,6 @@ export function simulateUntil(w: World, until: string, onDay?: (r: DayReport) =>
   while (isInSeason(w) && w.date <= until) {
     const r = simulateDay(w);
     onDay?.(r);
-    if (r.seasonOver) break;
+    if (r.seasonOver || r.blocked) break;
   }
 }

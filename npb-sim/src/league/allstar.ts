@@ -68,7 +68,7 @@ export function playAllStarGame(w: World, gameNo: number, date: string, seed: nu
   const away = allStarInput(w, awayLg, as.rosters[awayLg], true);
   const home = allStarInput(w, homeLg, as.rosters[homeLg], true);
   void date;
-  const res = simulateGame(away, home, parkTeam.park, { dh: true, seed, log: true, maxInnings: 9, exhibition: true });
+  const res = simulateGame(away, home, parkTeam.park, { dh: true, seed, log: true, maxInnings: 9, exhibition: true, norm: w.norm });
   return { res, parkTeam, away: away.teamId, home: home.teamId };
 }
 
