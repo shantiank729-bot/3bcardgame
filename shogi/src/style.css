@@ -296,3 +296,24 @@ body.in-game #main { padding-bottom: env(safe-area-inset-bottom); }
 .tsume .card .btn { width: 100%; margin-top: 6px; }
 .tsume .screen.play { padding: 0; }
 .tsume .actions .btn { padding: 0 4px; }
+
+/* ---- フェーズ6: 苦手分析・定跡練習 ---- */
+.bars { display: flex; flex-direction: column; gap: 8px; margin: 8px 0; }
+.bar-row { display: grid; grid-template-columns: 3em 1fr 3.5em; align-items: center; gap: 8px; }
+.bar-sub { grid-column: 2 / 4; margin-top: -6px; font-size: 0.75rem; }
+.bar-track { background: var(--bg); border-radius: 4px; height: 14px; overflow: hidden; }
+.bar { height: 100%; background: var(--accent); border-radius: 0 4px 4px 0; }
+.bar-value { text-align: right; font-variant-numeric: tabular-nums; font-weight: 700; }
+.op-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.op-table th, .op-table td { text-align: left; padding: 6px 4px; border-bottom: 1px solid var(--line); }
+.op-table th { color: var(--muted); font-weight: 400; }
+.advice { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.advice span { flex: 1; }
+.joseki-item { width: 100%; text-align: left; background: var(--card); color: var(--fg); border: 1px solid var(--line); border-radius: 12px; padding: 12px; margin: 8px 0; }
+.joseki-name { font-weight: 700; font-size: 1.05rem; display: flex; gap: 8px; align-items: center; }
+.joseki-title { font-weight: 700; }
+.joseki-explain { width: calc(var(--board) + 20px); min-height: 3.2em; font-size: 0.9rem; display: flex; flex-direction: column; gap: 2px; }
+.joseki-explain .ok { color: #1f8a4c; font-weight: 700; }
+.joseki-explain .ng { color: #d02020; font-weight: 700; }
+.joseki-explain .btn { align-self: flex-start; margin-top: 4px; }
+.joseki .actions { grid-template-columns: repeat(3, 1fr); }

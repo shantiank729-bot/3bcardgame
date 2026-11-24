@@ -29,6 +29,10 @@ export interface PlayOptions {
   mode: GameMode;
 }
 
+/** 定跡練習などから「この局面から練習対局」を始めるための受け渡し */
+let pending: { moves: Move[]; humanColor: Color } | null = null;
+export function setPendingStart(p: { moves: Move[]; humanColor: Color }) { pending = p; }
+
 export function mountPlay(root: HTMLElement, arg?: string): () => void {
   let cleanup: (() => void) | null = null;
   const begin = (opts: PlayOptions) => { cleanup = startGame(root, opts, showSetup); };
@@ -39,7 +43,15 @@ export function mountPlay(root: HTMLElement, arg?: string): () => void {
   }
   // ホームの「すぐ対局」: 前回の設定でレーティング対局をすぐ始める
   if (arg === "quick") void ratedOptions().then(begin);
-  else showSetup();
+  else if (arg === "continue" && pending) {
+    const p = pending;
+    pending = null;
+    void loadProfile().then((prof) => {
+      const level = chooseLevel(prof.glicko);
+      const names: [string, string] = p.humanColor === BLACK ? ["あなた", `AI Lv${level}`] : [`AI Lv${level}`, "あなた"];
+      begin({ mode: "practice", humans: [p.humanColor], timePreset: "none", names, ai: { color: (p.humanColor ^ 1) as Color, level }, moves: p.moves });
+    });
+  } else showSetup();
   return () => cleanup?.();
 }
 

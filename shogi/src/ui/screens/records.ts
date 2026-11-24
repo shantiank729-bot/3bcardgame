@@ -3,6 +3,7 @@ import { usiToMove } from "../../core/usi";
 import { GameRecord, humanScore, loadGames, loadProfile } from "../../db/records";
 import { rankOf } from "../../rating/rank";
 import { computeStats } from "../../rating/stats";
+import { PHASE_LABEL, Phase, analyzeWeakness, avgLoss } from "../../analysis/weakness";
 import { lineChart } from "../chart";
 import { download, el } from "../dom";
 
@@ -56,6 +57,31 @@ export function mountRecords(root: HTMLElement) {
           el("li", {}, el("span", { class: e.up ? "up" : "down" }, e.up ? "▲ 昇級・昇段" : "▼ 降級・降段"), ` ${e.label}`, el("span", { class: "note" }, ` ${fmtDate(e.date)}`))))
         : el("p", { class: "note" }, "まだありません。"));
     const list = el("div", { class: "card" }, el("h3", {}, "対局記録"));
+    const wk = analyzeWeakness(games);
+    const phaseKeys: Phase[] = ["opening", "middle", "endgame"];
+    const maxLoss = Math.max(0.02, ...phaseKeys.map((k) => avgLoss(wk.phases[k])));
+    const weak = el("div", { class: "card" }, el("h3", {}, "苦手分析"),
+      el("p", { class: "note" }, `解析済みの対局 ${wk.analyzedGames}局から集計（1手あたりに失った勝率の平均）`),
+      el("div", { class: "bars" }, ...phaseKeys.map((k) => {
+        const ph = wk.phases[k];
+        const v = avgLoss(ph);
+        const bar = el("div", { class: "bar" });
+        bar.style.width = `${Math.max(2, (v / maxLoss) * 100)}%`;
+        return el("div", { class: "bar-row" },
+          el("span", { class: "bar-label" }, PHASE_LABEL[k]),
+          el("div", { class: "bar-track" }, bar),
+          el("span", { class: "bar-value" }, ph.moves ? `${(v * 100).toFixed(1)}%` : "—"),
+          el("span", { class: "note bar-sub" }, ph.moves ? `悪手${ph.bad}・疑問手${ph.dubious}` : ""));
+      })),
+      el("p", { class: "note" }, `序盤 = 30手目まで、中盤 = 80手目まで、終盤 = それ以降。逆転負け ${wk.reversals}局。`),
+      el("h3", {}, "戦型ごとの勝率"),
+      wk.byOpening.length
+        ? el("table", { class: "op-table" }, el("tr", {}, el("th", {}, "あなたの戦型"), el("th", {}, "対局"), el("th", {}, "勝率")),
+          ...wk.byOpening.map((o) => el("tr", {}, el("td", {}, o.name), el("td", {}, `${o.games}`), el("td", {}, `${Math.round(o.score * 100)}%`))))
+        : el("p", { class: "note" }, "まだありません。"),
+      el("h3", {}, "おすすめの練習"),
+      ...wk.advice.map((a) => el("div", { class: "advice" }, el("span", {}, a.text), el("a", { class: "btn small", href: a.link }, a.linkLabel))),
+    );
     if (!games.length) list.append(el("p", { class: "note" }, "まだ対局がありません。"));
     const PAGE = 20;
     let shown = 0;
@@ -86,7 +112,7 @@ export function mountRecords(root: HTMLElement) {
           el("div", { class: "note" }, `${fmtDate(g.date)}・${g.moves.length}手・${g.result.reason}${delta !== null ? `・${delta >= 0 ? "+" : ""}${delta}` : ""}`)),
         el("div", { class: "row-btns" }, reviewBtn, kifBtn));
     }
-    body.replaceChildren(el("h2", {}, "成長記録"), tiles, chartBox, hist, list,
+    body.replaceChildren(el("h2", {}, "成長記録・苦手分析"), tiles, chartBox, weak, hist, list,
 );
   })();
 }

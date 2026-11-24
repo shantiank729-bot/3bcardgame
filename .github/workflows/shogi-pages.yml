@@ -1,0 +1,56 @@
+# 将棋道場（shogi/）をテスト・ビルドして GitHub Pages に公開する。
+# ルートの算数ドリル（index.html）もそのまま公開し、将棋は /shogi/ に置く。
+# 使う前に: リポジトリの Settings → Pages → Source を「GitHub Actions」にする。
+name: Shogi Pages
+
+on:
+  push:
+    paths: ["shogi/**", ".github/workflows/shogi-pages.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: shogi
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: shogi/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - name: Assemble site
+        working-directory: .
+        run: |
+          mkdir -p _site/shogi
+          cp index.html _site/
+          cp -r shogi/dist/. _site/shogi/
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    # 公開はデフォルトブランチへの push か、手動実行のときだけ
+    if: github.ref_name == github.event.repository.default_branch || github.event_name == 'workflow_dispatch'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -5,13 +5,10 @@ import { mountPlay } from "./ui/screens/play";
 import { mountRecords } from "./ui/screens/records";
 import { mountReview } from "./ui/screens/review";
 import { mountSettings } from "./ui/screens/settings";
+import { mountJoseki } from "./ui/screens/joseki";
 import { mountTsume } from "./ui/screens/tsume";
 
 type Mount = (root: HTMLElement, arg?: string) => (() => void) | void;
-
-const placeholder = (title: string, phase: number): Mount => (root) => {
-  root.replaceChildren(el("div", { class: "screen" }, el("h2", {}, title), el("p", { class: "note" }, `フェーズ${phase}で作ります。`)));
-};
 
 const ROUTES: Record<string, { title: string; mount: Mount; tab?: string }> = {
   "": { title: "ホーム", mount: mountHome, tab: "ホーム" },
@@ -19,7 +16,7 @@ const ROUTES: Record<string, { title: string; mount: Mount; tab?: string }> = {
   tsume: { title: "詰将棋", mount: mountTsume, tab: "詰将棋" },
   records: { title: "記録", mount: mountRecords, tab: "記録" },
   review: { title: "振り返り", mount: mountReview },
-  joseki: { title: "定跡練習", mount: placeholder("定跡練習", 6) },
+  joseki: { title: "定跡練習", mount: mountJoseki },
   settings: { title: "設定", mount: mountSettings, tab: "設定" },
 };
 
@@ -39,3 +36,14 @@ function route() {
 }
 window.addEventListener("hashchange", route);
 route();
+
+// PWA: Service Worker を登録する（本番ビルドのみ）。
+// ヘッダーで分離されていない環境（GitHub Pages など）では、SW が付けたヘッダーを効かせるため1回だけ再読み込みする。
+if (import.meta.env.PROD && "serviceWorker" in navigator) {
+  navigator.serviceWorker.register("./sw.js").then(async () => {
+    await navigator.serviceWorker.ready;
+    let reloaded = true;
+    try { reloaded = !!sessionStorage.getItem("coi-reloaded"); sessionStorage.setItem("coi-reloaded", "1"); } catch { /* 保存できない環境では再読み込みしない */ }
+    if (!window.crossOriginIsolated && !reloaded) location.reload();
+  }).catch(() => { /* SW が使えなくても簡易エンジンで動く */ });
+}

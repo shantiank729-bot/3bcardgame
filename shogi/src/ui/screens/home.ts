@@ -19,7 +19,8 @@ export function mountHome(root: HTMLElement) {
     el("a", { class: "btn primary big", href: "#/play/quick" }, "すぐ対局（レーティング対局）"),
     el("a", { class: "btn", href: "#/play" }, "対局の種類・持ち時間を選ぶ"),
     tsumeCard,
-    el("div", { class: "row-links" }, el("a", { href: "#/records" }, "成長記録・対局記録 →")),
+    el("a", { class: "btn", href: "#/joseki" }, "定跡練習"),
+    el("div", { class: "row-links" }, el("a", { href: "#/records" }, "成長記録・苦手分析 →")),
   ));
   loadProfile().then((p) => {
     const r = rankOf(p.glicko.rating);
