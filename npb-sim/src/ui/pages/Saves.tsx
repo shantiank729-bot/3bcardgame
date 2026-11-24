@@ -2,6 +2,7 @@ import { useEffect, useState } from 'preact/hooks';
 import { LEAGUE_NAMES } from '../../league/teams';
 import { deleteSave, listSaves, loadWorld, saveWorld, SLOT_COUNT } from '../../save/db';
 import { deserializeWorld, gzip, readSaveFile, serializeWorld, type SaveMeta } from '../../save/serialize';
+import { ConfirmButton } from '../components/ConfirmButton';
 import { go, notify, setWorld, state, toast, useWorld } from '../store';
 
 export function Saves() {
@@ -17,13 +18,11 @@ export function Saves() {
     refresh();
   };
   const load = async (slot: number) => {
-    if (!confirm('今の進行状況は保存されていなければ失われます。読み込みますか？')) return;
     setWorld(await loadWorld(slot), slot || 1);
     toast('読み込みました');
     go('home');
   };
   const del = async (slot: number) => {
-    if (!confirm(`スロット${slot}を削除しますか？`)) return;
     await deleteSave(slot);
     refresh();
   };
@@ -59,8 +58,8 @@ export function Saves() {
                 </div>
                 <div class="btns">
                   {slot !== 0 && <button class="btn" onClick={() => save(slot)}>保存</button>}
-                  {m && <button class="btn" onClick={() => load(slot)}>読込</button>}
-                  {m && slot !== 0 && <button class="btn danger" onClick={() => del(slot)}>削除</button>}
+                  {m && <ConfirmButton onConfirm={() => load(slot)} ask="読込（未保存の進行は消えます）">読込</ConfirmButton>}
+                  {m && slot !== 0 && <ConfirmButton cls="btn danger" onConfirm={() => del(slot)} ask="本当に削除">削除</ConfirmButton>}
                 </div>
               </li>
             );
@@ -72,6 +71,7 @@ export function Saves() {
         <h2>ファイルに書き出し／読み込み</h2>
         <div class="btns">
           <button class="btn primary" onClick={exportFile}>ファイルに書き出す</button>
+          <small class="muted">（claude.ai の公開ページではダウンロードが制限されるため、書き出しはローカル版で使ってください）</small>
           <label class="btn">
             ファイルを読み込む
             <input type="file" hidden accept=".json,.gz,application/json,application/gzip" onChange={(e) => {
@@ -90,7 +90,7 @@ export function Saves() {
           </label>
         ))}
         <p class="muted small">2027年からは両リーグともDH制が初期設定です。交流戦はホーム球団のリーグのルールに従います。</p>
-        <button class="btn danger" onClick={() => { if (confirm('タイトルに戻りますか？（保存していない進行は失われます）')) { setWorld(null); go(''); } }}>タイトルに戻る</button>
+        <ConfirmButton cls="btn danger" onConfirm={() => { setWorld(null); go(''); }} ask="戻る（未保存の進行は消えます）">タイトルに戻る</ConfirmButton>
       </section>
     </div>
   );
