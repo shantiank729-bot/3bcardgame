@@ -5,6 +5,7 @@ import { completeDraft, draftPending } from '../../league/sim';
 import { teamById, type World } from '../../league/world';
 import type { Prospect } from '../../players/prospects';
 import { Logo } from '../components/Logo';
+import { projection, scoutedRatings, uncertainty } from '../../amateur/scout';
 import { grade, POS_1 } from '../format';
 import { go, notify, toast, useWorld } from '../store';
 import { autosave } from '../actions';
@@ -17,19 +18,20 @@ function evalOf(w: World, p: Prospect) {
 
 function ProspectRow({ w, p, onPick, pickLabel, taken }: { w: World; p: Prospect; onPick?: () => void; pickLabel?: string; taken?: string }) {
   const v = evalOf(w, p);
+  const sd = w.amateur.players[p.id] ? uncertainty(w, p.id) : 4;
   const pl = p.player;
   return (
     <tr class={taken ? 'taken' : ''}>
-      <td class="l"><b>{pl.name}</b>{p.note && <small class="note"> {p.note}</small>}</td>
+      <td class="l"><a href={'#/am/' + p.id}><b>{pl.name}</b></a>{w.amateur.watch[p.id] && <em class="tag">注目</em>}{p.note && <small class="note"> {p.note}</small>}</td>
       <td class="l small">{KIND[p.kind]}・{p.school}</td>
       <td>{POS_1[p.pos]}</td><td>{pl.age}</td>
       <td>{pl.throws === 'R' ? '右' : '左'}投{pl.bats === 'R' ? '右' : pl.bats === 'L' ? '左' : '両'}打</td>
-      <td><span class={`grade ${grade(v).cls}`}>{grade(v).g}</span></td>
+      <td><span class={`grade ${grade(v).cls}`} title={`ぶれ ±${Math.round(sd)}`}>{grade(v).g}{sd > 9 ? '?' : ''}</span><small class="muted"> {projection(v)}</small></td>
       <td><span class="hype" style={{ width: `${p.hype}%` }} title={`注目度 ${p.hype}`} /></td>
       <td class="l small">
         {pl.isPitcher && pl.pit
-          ? `${Math.round(pl.pit.velocity)}km・制球${grade(pl.pit.control).g}・${pl.pit.pitches.map((x) => PITCH_NAMES[x.type]).join('/')}`
-          : `ミ${grade(pl.bat.contact).g} パ${grade(pl.bat.power).g} 走${grade(pl.bat.speed).g} 守${grade(pl.bat.fielding).g}`}
+          ? (() => { const s = w.amateur.players[p.id] ? scoutedRatings(w, w.amateur.players[p.id]) : null; const pt = s?.pit ?? pl.pit; return `${Math.round(pt.velocity)}km・制球${grade(pt.control).g}・${pt.pitches.map((x) => PITCH_NAMES[x.type]).join('/')}`; })()
+          : (() => { const s = w.amateur.players[p.id] ? scoutedRatings(w, w.amateur.players[p.id]) : null; const b = s?.bat ?? pl.bat; return `ミ${grade(b.contact).g} パ${grade(b.power).g} 走${grade(b.speed).g} 守${grade(b.fielding).g}`; })()}
       </td>
       <td>{taken ? <small>{taken}</small> : onPick ? <button class="btn" onClick={onPick}>{pickLabel}</button> : null}</td>
     </tr>

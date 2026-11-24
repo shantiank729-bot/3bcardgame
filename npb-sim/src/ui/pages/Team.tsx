@@ -8,6 +8,7 @@ import { LineupEditor, RotationEditor } from '../components/LineupEditor';
 import { grade, handStr, POS_1, POS_JP } from '../format';
 import { notify, toast, useWorld } from '../store';
 import { yen } from '../../league/contracts';
+import { scoutedRatings } from '../../amateur/scout';
 import { cannotActivate, demote, fixRotation, promote, signToShihaika } from '../../league/rosterOps';
 import { payroll } from '../../league/offseason';
 
@@ -30,7 +31,8 @@ function Move({ p }: { p: PlayerRecord }) {
 }
 
 function HitterRow({ p }: { p: PlayerRecord }) {
-  const b = p.bat;
+  const w = useWorld();
+  const b = p.teamId === w.userTeamId ? p.bat : scoutedRatings(w, p).bat;
   return (
     <tr class={p.injury ? 'injured' : ''}>
       <td>{p.number}</td>
@@ -45,7 +47,8 @@ function HitterRow({ p }: { p: PlayerRecord }) {
 }
 
 function PitcherRowView({ p, role }: { p: PlayerRecord; role?: string }) {
-  const pt = p.pit!;
+  const w = useWorld();
+  const pt = p.teamId === w.userTeamId ? p.pit! : scoutedRatings(w, p).pit!;
   return (
     <tr class={p.injury ? 'injured' : ''}>
       <td>{p.number}</td>

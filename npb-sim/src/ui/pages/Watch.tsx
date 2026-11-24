@@ -7,7 +7,7 @@ import { teamById, type World } from '../../league/world';
 import { Field } from '../components/Field';
 import { Logo } from '../components/Logo';
 import { f2, f3, grade, ipStr, POS_1 } from '../format';
-import { advance, finishLive, idle, live, startLive, stop, type Live, type StepMode } from '../live';
+import { advance, clearLive, finishLive, idle, live, startLive, stop, type Live, type StepMode } from '../live';
 import { pitchText } from '../liveView';
 import { autosave } from '../actions';
 import { go, useWorld } from '../store';
@@ -55,29 +55,31 @@ export function Watch() {
     return <div class="page"><section class="card"><p>観戦中の試合はありません。</p><button class="btn" onClick={() => go('home')}>ホームへ</button></section></div>;
   }
   const g = L.meta;
-  const A = teamById(w, g.away), H = teamById(w, g.home);
+  const [A, H] = L.teams;
+  const P = (id: number) => w.players[id] ?? w.amateur.players[id];
   const v = L.view;
   const sim = L.sim;
   const offTeam = v.top ? A : H;
   const defTeam = v.top ? H : A;
   const isIdle = idle(L);
-  const name = (id: number | null) => (id === null ? '' : w.players[id]?.name ?? '?');
+  const name = (id: number | null) => (id === null ? '' : P(id)?.name ?? '?');
   const mySide: SideState = sim.away.team.teamId === w.userTeamId ? sim.away : sim.home;
+  void teamById;
   const myOffense = isIdle ? sim.offense === mySide : v.top === (mySide === sim.away);
   const nextBatterId = isIdle ? sim.offense.order[sim.offense.next].playerId : v.batter;
   const batterId = v.batter ?? nextBatterId;
   const pitcherId = isIdle ? sim.defenseSide.pitcher.id : v.pitcher[v.top ? 1 : 0];
-  const batter = batterId ? w.players[batterId] : null;
-  const pitcher = pitcherId ? w.players[pitcherId] : null;
-  const sb = batter ? seasonBat(w, batter.id) : null;
-  const sp = pitcher ? seasonPit(w, pitcher.id) : null;
+  const batter = batterId ? P(batterId) : null;
+  const pitcher = pitcherId ? P(pitcherId) : null;
+  const sb = batter && L.kind === 'pro' ? seasonBat(w, batter.id) : null;
+  const sp = pitcher && L.kind === 'pro' ? seasonPit(w, pitcher.id) : null;
   const td = batter ? v.today[batter.id] : undefined;
   const refresh = () => setTick((x) => x + 1);
   const run = (m: StepMode) => void advance(L, w, m);
   const n = Math.max(9, v.line[0].length, v.line[1].length);
-  const koshien = false;
+  const koshien = L.kind === 'amateur' && L.park.name.includes('甲子園');
   const defLabels: Partial<Record<FieldPos, string>> = {};
-  for (const pos of Object.keys(sim.defenseSide.defense) as FieldPos[]) defLabels[pos] = String(w.players[sim.defenseSide.defense[pos]]?.number ?? '');
+  for (const pos of Object.keys(sim.defenseSide.defense) as FieldPos[]) defLabels[pos] = L.kind === 'amateur' ? '' : String(w.players[sim.defenseSide.defense[pos]]?.number ?? '');
   const finish = () => {
     finishLive(L, w);
     void autosave(w);
@@ -87,7 +89,7 @@ export function Watch() {
     <div class={`page watch ${koshien ? 'koshien' : ''}`}>
       <section class="card sb-card">
         <div class="sb-head">
-          <span>{fmtDate(g.date)} {H.park.name}{g.label ? `　${g.kind === 'JS' ? '日本シリーズ' : 'CS'}${g.label}` : ''}</span>
+          <span>{fmtDate(g.date)} {L.title}</span>
           <span class="inn">{v.over ? '試合終了' : `${v.inning}回${v.top ? '表' : '裏'}`}</span>
         </div>
         <div class="tablewrap">
@@ -113,7 +115,7 @@ export function Watch() {
       <div class="watch-grid">
         <section class="card field-card">
           <div class="fieldwrap">
-            <Field park={H.park} defColor={defTeam.primary} defColor2={defTeam.secondary} offColor={offTeam.primary} offColor2={offTeam.secondary}
+            <Field park={L.park} theme={koshien ? 'koshien' : 'pro'} defColor={defTeam.primary} defColor2={defTeam.secondary} offColor={offTeam.primary} offColor2={offTeam.secondary}
               bases={v.bases.map((id) => (id === null ? null : String(w.players[id]?.number ?? '')))} batterSide={batter && !v.over ? (batter.bats === 'S' ? (pitcher?.throws === 'R' ? 'L' : 'R') : batter.bats) : null}
               anim={L.anim} t={L.t} defLabels={defLabels} />
             {L.anim?.caption && L.t > 0.35 && <div class={`caption ${L.anim.captionCls ?? ''}`}>{L.anim.caption}</div>}
@@ -146,12 +148,12 @@ export function Watch() {
           <section class="card matchup">
             <div class="mrow">
               <span class="who">投手</span>
-              <a href={'#/player/' + pitcher?.id}>{pitcher?.name}</a>
+              <a href={(L.kind === 'amateur' ? '#/am/' : '#/player/') + pitcher?.id}>{pitcher?.name}</a>
               <small>{pitcher ? `${pitcher.throws === 'R' ? '右' : '左'}・${v.pitchCount[pitcher.id] ?? 0}球` : ''}{sp ? `・${sp.w}勝${sp.l}敗${sp.sv ? sp.sv + 'S' : ''} 防${f2(sp.era)}` : ''}</small>
             </div>
             <div class="mrow">
               <span class="who">{isIdle ? '次打者' : '打者'}</span>
-              <a href={'#/player/' + batter?.id}>{batter?.name}</a>
+              <a href={(L.kind === 'amateur' ? '#/am/' : '#/player/') + batter?.id}>{batter?.name}</a>
               <small>{batter ? `${batter.bats === 'R' ? '右' : batter.bats === 'L' ? '左' : '両'}打` : ''}{sb ? `・${f3(sb.avg)} ${sb.hr}本 ${sb.rbi}点` : ''}{td ? `・今日 ${td.ab}-${td.h}` : ''}</small>
             </div>
             <div class="pitchrow">
@@ -163,7 +165,10 @@ export function Watch() {
             </div>
           </section>
 
-          {!v.over ? (
+          {L.kind === 'amateur' ? (
+            v.over ? <section class="card"><h3>試合終了 {v.score[0]} - {v.score[1]}</h3><button class="btn primary big" onClick={() => { clearLive(); go('amateur'); }}>大会のページへ戻る</button></section>
+              : <section class="card"><p class="muted small">高校・大学の試合は観戦のみです。この試合の結果は、日付を進めたときの結果と同じになります。</p></section>
+          ) : !v.over ? (
             <section class={`card tactics ${isIdle ? '' : 'disabled'}`}>
               <h3>{myOffense ? '攻撃の采配' : '守備の采配'} <small class="muted">{isIdle ? '次の打席に向けて指示できます' : '打席中は指示できません'}</small></h3>
               {myOffense ? <OffenseControls L={L} w={w} side={mySide} refresh={refresh} /> : <DefenseControls L={L} w={w} side={mySide} refresh={refresh} />}

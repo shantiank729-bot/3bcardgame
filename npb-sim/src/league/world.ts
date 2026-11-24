@@ -5,9 +5,10 @@ import { allocPlayerId, generateBatter, generatePitcher, setNextPlayerId } from 
 import { buildSchedule, type SeasonCalendar } from './schedule';
 import { initContract, MIN_SALARY, SEASON_DAYS } from './contracts';
 import { rollPotential } from '../players/development';
+import { createAmateurWorld } from '../amateur/world';
 import { ALLSTAR_TEAMS, TEAMS, type LeagueId, type TeamInfo } from './teams';
 
-export const SAVE_VERSION = 3;
+export const SAVE_VERSION = 4;
 
 /** active=一軍 farm=二軍(支配下) ikusei=育成 fa=所属なし(自由契約) retired=引退 mlb=海外移籍 */
 export type RosterStatus = 'active' | 'farm' | 'ikusei' | 'fa' | 'retired' | 'mlb';
@@ -63,6 +64,15 @@ export interface PlayerRecord extends Player {
   demotedDay?: number;
   /** 経歴（ドラフト・移籍・タイトルなど） */
   events: CareerEvent[];
+  /** アマチュア時代の記録 */
+  amateur?: AmateurCareer;
+}
+
+export interface AmateurCareer {
+  /** 出身校（高校→大学→社会人） */
+  path: string[];
+  /** 年度ごとの成績 [年, 区分ラベル, 所属, 打撃 or 投手] */
+  lines: { year: number; label: string; school: string; bat?: number[]; pit?: number[] }[];
 }
 
 export interface PlayerSeason {
@@ -174,6 +184,8 @@ export interface World {
   off: import('./offseason').OffseasonState | null;
   /** トレードの記録 */
   trades: import('./trade').TradeRecord[];
+  /** 高校・大学・社会人野球 */
+  amateur: import('../amateur/types').AmateurWorld;
   /** リーグ基準補正（能力の平均のずれ） */
   norm?: import('../engine/pa').RatingNorm;
   /** 直近のキャンプでの成長（自チーム） */
@@ -316,7 +328,8 @@ export function newWorld(seed: number, userTeamId: number, year = 2027): World {
       rotIdx: 0, lastStart: {}, pitchLog: {}, manualOrder: null,
     };
   }
-  const nextPlayerId = allocPlayerId();
+  const amw = createAmateurWorld(seed, year, allocPlayerId());
+  const nextPlayerId = amw.nextId;
   const calendar = buildSchedule(TEAMS, year, seed + year);
   const park: Record<number, ParkAcc> = {};
   for (const t of TEAMS) park[t.id] = emptyPark();
@@ -324,7 +337,7 @@ export function newWorld(seed: number, userTeamId: number, year = 2027): World {
     version: SAVE_VERSION, seed, year, date: calendar.opening, phase: 'regular', userTeamId,
     teams: TEAMS.map((t) => ({ ...t, park: { ...t.park } })), teamState, players, nextPlayerId, calendar,
     results: {}, season: {}, runEnv: { C: emptyRunEnv(), P: emptyRunEnv() }, park, settings: defaultSettings(), history: {},
-    post: null, postStats: {}, allStar: null, awards: {}, news: {}, flags: {}, inbox: [], draft: null, off: null, trades: [],
+    amateur: amw.am, post: null, postStats: {}, allStar: null, awards: {}, news: {}, flags: {}, inbox: [], draft: null, off: null, trades: [],
     budget: Object.fromEntries(TEAMS.map((t) => [t.id, Math.round((Object.values(players).filter((p) => p.teamId === t.id).reduce((s, p) => s + p.contract.salary, 0) * 1.08) / 1000) * 1000])),
   };
 }

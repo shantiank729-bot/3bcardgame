@@ -141,6 +141,7 @@ export function Field(p: FieldProps) {
       <path d={`M0,0 L${stands.map((q) => q.join(',')).join(' L')} Z`} class="stands" />
       <path d={fencePath} fill="url(#mow)" class="grass" />
       <path d={`M0,0 L${fence.map((q) => q.join(',')).join(' L')}`} class="fence" />
+      {koshien && <path d={`M${fence.slice(1, -1).map((q) => q.join(',')).join(' L')}`} class="ivy" />}
       {/* 内野 */}
       <path d={`M0,6 L${polar(-45, 29).join(',')} A29,29 0 0 1 ${polar(45, 29).join(',')} Z`} class="dirt" />
       <path d={`M0,-2 L${BASES[1].join(',')} L${BASES[2].join(',')} L${BASES[3].join(',')} Z`} class="infield-grass" />

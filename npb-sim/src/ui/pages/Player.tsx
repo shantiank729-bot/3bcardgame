@@ -7,6 +7,8 @@ import { LineChart } from '../components/LineChart';
 import { domesticFA, overseasFA, SEASON_DAYS, yen } from '../../league/contracts';
 import { overall } from '../../players/development';
 import { careerTotals } from '../../news/daily';
+import { bline, pline } from './Amateur';
+import { scoutedRatings, uncertainty } from '../../amateur/scout';
 import { Logo } from '../components/Logo';
 import { f0, f1, f2, f3, grade, handStr, ipStr, pct1, POS_1, POS_JP } from '../format';
 import { useWorld } from '../store';
@@ -61,6 +63,9 @@ export function PlayerPage({ id }: { id: number }) {
   const p = w.players[id];
   if (!p) return <div class="page"><p>選手が見つかりません</p></div>;
   const t = p.teamId ? teamById(w, p.teamId) : null;
+  const view = p.teamId === w.userTeamId ? { bat: p.bat, pit: p.pit, pot: p.pot, sd: 0 } : scoutedRatings(w, p);
+  const vp = { ...p, bat: view.bat, pit: view.pit, pot: view.pot };
+  void uncertainty;
   const rows = yearRows(w, id);
   const bats = rows.filter((r) => r.e.bat && r.e.bat.pa > 0);
   const pits = rows.filter((r) => r.e.pitch && r.e.pitch.bf > 0);
@@ -72,7 +77,7 @@ export function PlayerPage({ id }: { id: number }) {
         <div>
           <h2><span class="num">{p.number}</span> {p.name}{p.foreign && <em class="tag">外国人</em>}</h2>
           <p>{t ? t.city + t.nickname : 'フリー'}・{statusJP}・{POS_JP[p.primary]}・{p.age}歳・{handStr(p.bats, p.throws)}</p>
-          <p class="small">年俸 {yen(p.contract.salary)}（{p.contract.years > 1 ? `残り${p.contract.years}年` : '単年'}）・プロ{w.year - (p.debutYear ?? w.year) + (w.phase === 'offseason' ? 1 : 0)}年目・一軍登録 {(p.service / SEASON_DAYS).toFixed(1)}シーズン{domesticFA(p) ? (p.faUsed ? '・FA行使済' : '・国内FA権あり') : ''}{overseasFA(p) ? '・海外FA権あり' : ''}</p>
+          <p class="small">年俸 {yen(p.contract.salary)}（{p.contract.years > 1 ? `残り${p.contract.years}年` : '単年'}）・{(p.debutYear ?? 0) > w.year ? '来季入団' : `プロ${w.year - (p.debutYear ?? w.year) + 1}年目`}・一軍登録 {(p.service / SEASON_DAYS).toFixed(1)}シーズン{domesticFA(p) ? (p.faUsed ? '・FA行使済' : '・国内FA権あり') : ''}{overseasFA(p) ? '・海外FA権あり' : ''}</p>
           {p.injury && <p class="small warn">ケガ: {p.injury.desc}（復帰まで約{p.injury.days}日）</p>}
           <p class="small">調子: {(p.form ?? 0) > 0.4 ? '絶好調 ☀' : (p.form ?? 0) > 0.1 ? '好調 ⛅' : (p.form ?? 0) < -0.4 ? '絶不調 ☂' : (p.form ?? 0) < -0.1 ? '不調 ☁' : '普通'}</p>
         </div>
@@ -80,31 +85,31 @@ export function PlayerPage({ id }: { id: number }) {
       <div class="grid2">
         <section class="card">
           <h3>能力</h3>
-          <p class="muted small">現在はスカウト評価ではなく本当の能力を表示しています（スカウト機能はフェーズ6）。</p>
-          {p.isPitcher && p.pit ? (
+          <p class="muted small">{p.teamId === w.userTeamId ? '自チームの選手は正確な能力です。' : `他球団の選手はスカウトの見立てです（ぶれ ±${Math.round(view.sd)}）。`}</p>
+          {p.isPitcher && vp.pit ? (
             <>
-              <Bar label="総合" v={overall(p)} />
-              <Bar label="将来性" v={p.pot} />
-              <Bar label="球速" v={(p.pit.velocity - 120) * 2.2} extra={Math.round(p.pit.velocity) + 'km'} />
-              <Bar label="球威" v={pitcherStuff(p.pit)} />
-              <Bar label="制球" v={p.pit.control} />
-              <Bar label="スタミナ" v={p.pit.stamina} />
-              <p>傾向: {p.pit.groundball > 10 ? 'ゴロ投手' : p.pit.groundball < -10 ? 'フライ投手' : '標準'}</p>
+              <Bar label="総合" v={overall(vp)} />
+              <Bar label="将来性" v={vp.pot} />
+              <Bar label="球速" v={(vp.pit!.velocity - 120) * 2.2} extra={Math.round(vp.pit!.velocity) + 'km'} />
+              <Bar label="球威" v={pitcherStuff(vp.pit!)} />
+              <Bar label="制球" v={vp.pit!.control} />
+              <Bar label="スタミナ" v={vp.pit!.stamina} />
+              <p>傾向: {vp.pit!.groundball > 10 ? 'ゴロ投手' : vp.pit!.groundball < -10 ? 'フライ投手' : '標準'}</p>
               <h4>変化球</h4>
-              {p.pit.pitches.map((x) => <Bar key={x.type} label={PITCH_NAMES[x.type]} v={x.quality} />)}
+              {vp.pit!.pitches.map((x) => <Bar key={x.type} label={PITCH_NAMES[x.type]} v={x.quality} />)}
             </>
           ) : (
             <>
-              <Bar label="総合" v={overall(p)} />
-              <Bar label="将来性" v={p.pot} />
-              <Bar label="ミート" v={p.bat.contact} />
-              <Bar label="パワー" v={p.bat.power} />
-              <Bar label="選球眼" v={p.bat.eye} />
-              <Bar label="走力" v={p.bat.speed} />
-              <Bar label="守備力" v={p.bat.fielding} />
-              <Bar label="肩" v={p.bat.arm} />
-              <Bar label="捕球" v={p.bat.catching} />
-              <p>守備位置: {Object.entries(p.bat.positions).sort((a, b) => (b[1] ?? 0) - (a[1] ?? 0)).map(([k, v]) => `${POS_1[k]}(${grade(v ?? 0).g})`).join(' ')}</p>
+              <Bar label="総合" v={overall(vp)} />
+              <Bar label="将来性" v={vp.pot} />
+              <Bar label="ミート" v={vp.bat.contact} />
+              <Bar label="パワー" v={vp.bat.power} />
+              <Bar label="選球眼" v={vp.bat.eye} />
+              <Bar label="走力" v={vp.bat.speed} />
+              <Bar label="守備力" v={vp.bat.fielding} />
+              <Bar label="肩" v={vp.bat.arm} />
+              <Bar label="捕球" v={vp.bat.catching} />
+              <p>守備位置: {Object.entries(vp.bat.positions).sort((a, b) => (b[1] ?? 0) - (a[1] ?? 0)).map(([k, v]) => `${POS_1[k]}(${grade(v ?? 0).g})`).join(' ')}</p>
             </>
           )}
         </section>
@@ -170,7 +175,16 @@ export function PlayerPage({ id }: { id: number }) {
           const c = careerTotals(w, p.id);
           return <p class="small">通算: {p.isPitcher ? `${c.pg}登板 ${c.w}勝${c.l}敗${c.sv}S${c.hld}H ${c.k}奪三振 ${Math.floor(c.outs / 3)}回` : `${c.g}試合 ${c.h}安打 ${c.hr}本塁打 ${c.rbi}打点 ${c.sb}盗塁`}{p.pre ? '（このゲーム開始前の記録を含む）' : ''}</p>;
         })()}
-        <p class="muted small">高校・大学時代の記録はフェーズ6で追加されます。</p>
+        {p.amateur && (
+          <>
+            <h4>アマチュア時代（{p.amateur.path.join(' → ')}）</h4>
+            <div class="tablewrap"><table class="data">
+              <thead><tr><th>年</th><th class="l">所属</th><th class="l">区分</th><th class="l">成績</th></tr></thead>
+              <tbody>{p.amateur.lines.map((l, i) => <tr key={i}><td>{l.year}</td><td class="l">{l.school}</td><td class="l">{l.label}</td><td class="l small">{p.isPitcher && l.pit ? pline(l.pit) : bline(l.bat)}</td></tr>)}</tbody>
+            </table></div>
+          </>
+        )}
+        {!p.amateur && <p class="muted small">ゲーム開始前に入団した選手のため、アマチュア時代の詳しい記録はありません。</p>}
       </section>
     </div>
   );

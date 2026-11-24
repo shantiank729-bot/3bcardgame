@@ -18,6 +18,7 @@ import { NewsPage } from './pages/News';
 import { PostPage } from './pages/Post';
 import { AwardsPage } from './pages/Awards';
 import { DraftPage } from './pages/Draft';
+import { AmateurPage, AmPlayerPage, SchoolPage } from './pages/Amateur';
 import { OffPage } from './pages/Off';
 import { TradePage } from './pages/Trade';
 import { draftPending } from '../league/sim';
@@ -37,6 +38,7 @@ const NAV: [string, string, string, boolean][] = [
   ['saber', 'セイバー', '∑', false],
   ['post', 'ポストシーズン', '♛', false],
   ['awards', '表彰', '✪', false],
+  ['amateur', 'アマチュア', '✿', false],
   ['draft', 'ドラフト', '✎', false],
   ['trade', 'トレード', '⇄', false],
   ['off', 'オフ', '❄', false],
@@ -67,6 +69,9 @@ export function App() {
     case 'post': body = <PostPage />; break;
     case 'awards': body = <AwardsPage />; break;
     case 'draft': body = <DraftPage />; break;
+    case 'amateur': body = <AmateurPage tab={arg} />; break;
+    case 'school': body = <SchoolPage id={Number(arg)} key={arg} />; break;
+    case 'am': body = <AmPlayerPage id={Number(arg)} key={arg} />; break;
     case 'off': body = <OffPage />; break;
     case 'trade': body = <TradePage />; break;
     default: body = <Home />;

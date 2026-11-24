@@ -19,6 +19,7 @@ import { domesticFA, initContract, marketSalary, MIN_SALARY, overseasFA, renewal
 import { assignNumber } from './draft';
 import { buildSchedule } from './schedule';
 import { computeNorm } from './norm';
+import { amateurTick } from '../amateur/season';
 import { computeStandings } from './standings';
 import { inbox, rebuildActive, shihaika, SHIHAIKA_MAX } from './rosterOps';
 import { aiTrades, playerValue } from './trade';
@@ -488,6 +489,7 @@ export function startNewSeason(w: World) {
   // 年をまたぐ
   w.year++;
   w.calendar = buildSchedule(w.teams, w.year, w.seed + w.year);
+  amateurTick(w, addDays(w.calendar.opening, -1));
   w.date = w.calendar.opening;
   w.phase = 'regular';
   w.results = {};
@@ -574,6 +576,7 @@ export function advanceOffseason(w: World) {
   const next = STAGES[i + 1];
   st.stage = next.key;
   w.date = mdDate(w, next.md);
+  amateurTick(w, w.date);
   if (next.key === 'fa') aiFAOffers2(w);
   if (next.key === 'contract' && st.talks.length === 0) prepareTalks(w);
   if (next.key === 'foreign') prepareForeign(w);

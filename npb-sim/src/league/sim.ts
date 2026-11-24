@@ -5,6 +5,9 @@ import { Rng } from '../engine/rng';
 import { dayDiff, addDays, weekday } from './calendar';
 import { finalizeDraft, startDraft } from './draft';
 import { computeNorm } from './norm';
+import { draftClassFromAmateur, removeDrafted } from '../amateur/draftSupply';
+import { amateurTick } from '../amateur/season';
+import { scoutedOverall } from '../amateur/scout';
 import { addServiceDay, dailyInjuries, inbox, weeklyAiMoves } from './rosterOps';
 import { aiTrades } from './trade';
 import { startOffseason } from './offseason';
@@ -398,6 +401,7 @@ export function completeDraft(w: World) {
   const d = w.draft!;
   if (w.flags[`draft-${w.year}`]) return;
   finalizeDraft(w, d);
+  removeDrafted(w, d.picks.map((p) => p.pid));
   w.flags[`draft-${w.year}`] = true;
   const byId = new Map(d.prospects.map((p) => [p.id, p]));
   const hot = [...d.lotteries].sort((a, b) => b.bidders.length - a.bidders.length)[0];
@@ -408,7 +412,7 @@ export function completeDraft(w: World) {
     id: `draft-${w.year}`, score: 65, kind: 'draft',
     headline: hp ? `${shortName(hp.player.name)}に${hot!.bidders.length}球団競合 ${teamById(w, hot!.winner).nickname}が交渉権` : `${w.year}年ドラフト 12球団の1位決まる`,
     sub: `${w.year}年ドラフト会議`,
-    body: `${w.year}年のドラフト会議が行われた。1位指名は${desc}。${d.lotteries.length ? `抽選は${d.lotteries.length}回行われた。` : ''}支配下${d.picks.filter((p) => !p.ikusei).length}人、育成${d.picks.filter((p) => p.ikusei).length}人が指名された。`,
+    body: `${w.year}年のドラフト会議が行われた。${hp && hp.note ? `目玉の${hp.player.name}（${hp.school}）は「${hp.note}」の実績を持つ。` : ''}1位指名は${desc}。${d.lotteries.length ? `抽選は${d.lotteries.length}回行われた。` : ''}支配下${d.picks.filter((p) => !p.ikusei).length}人、育成${d.picks.filter((p) => p.ikusei).length}人が指名された。`,
     scene: 'draft', tids: hot ? [hot.winner] : [], pids: hp ? [hp.id] : [],
   });
   const mine = d.picks.filter((p) => p.tid === w.userTeamId);
@@ -421,7 +425,17 @@ export function simulateDay(w: World): DayReport {
   const today = dayIndex(w);
   if (!isInSeason(w)) return { date, games: [], seasonOver: true };
   if (draftPending(w)) {
-    if (!w.draft) w.draft = startDraft(w, date);
+    if (!w.draft) {
+      w.draft = startDraft(w, date, () => draftClassFromAmateur(w));
+      // ユーザー球団の見立てはスカウトの視察結果に基づく
+      for (const p of w.draft.prospects) {
+        const a = w.amateur.players[p.id];
+        if (!a) continue;
+        const v = scoutedOverall(w, a);
+        const wPot = p.kind === 'HS' ? 0.7 : p.kind === 'COL' ? 0.55 : 0.4;
+        w.draft.views[w.userTeamId][p.id] = v.pot * wPot + v.ovr * (1 - wPot) + p.hype * 0.05;
+      }
+    }
     return { date, games: [], seasonOver: false, blocked: 'draft' };
   }
   const before = snapshot(w);
@@ -447,6 +461,7 @@ export function simulateDay(w: World): DayReport {
   for (const ts of Object.values(w.teamState)) for (const pid in ts.pitchLog) {
     for (const d in ts.pitchLog[pid]) if (Number(d) < today - 7) delete ts.pitchLog[pid][d];
   }
+  amateurTick(w, date);
   writeDailyNews(w, date, played, before);
   let seasonOver = false;
   if (w.phase === 'regular' && date >= w.calendar.lastDay) {

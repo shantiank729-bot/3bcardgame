@@ -243,6 +243,13 @@ export function finalizeDraft(w: World, d: DraftState) {
       events: [{ year: d.year, text: `ドラフト${pk.label}で${teamById(w, pk.tid).city}${teamById(w, pk.tid).nickname}が指名（${pr.school}）${pk.bidders ? `・${pk.bidders.length}球団競合` : ''}` }],
       debutYear: d.year + 1, rookie: true, pre: undefined,
     };
+    // アマチュア時代の経歴を引き継ぐ
+    const am = (p as Partial<import('../amateur/types').Amateur>);
+    if (am.notes) {
+      rec.events.unshift(...am.notes.filter((n) => /入学|進学|入社|甲子園|センバツ|優勝|大会|全国|志望届|本塁打|奪三振|ヒーロー/.test(n.text)));
+      rec.amateur = pr.amateurCareer as import('./world').AmateurCareer;
+      for (const k of ['stage', 'schoolId', 'grade', 'pos', 'hype', 'shibou', 'path', 'sbat', 'spit', 'notes', 'retiredFromClub'] as const) delete (rec as unknown as Record<string, unknown>)[k];
+    }
     w.players[rec.id] = rec;
     assignNumber(w, rec);
   }

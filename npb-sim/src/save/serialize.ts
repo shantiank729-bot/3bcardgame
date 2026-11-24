@@ -2,6 +2,8 @@ import { SAVE_VERSION, type World } from '../league/world';
 import { Rng } from '../engine/rng';
 import { rollPotential } from '../players/development';
 import { initContract, SEASON_DAYS } from '../league/contracts';
+import { createAmateurWorld } from '../amateur/world';
+import { addDays } from '../league/calendar';
 
 export interface SaveMeta {
   slot: number;
@@ -57,6 +59,13 @@ function migrate(w: World): World {
       w.budget = {};
       for (const t of w.teams) w.budget[t.id] = Math.round(Object.values(w.players).filter((p) => p.teamId === t.id).reduce((s2, p) => s2 + p.contract.salary, 0) * 1.08 / 1000) * 1000;
     }
+  }
+  // version 3 → 4: 高校・大学・社会人野球の世界
+  if (!w.amateur) {
+    const amw = createAmateurWorld(w.seed, w.year, w.nextPlayerId);
+    w.amateur = amw.am;
+    w.amateur.lastTick = addDays(w.date, -1);
+    w.nextPlayerId = amw.nextId;
   }
   w.version = SAVE_VERSION;
   return w;

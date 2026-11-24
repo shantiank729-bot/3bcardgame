@@ -8,7 +8,7 @@ import { Rng } from '../engine/rng';
 import { pitcherStuff } from '../engine/pa';
 import type { BatterRatings, Player } from '../engine/types';
 
-const clamp = (x: number, lo = 1, hi = 100) => (x < lo ? lo : x > hi ? hi : x);
+const clamp = (x: number, lo = 1, hi = 100) => Math.round((x < lo ? lo : x > hi ? hi : x) * 10) / 10;
 
 export function batterOverall(p: Player): number {
   const b = p.bat;
@@ -57,12 +57,12 @@ export interface DevResult {
  * 1年分の成長・衰え（年齢はすでに+1されている前提）
  * bonus: 一軍で多く出場した若手・練習環境などによる上積み（総合値ポイント）
  */
-export function developPlayer(rng: Rng, p: Player & { pot: number; growth: 'early' | 'normal' | 'late' }, bonus = 0): DevResult {
+export function developPlayer(rng: Rng, p: Player & { pot: number; growth: 'early' | 'normal' | 'late' }, bonus = 0, scale = 1): DevResult {
   const before = overall(p);
   const gap = Math.max(0, p.pot - before);
   const grow = gap * growthRate(p.age, p.growth) + (gap > 0 ? bonus : 0) + rng.normal(0, 1.2);
   const dec = declineAmount(p.age, p.growth, p.isPitcher);
-  const delta = grow - dec;
+  const delta = (grow - dec) * scale;
   if (p.isPitcher && p.pit) {
     const pit = p.pit;
     const w = () => 1 + rng.normal(0, 0.35);
