@@ -7,6 +7,8 @@ import { LineScore } from '../components/LineScore';
 import { Logo } from '../components/Logo';
 import { f2, f3 } from '../format';
 import { go, useWorld } from '../store';
+import { userGameToday } from '../../league/sim';
+import { live, startLive } from '../live';
 import { StandingsTable } from './Standings';
 
 export function Home() {
@@ -39,6 +41,24 @@ export function Home() {
         </div>
       </section>
 
+      {(() => {
+        const ug = userGameToday(w);
+        if (!ug) return null;
+        const opp = teamById(w, ug.away === me.id ? ug.home : ug.away);
+        const watching = live && live.gameId === ug.id;
+        return (
+          <section class="card playball">
+            <div>
+              <h3>今日の試合</h3>
+              <p class="big"><Logo team={me} size={26} /> {me.nickname} {ug.home === me.id ? 'vs' : '@'} <Logo team={opp} size={26} /> {opp.nickname}</p>
+              <p class="muted small">{teamById(w, ug.home).park.name}{ug.kind === 'I' ? '・交流戦' : ''}</p>
+            </div>
+            <div class="btns">
+              <button class="btn primary big" onClick={() => { startLive(w, ug.id); go('watch'); }}>{watching ? '観戦に戻る' : '⚾ 試合を観戦・采配する'}</button>
+            </div>
+          </section>
+        );
+      })()}
       <div class="grid2">
         <section class="card">
           <h3>{w.phase === 'regular' ? `今日の試合（${fmtDate(w.date)}）` : 'シーズン終了'}</h3>

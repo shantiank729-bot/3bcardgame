@@ -12,10 +12,13 @@ import { Schedule } from './pages/Schedule';
 import { Standings } from './pages/Standings';
 import { TeamPage } from './pages/Team';
 import { Title } from './pages/Title';
+import { Watch } from './pages/Watch';
+import { live } from './live';
 import { useRoute, useStore } from './store';
 
 const NAV: [string, string, string][] = [
   ['home', 'ホーム', '⌂'],
+  ['watch', '観戦', '◉'],
   ['standings', '順位表', '☰'],
   ['schedule', '日程', '▦'],
   ['leaders', '成績', '★'],
@@ -41,6 +44,7 @@ export function App() {
     case 'player': body = <PlayerPage id={Number(arg)} key={arg} />; break;
     case 'game': body = <GamePage id={Number(arg)} />; break;
     case 'saves': body = <Saves />; break;
+    case 'watch': body = <Watch />; break;
     default: body = <Home />;
   }
   const active = page ?? 'home';
@@ -58,7 +62,7 @@ export function App() {
         </div>
       </header>
       <nav class="nav">
-        {NAV.map(([k, label, icon]) => (
+        {NAV.filter(([k]) => k !== 'watch' || live).map(([k, label, icon]) => (
           <a key={k} href={'#/' + k} class={active === k ? 'on' : ''}><span class="ic">{icon}</span><span>{label}</span></a>
         ))}
       </nav>

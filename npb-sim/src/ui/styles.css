@@ -218,3 +218,84 @@ ol.order li::before { counter-increment: o; content: counter(o); width: 1.4em; c
 .toast { position: fixed; left: 50%; bottom: 90px; transform: translateX(-50%); background: #fff8d8; color: #2a2200; padding: 8px 18px; border-radius: 20px; z-index: 60; box-shadow: 0 4px 16px rgba(0,0,0,0.4); }
 .chart svg { max-height: 220px; }
 .btn.armed { background: var(--red); color: white; border-color: var(--red); }
+
+/* ---- 観戦 ---- */
+.playball { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; border-color: var(--yellow); }
+.playball .btn.big { width: auto; margin: 0; }
+.sb-card { padding: 10px 12px; }
+.sb-head { display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--muted); margin-bottom: 6px; }
+.sb-head .inn { color: var(--yellow); font-weight: 800; font-size: 1rem; }
+.linescore th.now, .linescore td.now { background: #123d27; }
+.watch-grid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 899px) { .watch-grid { grid-template-columns: minmax(0, 1fr); } }
+.field-card { padding: 8px; }
+.fieldwrap { position: relative; }
+.field { width: 100%; height: auto; display: block; border-radius: 8px; background: #06130c; }
+.field .stands { fill: #1a2630; }
+.field .g1 { fill: #2f7d3a; }
+.field .g2 { fill: #2a7334; }
+.field .fence { fill: none; stroke: #d9c56a; stroke-width: 1.2; }
+.field .dirt { fill: #b07c46; }
+.field .infield-grass { fill: #2f7d3a; }
+.field .chalk { stroke: rgba(255,255,255,0.85); stroke-width: 0.35; }
+.field .base { fill: #fff; }
+.field .dist { fill: rgba(255,255,255,0.7); font-size: 4px; text-anchor: middle; }
+.field .flabel, .field .rlabel { font-size: 3px; text-anchor: middle; fill: #fff; font-weight: 700; paint-order: stroke; stroke: rgba(0,0,0,0.6); stroke-width: 0.3; }
+.field .ball { fill: #fff; stroke: #c33; stroke-width: 0.25; }
+.field .ballshadow { fill: rgba(0,0,0,0.35); }
+.field.koshien .g1 { fill: #3d8a3f; } .field.koshien .dirt { fill: #8a5a32; } .field.koshien .stands { fill: #3b3a33; }
+.caption { position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%); font-size: clamp(1.3rem, 5vw, 2.4rem); font-weight: 900; letter-spacing: 0.05em;
+  padding: 4px 18px; border-radius: 10px; background: rgba(0,0,0,0.55); white-space: nowrap; animation: pop 0.35s ease-out; pointer-events: none; }
+.cap-hr { color: #ffde59; text-shadow: 0 0 18px rgba(255, 200, 0, 0.9); font-size: clamp(1.8rem, 7vw, 3.2rem); }
+.cap-hit { color: #ff9a6b; } .cap-out { color: #9fd0ff; } .cap-walk { color: #c9f59d; }
+@keyframes pop { from { transform: translate(-50%, -50%) scale(0.6); opacity: 0; } to { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .caption { animation: none; } }
+.count { position: absolute; left: 8px; bottom: 8px; background: rgba(4, 16, 9, 0.88); border: 2px solid #2b4a38; border-radius: 8px; padding: 4px 10px; font-family: ui-monospace, Menlo, monospace; }
+.count div { display: flex; align-items: center; gap: 6px; line-height: 1.3; }
+.count b { width: 1em; color: #ddd; }
+.lights { display: inline-flex; gap: 4px; }
+.lights i { width: 12px; height: 12px; border-radius: 50%; background: #23362b; display: inline-block; }
+.lights i.on-b { background: #4cd964; box-shadow: 0 0 6px #4cd964; }
+.lights i.on-s { background: #ffd84a; box-shadow: 0 0 6px #ffd84a; }
+.lights i.on-o { background: #ff4d4d; box-shadow: 0 0 6px #ff4d4d; }
+.controls { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.speed { display: flex; gap: 8px; align-items: center; font-size: 0.85rem; color: var(--muted); flex-wrap: wrap; }
+.side { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.matchup .mrow { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; padding: 3px 0; }
+.matchup .who { font-size: 0.75rem; color: #1b1400; background: var(--yellow); border-radius: 4px; padding: 0 6px; }
+.matchup small { color: var(--muted); }
+.pitchrow { display: grid; grid-template-columns: 110px 1fr; gap: 10px; margin-top: 6px; align-items: start; }
+.zone { width: 110px; height: 110px; background: #0a1c13; border-radius: 6px; }
+.zone .zbox { fill: none; stroke: #e8f1ea; stroke-width: 0.04; }
+.zone .zgrid { stroke: #4a7a60; stroke-width: 0.02; }
+.zone .pdot { stroke: #000; stroke-width: 0.03; r: 0.3px; }
+.pdot.ball { fill: #4cd964; } .pdot.called, .pdot.swinging { fill: #ffd84a; } .pdot.foul { fill: #ffa94d; } .pdot.inplay { fill: #6fb7ff; } .pdot.hbp { fill: #ff4d4d; }
+.zone .pnum { font-size: 0.3px; text-anchor: middle; fill: #000; font-weight: 700; }
+.plist { font-size: 0.78rem; max-height: 140px; overflow: auto; }
+.plist .p { padding: 1px 0; color: #cfe3d5; }
+.plist .lastp { margin-top: 4px; font-size: 0.95rem; color: var(--yellow); }
+.plist .lastp b { font-size: 1.4rem; }
+.tactics.disabled { opacity: 0.6; }
+.tactics h3 small { font-weight: 400; font-size: 0.75rem; }
+.tgroup { display: flex; flex-direction: column; gap: 8px; }
+.btn.sel { background: var(--yellow); color: #1b1400; border-color: #e0b800; font-weight: 700; }
+.subrow { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.subrow label { width: 2.6em; color: var(--muted); font-size: 0.85rem; }
+.subrow select { flex: 1; min-width: 0; }
+.auto { margin-top: 10px; font-size: 0.88rem; }
+.auto summary { cursor: pointer; color: var(--muted); }
+.log ul { list-style: none; margin: 0; padding: 0; max-height: 320px; overflow: auto; font-size: 0.86rem; }
+.log li { padding: 3px 0; border-bottom: 1px solid #1c3d2c; display: flex; gap: 8px; }
+.log li small { color: var(--muted); min-width: 2.6em; }
+.log li.hr { color: #ffde59; font-weight: 700; }
+.log li.score { color: #ff9a6b; }
+.log li.hit { color: #ffd2b8; }
+.log li.sub { color: #9fd0ff; }
+.log li.inning { color: var(--muted); font-size: 0.78rem; }
+.order.edit li { flex-wrap: wrap; }
+.order.edit select { max-width: 11em; }
+.order.edit .mv { margin-left: auto; display: inline-flex; gap: 4px; }
+.order.edit .mv .btn { padding: 2px 8px; }
+.order.edit small { margin-left: 0; }
+.warn { color: var(--red); font-weight: 700; }
+hr { border: 0; border-top: 1px solid var(--line); margin: 16px 0; }

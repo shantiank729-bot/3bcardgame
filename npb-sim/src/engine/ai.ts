@@ -206,6 +206,8 @@ export function fixDefense(g: GameSim, side: SideState) {
     const p = side.team.players.get(slot.playerId)!;
     const prof = p.bat.positions[pos] ?? 0;
     if (prof >= 40) continue;
+    // 先発メンバーの守備位置は監督（ユーザー）の判断を尊重する。直すのは途中出場の選手だけ
+    if (!side.appearances.some((a) => a.pid === p.id && a.sub)) continue;
     const cand = benchPlayers(side)
       .filter((b) => !b.isPitcher && (b.bat.positions[pos] ?? 0) >= 60)
       .sort((a, b) => (b.bat.positions[pos] ?? 0) + b.bat.fielding - ((a.bat.positions[pos] ?? 0) + a.bat.fielding))[0];

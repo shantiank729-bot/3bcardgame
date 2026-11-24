@@ -1,5 +1,5 @@
 import { addLine, addField, emptyBat, emptyField, emptyPitch } from '../engine/box';
-import { simulateGame, type GameResult, type PAObserver } from '../engine/game';
+import { GameSim, simulateGame, type GameResult, type PAObserver } from '../engine/game';
 import type { TeamGameInput } from '../engine/types';
 import { Rng } from '../engine/rng';
 import { dayDiff, addDays } from './calendar';
@@ -177,6 +177,34 @@ export interface DayReport {
   date: string;
   games: GameSummary[];
   seasonOver: boolean;
+}
+
+/** その日の自チームの試合（未消化）*/
+export function userGameToday(w: World) {
+  if (w.phase !== 'regular') return null;
+  return w.calendar.games.find((g) => g.date === w.date && !w.results[g.id] && (g.away === w.userTeamId || g.home === w.userTeamId)) ?? null;
+}
+
+/** 観戦用に試合を準備する（自チームは手動采配が可能） */
+export function prepareLiveGame(w: World, gameId: number): GameSim {
+  const g = w.calendar.games.find((x) => x.id === gameId)!;
+  const today = dayIndex(w);
+  const home = teamById(w, g.home);
+  const dh = w.settings.dh[home.league as LeagueId];
+  const awaySP = chooseStarter(w, g.away, today);
+  const homeSP = chooseStarter(w, g.home, today);
+  const ai = buildTeamInput(w, g.away, today, dh, w.players[homeSP].throws, awaySP);
+  const hi = buildTeamInput(w, g.home, today, dh, w.players[awaySP].throws, homeSP);
+  const sim = new GameSim(ai, hi, home.park, { dh, seed: hashSeed(w.seed, w.year, g.id, 991), log: true });
+  sim.observer = runEnvObserver(w.runEnv[home.league]);
+  sim.manualTeam = w.userTeamId;
+  return sim;
+}
+
+/** 観戦した試合を記録する */
+export function recordLiveGame(w: World, gameId: number, sim: GameSim) {
+  const g = w.calendar.games.find((x) => x.id === gameId)!;
+  return recordGame(w, g, sim.result(), dayIndex(w));
 }
 
 /** 現在の日付の試合をすべて行い、日付を1日進める */

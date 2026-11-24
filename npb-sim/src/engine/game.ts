@@ -2,6 +2,7 @@ import { DEFAULT_TUNING, MAX_INNINGS_REGULAR, PITCHES_PER_RESULT, type EngineTun
 import { emptyBat, emptyField, emptyPitch, type BatLine, type FieldLine, type PitchLine } from './box';
 import { isOutfield, logit, resolvePA, sigmoid, type BipResult, type DefenseMap, type PAOutcome } from './pa';
 import { Rng } from './rng';
+import { pitchSequence, type PitchInfo } from './pitches';
 import { FIELD_POSITIONS, type BullpenRole, type FieldPos, type Park, type Player, type Pos, type TeamGameInput } from './types';
 import * as AI from './ai';
 
@@ -72,6 +73,10 @@ export type GameEvent =
       /** 進塁などの補足（例: 'DP', 'SF', 'FC', 'outHome'） */
       notes: string[];
       pitches: number;
+      /** 観戦用: 1球ごとの投球（log 時のみ） */
+      seq?: PitchInfo[];
+      /** この打席で使われた作戦 */
+      tactic?: string;
     }
   | { t: 'steal'; inning: number; top: boolean; runner: number; base: 2 | 3; success: boolean; outsAfter: number }
   | { t: 'wp'; inning: number; top: boolean; pitcher: number; runs: number; scorers: number[] }
@@ -135,6 +140,8 @@ const basesMask = (b: Bases) => (b[0] ? 1 : 0) | (b[1] ? 2 : 0) | (b[2] ? 4 : 0)
 
 export class GameSim {
   readonly rng: Rng;
+  /** 観戦用の投球データ専用の乱数（試合結果に影響させない） */
+  private readonly prng: Rng;
   readonly tuning: EngineTuning;
   readonly away: SideState;
   readonly home: SideState;
@@ -165,6 +172,7 @@ export class GameSim {
 
   constructor(awayIn: TeamGameInput, homeIn: TeamGameInput, readonly park: Park, readonly opts: GameOptions) {
     this.rng = new Rng(opts.seed);
+    this.prng = new Rng((opts.seed ^ 0x5bd1e995) >>> 0);
     this.tuning = opts.tuning ?? DEFAULT_TUNING;
     this.maxInn = opts.maxInnings === undefined ? MAX_INNINGS_REGULAR : opts.maxInnings;
     this.away = this.initSide(awayIn, false);
@@ -280,6 +288,11 @@ export class GameSim {
 
     // 守備側の投手交代（イニング途中）
     if (!this.isManual(def, 'pitching')) AI.maybeChangePitcherMidInning(this, def);
+    else if (def.pitcher.pitches > def.pitcher.limit + 45 || def.pitcher.pitches >= 170) {
+      // 手動采配でも、限界を大きく超えたら強制的に交代（試合が終わらなくなるのを防ぐ）
+      const r = AI.pickReliever(this, def);
+      if (r) this.changePitcher(def, r.id, r.role);
+    }
     // 攻撃側の代打・代走
     if (!this.isManual(off, 'subs')) {
       AI.maybePinchRun(this, off);
@@ -304,6 +317,7 @@ export class GameSim {
         return !this.over;
       }
     }
+    this.lastTactic = ibb ? 'ibb' : tactic;
     if (ibb) {
       this.doPA('IBB');
     } else if (tactic === 'bunt' || tactic === 'squeeze') {
@@ -397,7 +411,8 @@ export class GameSim {
 
   private addPitches(ps: PitcherState, kind: keyof typeof PITCHES_PER_RESULT) {
     const mean = PITCHES_PER_RESULT[kind];
-    const n = mean === 0 ? 0 : Math.max(1, Math.round(this.rng.normal(mean, kind === 'BIP' ? 1.9 : 1.5)));
+    const min = kind === 'K' ? 3 : kind === 'BB' ? 4 : 1;
+    const n = mean === 0 ? 0 : Math.max(min, Math.round(this.rng.normal(mean, kind === 'BIP' ? 1.9 : 1.5)));
     ps.pitches += n;
     this.pitchLine(ps.id).pitches += n;
     return n;
@@ -430,6 +445,7 @@ export class GameSim {
     return { runs, rbi };
   }
   private hrInProgress = false;
+  private lastTactic = 'none';
 
   private updateLead(scoringRunner: Runner) {
     const diff = this.home.runs - this.away.runs;
@@ -606,6 +622,9 @@ export class GameSim {
         t: 'pa', inning: this.inning, top: this.top, outsBefore, batter: batter.id, pitcher: pitcher.id, result: code,
         bip: bipOut, angle: outcomeAngle, distance: outcomeDist, basesBefore, basesAfter: this.bases.map((r) => r?.id ?? null),
         runs, rbi, scorers, outsAfter: this.outs, scoreAway: this.away.runs, scoreHome: this.home.runs, notes, pitches,
+        tactic: this.lastTactic,
+        seq: code === 'IBB' ? [] : pitchSequence(this.prng, pitcher, pitches,
+          code === 'K' ? (mode === 'BUNT' || mode === 'SQZ' ? 'BUNTK' : 'K') : code === 'BB' ? 'BB' : code === 'HBP' ? 'HBP' : 'INPLAY'),
       });
     }
     if (this.over) this.finish();

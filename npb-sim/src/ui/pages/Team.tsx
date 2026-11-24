@@ -4,6 +4,7 @@ import { PITCH_NAMES } from '../../engine/types';
 import { buildTeamInput, chooseStarter, dayIndex } from '../../league/sim';
 import { rosterOf, teamById, type PlayerRecord } from '../../league/world';
 import { Logo } from '../components/Logo';
+import { LineupEditor, RotationEditor } from '../components/LineupEditor';
 import { grade, handStr, POS_1, POS_JP } from '../format';
 import { useWorld } from '../store';
 
@@ -97,7 +98,8 @@ export function TeamPage({ id }: { id: number }) {
       )}
       {tab === 'order' && (
         <section class="card">
-          <h3>今日の打順（自動・対右投手）</h3>
+          {id === w.userTeamId && (<><h3>打順の編集</h3><LineupEditor w={w} tid={id} /><hr /></>)}
+          <h3>今日の打順（{w.teamState[id].manualOrder && id === w.userTeamId ? '手動' : '自動・対右投手'}）</h3>
           <ol class="order">
             {input.lineup.order.map((s) => {
               const p = w.players[s.playerId];
@@ -106,11 +108,11 @@ export function TeamPage({ id }: { id: number }) {
           </ol>
           <h4>ベンチ</h4>
           <p>{input.lineup.bench.map((id) => w.players[id].name).join('、')}</p>
-          <p class="muted small">打順の手動編集と試合中の采配はフェーズ3で追加します。</p>
         </section>
       )}
       {tab === 'rot' && (
         <section class="card">
+          {id === w.userTeamId && (<><h3>ローテーションの編集</h3><RotationEditor w={w} tid={id} /><hr /></>)}
           <h3>先発ローテーション（中6日）</h3>
           <ol class="order">
             {ts.rotation.map((pid) => {

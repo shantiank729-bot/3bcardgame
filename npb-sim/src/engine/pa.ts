@@ -106,7 +106,7 @@ export function paLogits(ctx: PAContext) {
   // 同じ側（右対右・左対左）は打者不利。左打者対左投手の方が影響が大きい。
   const pl = (sameSide ? (side === 'L' ? 1.25 : 0.9) : -0.55) * platoonMag;
   const form = (ctx.batter.form ?? 0) - (ctx.pitcher.form ?? 0) * 0.8;
-  const f = ctx.fatigue;
+  const f = Math.min(ctx.fatigue, 2);
   const stuff = pitcherStuff(pit) - 18 * f;
   const control = pit.control - 15 * f;
   const mix = pitchMix(pit);

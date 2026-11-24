@@ -3,6 +3,7 @@ import { simulateDay } from '../league/sim';
 import { newWorld, type World } from '../league/world';
 import { AUTO_SLOT, saveWorld } from '../save/db';
 import { runInWorker } from '../worker/client';
+import { clearLive } from './live';
 import { setBusy, setWorld, state, toast, notify } from './store';
 
 export async function autosave(w: World) {
@@ -23,6 +24,7 @@ export function startNewGame(teamId: number, seed = Math.floor(Math.random() * 1
 export function simOneDay() {
   const w = state.world;
   if (!w || w.phase !== 'regular') return;
+  clearLive();
   const r = simulateDay(w);
   notify();
   void autosave(w);
@@ -35,6 +37,7 @@ export type SimSpan = 'week' | 'month' | 'season';
 export async function simSpan(span: SimSpan) {
   const w = state.world;
   if (!w || w.phase !== 'regular' || state.busy) return;
+  clearLive();
   let until: string;
   if (span === 'week') until = addDays(w.date, 6);
   else if (span === 'month') {
