@@ -91,7 +91,7 @@ async function dungeonBoss(D){
   if(D.id==='final') await startChapter(24);
   if(D.id==='final'&&S.flags.mumeiDown){S.flags.boss_final=1; loadNPCs(); await afterMumei(); return;}
   msgClear(); for(const t of D.intro||[]) await say(t); msgClose();
-  const r=await battle(D.group||[D.boss],{boss:1,area:D.area});
+  const r=await battle(D.group||[D.boss],{boss:1,area:D.area,bgm:D.id==='final'?'last':D.id==='ruins7'?'last':null});
   if(r!=='win') return;
   S.flags['boss_'+D.id]=1; loadNPCs();
   if(AFTER[D.id]) await AFTER[D.id]();
@@ -191,7 +191,7 @@ function drawSky(now,count){
 
 /* ---------- タイトル ---------- */
 async function titleScreen(){
-  mode='title'; playBgm('town');
+  mode='title'; playBgm('title');
   titleUI=document.createElement('div'); titleUI.className='title';
   titleUI.innerHTML='<div class="logo">ほしかげの剣 II</div><div class="sub">― なまえを なくした せかい ―</div><div class="foot">A：けってい　B：もどる</div>';
   ui.appendChild(titleUI);
@@ -204,7 +204,7 @@ async function titleScreen(){
     titleUI.remove(); titleUI=null;
     await fadeOut(300);
     S=sv; if(!MAPS[S.map]) S.map='akari';
-    P.x=S.x; P.y=S.y; P.dir=S.dir||'down'; P.moving=false; trail=[]; mode='field'; loadNPCs(); playBgm(curMap().bgm);
+    P.x=S.x; P.y=S.y; P.dir=S.dir||'down'; P.moving=false; trail=[]; mode='field'; loadNPCs(); playBgm(mapBgm());
     await fadeIn(300); toast(curMap().name||'フィールド');
     return;
   }
@@ -214,7 +214,7 @@ async function titleScreen(){
 }
 async function beginStory(name){
   newGame(name); await fadeOut(400);
-  mode='ending'; endStars=stars.length; stopBgm(); await fadeIn(400);
+  mode='ending'; endStars=stars.length; playBgm('title'); await fadeIn(400);
   msgClear();
   await say('この せかいでは、 ひとは にど しぬ と いわれている。');
   await say('いちどめは、 いのちが つきた とき。 にどめは、 だれにも なまえを よばれなく なった とき。');

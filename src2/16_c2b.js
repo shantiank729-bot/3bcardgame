@@ -120,7 +120,7 @@ async function smithTalk(){
   if(n<3){await say(`かじや「おれは なまえの こもった ぶきしか うたん。 なまえを まもる ための ぶきなら うってやる。」`); await say(`かじや「ほのおの こうせき、 ほしの てっこう、 りゅうの うろこ。 みっつ もってこい。（いま ${n}／3）」`); msgClose(); return;}
   for(const id of need) delItem(id);
   await say('かじや「…そろったな。 よし、 うつぞ。」'); msgClose(); stopBgm(); await fadeOut(500);
-  for(let i=0;i<4;i++){sfx.hit(); await sleep(300);} await fadeIn(500); playBgm(curMap().bgm);
+  for(let i=0;i<4;i++){sfx.hit(); await sleep(300);} await fadeIn(500); playBgm(mapBgm());
   msgClear(); addItem('legend'); addItem('legendS'); sfx.lvl();
   await say(`かじや「できた。『なまえの つるぎ』と『なまえの たて』だ。 つかいてが じぶんの なまえを よぶ たびに、 つよく ひかる。」`);
   await say(`${HN()}は なまえの つるぎと なまえの たてを てにいれた！`);

@@ -86,40 +86,7 @@ function song(bpm,mel,bass,mw='square',bw='triangle',mv=.035,bv=.06){
   const ev=[...m.ev.map(e=>({...e,w:mw,v:mv})),...b.ev.map(e=>({...e,w:bw,v:bv}))].sort((x,y)=>x.st-y.st);
   return {bpm,ev,len:Math.max(m.len,b.len)};
 }
-const SONGS={
- field:song(116,
-  'E4 G4 C5 . B4 A4 G4 . | A4 F4 A4 C5 B4 . G4 . | E4 G4 C5 E5 D5 C5 B4 A4 | G4 . . . . . - - | F4 A4 C5 . A4 G4 F4 . | E4 G4 C5 . G4 E4 C4 . | D4 F4 A4 C5 B4 A4 G4 B4 | C5 . . . . . - -',
-  'C3 G2 C3 G2 | F2 C3 G2 D3 | C3 E3 F2 F3 | G2 D3 G2 B2 | F2 C3 F2 C3 | C3 G2 C3 E3 | D3 F3 G2 G2 | C3 G2 C3 -'),
- town:song(96,
-  'C5 . A4 F4 G4 . A4 . | Bb4 . A4 G4 F4 . . - | A4 . C5 A4 G4 . F4 . | E4 F4 G4 A4 G4 . . - | C5 . A4 F4 G4 . A4 . | Bb4 . D5 C5 A4 . F4 . | G4 . A4 Bb4 A4 . G4 . | F4 . . . . . - -',
-  'F2 C3 F2 C3 | Bb2 F3 F2 C3 | F2 C3 C3 E3 | C3 G3 C3 E3 | F2 C3 F2 A2 | Bb2 D3 F2 A2 | C3 E3 C3 E3 | F2 C3 F2 -','triangle','triangle',.06,.06),
- battle:song(152,
-  'A4 A4 C5 A4 E5 . D5 C5 | B4 B4 D5 B4 G5 . F5 E5 | A4 A4 C5 A4 E5 . D5 C5 | B4 G4 E4 G4 B4 . . - | F4 A4 C5 F5 E5 . C5 A4 | G4 B4 D5 G5 F5 . D5 B4 | A4 C5 E5 A5 G#5 . E5 B4 | A4 . E4 . A4 . - -',
-  'A2 A3 A2 A3 | G2 G3 G2 G3 | A2 A3 A2 A3 | E2 E3 E2 E3 | F2 F3 F2 F3 | G2 G3 G2 G3 | A2 A3 E2 E3 | A2 E2 A2 -','square','triangle',.03,.07),
- boss:song(168,
-  'D5 D5 F5 D5 A5 . G5 F5 | E5 E5 G5 E5 C6 . Bb5 A5 | D5 D5 F5 D5 A5 . G5 F5 | E5 C#5 A4 C#5 E5 . . - | Bb4 D5 F5 Bb5 A5 . F5 D5 | C5 E5 G5 C6 Bb5 . G5 E5 | D5 F5 A5 D6 C#6 . A5 E5 | D5 . A4 . D5 . - -',
-  'D2 D3 D2 D3 | C2 C3 C2 C3 | D2 D3 D2 D3 | A1 A2 A1 A2 | Bb1 Bb2 Bb1 Bb2 | C2 C3 C2 C3 | D2 D3 A1 A2 | D2 A1 D2 -','square','triangle',.03,.07),
- dungeon:song(84,
-  'D4 . F4 . A4 . G4 F4 | E4 . . - C4 . . - | D4 . F4 . A4 . Bb4 A4 | G4 . . . . . - - | F4 . E4 . D4 . C4 D4 | E4 . A3 . C#4 . E4 . | D4 . . . . . - - | - - - - - - - -',
-  'D2 . A2 . | C2 . G2 . | Bb1 . F2 . | G1 . D2 . | D2 . A2 . | A1 . E2 . | D2 . A2 . | D2 . . -','triangle','triangle',.05,.06),
-};
-function playBgm(name){
-  Snd.want=name; if(Snd.cur===name) return;
-  stopBgm(); Snd.cur=name; Snd.want=name;
-  if(!Snd.ac||!name||!SONGS[name]) return;
-  Snd.song=SONGS[name]; Snd.t0=Snd.ac.currentTime+.08; Snd.ptr=0; Snd.loop=0;
-  Snd.timer=setInterval(bgmTick,40); bgmTick();
-}
-function stopBgm(){clearInterval(Snd.timer); Snd.timer=null; Snd.song=null; Snd.cur=null;}
-function bgmTick(){
-  const s=Snd.song, a=Snd.ac; if(!s||!a) return; const step=60/s.bpm/2, loopDur=s.len*step;
-  for(let guard=0;guard<64;guard++){
-    const e=s.ev[Snd.ptr]; const t=Snd.t0+Snd.loop*loopDur+e.st*step;
-    if(t>a.currentTime+.3) break;
-    if(t>=a.currentTime-.02) tone(e.f,t,e.len*step*.92,e.w,e.v);
-    if(++Snd.ptr>=s.ev.length){Snd.ptr=0; Snd.loop++;}
-  }
-}
+/* BGM は 03_music2.js（2さくめ せんよう の オーケストラ）*/
 function jingle(notes,unit=.11,type='square',vol=.05){
   const a=Snd.ac; if(!a) return 0; let t=a.currentTime+.02;
   for(const n of notes){const [nm,len=1]=n.split(':'); if(nm!=='-') tone(freq(nm),t,unit*len*.95,type,vol); t+=unit*len;}

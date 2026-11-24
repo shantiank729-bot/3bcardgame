@@ -34,12 +34,12 @@ function makeMirror(){
   // かわを わたれる ように
   for(let y=54;y<118;y++){const x=WW-1-67; if(rows[y][x]==='~'&&y===86){} }
   for(const x of [91,92,93]) rows[86]=rows[86].slice(0,x)+'='+rows[86].slice(x+1);
-  MAPS.mirror={id:'mirror',name:'うらがえしの せかい',rows,out:'~',bgm:'dungeon',kind:'world',enc:()=>'mirror',links:{},npcs:[],chests:[],objs:[],tint:'rgba(80,0,90,.28)',hid:[]};
+  MAPS.mirror={id:'mirror',name:'うらがえしの せかい',rows,out:'~',bgm:'mirror',kind:'world',enc:()=>'mirror',links:{},npcs:[],chests:[],objs:[],tint:'rgba(80,0,90,.28)',hid:[]};
 }
 const MX=x=>WW-1-x;
 function defineCh18(){
   makeMirror();
-  buildTown({id:'makari',name:'うらがえしの アカリ',type:'harbor',w:34,seed:1801,bands:['park','bld','road','plaza','bld','road','pier'],landmark:'lighthouse',roofs:['黒','紫'],trees:['Y'],ground:'x',road:'道',bgm:'dungeon',
+  buildTown({id:'makari',name:'うらがえしの アカリ',type:'harbor',w:34,seed:1801,bands:['park','bld','road','plaza','bld','road','pier'],landmark:'lighthouse',roofs:['黒','紫'],trees:['Y'],ground:'x',road:'道',bgm:'mirror',
     sign:'うらがえしの アカリ　―わすれられた ものの まち―',barrels:2,pots:2,loot:['frag','herb3'],
     bld:[{t:'house',name:'うらがえしの じぶんの いえ',npcs:[{pal:'mio',shadow:1,talk:by([true,['かがみの ミオ「ここは、 だれかに わすれられた ものが くる せかい。」','かがみの ミオ「わたしも 5ねん、 ここに いたの。 …あなたが みつけて くれるまで。」']])}],loot:['frag']},
       {t:'inn',price:22},{t:'item',goods:['herb2','herb3','antidote','bell','drop','life','smoke']},{t:'arms',goods:['sword12','knife12','axe11','staff11','heavy12','light12','robe12','shield12']},{t:'church'}],
@@ -52,7 +52,7 @@ function defineCh18(){
   const L=MAPS.akari_lh; L.rows[2]=L.rows[2].slice(0,1)+'釦'.replace('釦','u')+L.rows[2].slice(2); L.links['1,2']=['makari',0,0];
   LINK_GATE['akari_lh:1,2']=()=>has('mirrorShard')?null:['かべに ふしぎな かがみの わくが ある。 なにかを はめこめそうだ…'];
   addDoor('makari',lmM.x,lmM.y+lmM.h-1,'akari_lh',1,3,'down');
-  DUNGEONS.push({id:'mlight',name:'かがみの とうだい',floors:4,w:19,h:15,wall:'l',floor:'i',rooms:2,loops:.07,up:1,zone:'mlight',area:'dark',seed:1818,per:2,worldMap:'mirror',
+  DUNGEONS.push({id:'mlight',bgm:'mirror',name:'かがみの とうだい',floors:4,w:19,h:15,wall:'l',floor:'i',rooms:2,loops:.07,up:1,zone:'mlight',area:'dark',seed:1818,per:2,worldMap:'mirror',
     loot:['herb3','frag',{gold:1800},'life','drop','frag','herb3'],feat:['lock','switch','lock secret','switch lock'],darkAll:1,boss:'mirrorme',reward:'frag',
     intro:['「…よく きたな。 おれ。」','かがみの じぶん「おれは おまえが わすれた おまえ。 いもうとを わすれて へいきで くらしていた、 5ねんぶんの おまえだ。」','かがみの じぶん「おまえに、 ひとを すくう しかくが あるのか？」']});
   icon('mirror',MX(10),102,'R','mlight1');
@@ -63,13 +63,13 @@ function defineCh18(){
   GOALS[18]=()=>!S.flags.boss_mlight?'かがみの かけらを もって アカリの とうだいへ。 うらがえしの せかいの『かがみの とうだい』を のぼろう。':'うらがえしの とりでへ。（にし）';
 }
 function defineCh19(){
-  buildTown({id:'mfort',name:'うらがえしの とりで',type:'castle',w:30,seed:1901,bands:['castle','road','bld','road'],roofs:['黒'],ground:'x',edge:'X',plaza:'s',bgm:'dungeon',
+  buildTown({id:'mfort',name:'うらがえしの とりで',type:'castle',w:30,seed:1901,bands:['castle','road','bld','road'],roofs:['黒'],ground:'x',edge:'X',plaza:'s',bgm:'mirror',
     castle:{name:'うらがえしの おおひろま',npcs:[{pal:'guard',shadow:1,at:[8,3],talk:by([true,['わすれられた へいし「たいちょうの たましいは、 ちかの くろい へやで まだ たたかっている。」']])}]},
     bld:[{t:'inn',price:24},{t:'item',goods:['herb3','antidote','bell','drop','life','smoke']},{t:'arms',goods:['sword12','axe11','heavy12','shield12']}],
     npcs:[{at:'gate',pal:'guard',shadow:1,talk:by([true,['わすれられた へいし「ここは わすれられた へいしの とりで。 ガルム… おまえの ことは みんな おぼえている。」']])}]});
   icon('mirror',MX(78),62,'K','mfort');
   const from=stairsIn('mfort_castle',14,11,'mfortD1');
-  DUNGEONS.push({id:'mfortD',name:'かがみの ちかどう',floors:4,w:21,h:15,wall:'X',floor:'s',rooms:2,loops:.07,zone:'mfort',area:'dark',seed:1919,per:2,worldMap:'mirror',from:['mfort_castle',13,11,'left'],
+  DUNGEONS.push({id:'mfortD',bgm:'mirror',name:'かがみの ちかどう',floors:4,w:21,h:15,wall:'X',floor:'s',rooms:2,loops:.07,zone:'mfort',area:'dark',seed:1919,per:2,worldMap:'mirror',from:['mfort_castle',13,11,'left'],
     loot:['herb3','frag',{gold:2000},'life','drop','frag','herb3'],feat:['switch','lock','crack lock','switch secret'],boss:'truecaptain',reward:'oathMail',
     intro:['「…ガルム。 おおきく なったな。」','たいちょう バルドの たましい「わたしは ここで わすれの かみと たたかい つづけて きた。 だが もう、 こころが のまれかけて いる。」','バルド「ガルム、 おまえの ちかいで わたしを とめろ！」']});
   IT.oathMail={n:'ちかいの よろい',slot:'a',def:80,only:['garm'],price:0,d:'たいちょう バルドの よろい。'};
@@ -80,7 +80,7 @@ function defineCh19(){
   GOALS[19]=()=>!S.flags.boss_mfortD?'うらがえしの とりでの ちかどうで、 たいちょう バルドの たましいと むきあおう。':'うらがえしの サンドラへ。（ひがし）';
 }
 function defineCh20(){
-  buildTown({id:'msandra',name:'うらがえしの サンドラ',type:'market',w:34,seed:2001,ground:':',bands:['bld','road','market','road','bld','road'],roofs:['黒','紫'],trees:['k'],edge:'D',plaza:'s',bgm:'dungeon',
+  buildTown({id:'msandra',name:'うらがえしの サンドラ',type:'market',w:34,seed:2001,ground:':',bands:['bld','road','market','road','bld','road'],roofs:['黒','紫'],trees:['k'],edge:'D',plaza:'s',bgm:'mirror',
     sign:'うらがえしの サンドラ　―なまえいしに なった ひとびとの まち―',barrels:3,pots:2,loot:['frag','herb3'],
     bld:[{t:'guild',name:'かげの ギルド',talk:by([true,['かげの うけつけ「おやかたは ちかで なまえいしを かぞえて いる。」']]),pal:'merchant'},{t:'inn',price:26},{t:'item',goods:['herb3','antidote','bell','drop','life','smoke']},
       {t:'house',name:'リリの かぞくの いえ',npcs:[{pal:'woman',shadow:1,talk:ririFamily},{pal:'kid',shadow:1,talk:ririFamily}],loot:['frag']}],
@@ -88,7 +88,7 @@ function defineCh20(){
   icon('mirror',MX(80),80,'G','msandra');
   const gm=mapByName('かげの ギルド');
   stairsIn(gm,11,7,'mvault1');
-  DUNGEONS.push({id:'mvault',name:'うらがえしの ちかこ',floors:4,w:21,h:15,wall:'X',floor:'s',rooms:1,loops:.06,zone:'mvault',area:'dark',seed:2020,per:2,worldMap:'mirror',from:[gm,10,7,'left'],
+  DUNGEONS.push({id:'mvault',bgm:'mirror',name:'うらがえしの ちかこ',floors:4,w:21,h:15,wall:'X',floor:'s',rooms:1,loops:.06,zone:'mvault',area:'dark',seed:2020,per:2,worldMap:'mirror',from:[gm,10,7,'left'],
     loot:['herb3','frag',{gold:2200},'life','drop','frag','herb3'],feat:['guard','guard lock','switch secret','guard lock'],guardsPer:3,boss:'oyakata',reward:'frag',
     intro:['「くっくっ… なまえいしは すべて わたしの もの。」','かげの おやかた「その こむすめの かぞくの いしも なあ！」','リリ「かえして！ あたしの かぞくを かえして！」']});
   MON.oyakata=B_(Object.assign({n:'かげの おやかた',s:'lord',p:{1:'#3a3a3a',2:'#1a1a1a',3:'#e0c040',w:'#a0a0a0',e:'#ff4040'},scale:4},bstat(48,20,{turns:13}),{
@@ -113,7 +113,7 @@ async function ririFamily(){
   await lines(['かげの おんな「…あなたは だれ？ どこかで あった きが する…」']);
 }
 function defineCh21(){
-  DUNGEONS.push({id:'waste',name:'わすれの こうや',floors:4,w:23,h:15,wall:'I',floor:'i',rooms:3,loops:.08,zone:'waste',area:'abyss',seed:2121,per:2,worldMap:'mirror',
+  DUNGEONS.push({id:'waste',bgm:'mirror',name:'わすれの こうや',floors:4,w:23,h:15,wall:'I',floor:'i',rooms:3,loops:.08,zone:'waste',area:'abyss',seed:2121,per:2,worldMap:'mirror',
     loot:['herb3','frag',{gold:2400},'life','drop','frag','herb3'],feat:['crack','switch lock','secret','lock'],darkAll:1,boss:'kyojin',reward:'frag',
     intro:['「…ズシン… ズシン… この さきには いかせぬ…」','わすれの きょじん「この おとこは わすれの かみへの いけにえ！」','とうだいもりの ちち「…ミオ？ その こえは ミオ なのか！」']});
   icon('mirror',MX(84),104,'C','waste1');
@@ -171,7 +171,7 @@ async function pastKing(){
   await say('――『おまえを わすれた ものたちに、 わすれられる いたみを おしえて やれ』と。');
   msgClose(); await fadeOut(1000);
   Object.assign(S,{party:S.saved.party,reserve:S.saved.reserve,guest:S.saved.guest}); const sv=S.saved; delete S.saved;
-  S.map=sv.map; P.x=sv.x; P.y=sv.y; trail=[]; loadNPCs(); playBgm(curMap().bgm); await fadeIn(1000);
+  S.map=sv.map; P.x=sv.x; P.y=sv.y; trail=[]; loadNPCs(); playBgm(mapBgm()); await fadeIn(1000);
   msgClear();
   await say('ミオ「…いまの、 ムメイの きおく。 ムメイの ほんとうの なまえは…」');
   await say(`${HN()}は その なまえを むねに きざんだ。`);
@@ -183,7 +183,7 @@ MON.wasurekami0=B_(Object.assign({n:'わすれの かみ',s:'eye',p:{1:'#f0f0f0'
 
 /* ---------- 23〜24しょう わすれの とう ---------- */
 function defineCh23(){
-  DUNGEONS.push({id:'final',name:'わすれの とう',floors:7,w:21,h:15,wall:'l',floor:'i',rooms:2,loops:.07,up:1,zone:'final',area:'nox',seed:2323,per:2,worldMap:'mirror',bossBgm:'boss',
+  DUNGEONS.push({id:'final',name:'わすれの とう',floors:7,w:21,h:15,wall:'l',floor:'i',rooms:2,loops:.07,up:1,zone:'final',area:'nox',seed:2323,per:2,worldMap:'mirror',bgm:'mirror',bossBgm:'dungeon',
     loot:['herb3','frag','life','drop','herb3','frag','life','drop','herb3','frag'],feat:['lock','switch','lock secret','switch lock','lock','switch secret',''],darkAll:1,
     mids:[{floor:2,mon:'gen1',intro:['わすれの しと ヴェール「ここから さきは とおさぬ。」']},{floor:4,mon:'gen2',intro:['わすれの しと ネル「なまえなど、 くさりに すぎない。」']},{floor:6,mon:'gen3',intro:['わすれの しと オブリ「ムメイさまの いたみを しれ。」']}],
     boss:'mumei',reward:null,
@@ -223,7 +223,7 @@ async function afterMumei(){
   await say('セイル「…ありがとう。 だが きを つけろ。 わたしの なかから、 かみが でてくる…！」'); shake(); flash('#ffffff',600);
   await say('セイルの からだから、 まっしろな なにかが あふれだした！');
   msgClose();
-  const r=await battle(['oblivion'],{boss:1,area:'nox'});
+  const r=await battle(['oblivion'],{boss:1,area:'nox',bgm:'last'});
   if(r==='win') await ending2();
   else {delete S.flags.boss_final; loadNPCs(); msgClear(); await say('（わすれの とうの ちょうじょうで、 もういちど わすれの かみに いどもう）'); msgClose();}
 }
@@ -249,7 +249,7 @@ async function ending2(){
   await say('セイル「わたしの なまえを、 ときどき よんで おくれ。 それだけで いい。」');
   await say('セイルは ほほえんで、 ほしの ひかりに とけていった。');
   S.flags.clear=1; S.ch=25; S.guest=null; msgClose(); await fadeOut(1200);
-  mode='ending'; endStars=0; playBgm('town'); await fadeIn(1200);
+  mode='ending'; endStars=0; playBgm('ending'); await fadeIn(1200);
   const grow=setInterval(()=>{endStars=Math.min(stars.length,endStars+1);},120);
   msgClear();
   const roll=[

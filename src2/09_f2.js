@@ -50,6 +50,7 @@ async function showGoal(){
 
 /* ---------- マップと しかけ ---------- */
 function curMap(){return MAPS[S.map];}
+function mapBgm(){return S.veh==='ship'?'sea':S.veh==='air'?'sky':curMap().bgm;}
 const FLOOR_OF=m=>m.floor||(m.town?'道':'.');
 function rawTile(x,y){const m=curMap(); if(m.dyn){const d=m.dyn[x+','+y]; if(d) return d();} const r=m.rows[y]; if(!r||x<0||x>=r.length) return m.out; return r[x];}
 function tileAt(x,y){
@@ -98,10 +99,10 @@ function tryMove(d){
     if(onShip()){
       if(t==='~'){P.fx=P.x; P.fy=P.y; P.x=nx; P.y=ny; P.t=0; P.moving=true; return;}
       if(SOLID.has(t)||t==='='){bump(); return;}
-      S.ship={x:P.x,y:P.y,map:S.map}; S.veh=null; trail=[];
+      S.ship={x:P.x,y:P.y,map:S.map}; S.veh=null; trail=[]; playBgm(mapBgm());
     }
-    if(S.ship&&S.ship.map===S.map&&S.ship.x===nx&&S.ship.y===ny){S.veh='ship'; trail=[]; sfx.ok(); P.fx=P.x; P.fy=P.y; P.x=nx; P.y=ny; P.t=0; P.moving=true; return;}
-    if(S.air&&S.air.map===S.map&&S.air.x===nx&&S.air.y===ny){S.veh='air'; S.air=null; trail=[]; sfx.magic(); P.fx=P.x; P.fy=P.y; P.x=nx; P.y=ny; P.t=0; P.moving=true; return;}
+    if(S.ship&&S.ship.map===S.map&&S.ship.x===nx&&S.ship.y===ny){S.veh='ship'; trail=[]; sfx.ok(); playBgm('sea'); P.fx=P.x; P.fy=P.y; P.x=nx; P.y=ny; P.t=0; P.moving=true; return;}
+    if(S.air&&S.air.map===S.map&&S.air.x===nx&&S.air.y===ny){S.veh='air'; S.air=null; trail=[]; sfx.magic(); playBgm('sky'); P.fx=P.x; P.fy=P.y; P.x=nx; P.y=ny; P.t=0; P.moving=true; return;}
     const gate=ICON_GATE[S.map+':'+nx+','+ny]&&ICON_GATE[S.map+':'+nx+','+ny]();
     if(gate){run(()=>lines(gate)); return;}
   }
@@ -169,7 +170,7 @@ async function gotoMap(id,x,y,dir){
   if(!MAPS[id].kind||MAPS[id].kind!=='world'){ if(S.veh==='ship') S.ship={x:P.x,y:P.y,map:S.map}; S.veh=null; }
   S.map=id; P.x=x; P.y=y; P.dir=dir; P.moving=false; trail=[]; stepsSince=0;
   if(curMap().kind==='world'&&rawTile(x,y)==='~'&&!(curMap().links||{})[x+','+y]){S.veh='ship'; S.ship={x,y,map:id};}
-  loadNPCs(); playBgm(onShip()?'field':curMap().bgm);
+  loadNPCs(); playBgm(mapBgm());
   if(curMap().town){S.visited=S.visited||[]; if(!S.visited.includes(id)) S.visited.push(id); S.lastTown=id;}
   await fadeIn(); if(!curMap().interior) toast(curMap().name);
   const m=curMap(); if(m.onEnter) await m.onEnter();
@@ -214,7 +215,7 @@ async function giveLoot(L){
 async function landAir(){
   const t=tileAt(P.x,P.y);
   if(t==='~'||SOLID.has(t)||(curMap().links||{})[P.x+','+P.y]||t==='='){await lines(['ここには おりられない。 ひらけた ちめんの うえで おりよう。']); return;}
-  S.air={x:P.x,y:P.y,map:S.map}; S.veh=null; trail=[]; sfx.ok();
+  S.air={x:P.x,y:P.y,map:S.map}; S.veh=null; trail=[]; sfx.ok(); playBgm(mapBgm());
 }
 async function openChest(c){
   msgClear();

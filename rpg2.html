@@ -507,40 +507,7 @@ function song(bpm,mel,bass,mw='square',bw='triangle',mv=.035,bv=.06){
   const ev=[...m.ev.map(e=>({...e,w:mw,v:mv})),...b.ev.map(e=>({...e,w:bw,v:bv}))].sort((x,y)=>x.st-y.st);
   return {bpm,ev,len:Math.max(m.len,b.len)};
 }
-const SONGS={
- field:song(116,
-  'E4 G4 C5 . B4 A4 G4 . | A4 F4 A4 C5 B4 . G4 . | E4 G4 C5 E5 D5 C5 B4 A4 | G4 . . . . . - - | F4 A4 C5 . A4 G4 F4 . | E4 G4 C5 . G4 E4 C4 . | D4 F4 A4 C5 B4 A4 G4 B4 | C5 . . . . . - -',
-  'C3 G2 C3 G2 | F2 C3 G2 D3 | C3 E3 F2 F3 | G2 D3 G2 B2 | F2 C3 F2 C3 | C3 G2 C3 E3 | D3 F3 G2 G2 | C3 G2 C3 -'),
- town:song(96,
-  'C5 . A4 F4 G4 . A4 . | Bb4 . A4 G4 F4 . . - | A4 . C5 A4 G4 . F4 . | E4 F4 G4 A4 G4 . . - | C5 . A4 F4 G4 . A4 . | Bb4 . D5 C5 A4 . F4 . | G4 . A4 Bb4 A4 . G4 . | F4 . . . . . - -',
-  'F2 C3 F2 C3 | Bb2 F3 F2 C3 | F2 C3 C3 E3 | C3 G3 C3 E3 | F2 C3 F2 A2 | Bb2 D3 F2 A2 | C3 E3 C3 E3 | F2 C3 F2 -','triangle','triangle',.06,.06),
- battle:song(152,
-  'A4 A4 C5 A4 E5 . D5 C5 | B4 B4 D5 B4 G5 . F5 E5 | A4 A4 C5 A4 E5 . D5 C5 | B4 G4 E4 G4 B4 . . - | F4 A4 C5 F5 E5 . C5 A4 | G4 B4 D5 G5 F5 . D5 B4 | A4 C5 E5 A5 G#5 . E5 B4 | A4 . E4 . A4 . - -',
-  'A2 A3 A2 A3 | G2 G3 G2 G3 | A2 A3 A2 A3 | E2 E3 E2 E3 | F2 F3 F2 F3 | G2 G3 G2 G3 | A2 A3 E2 E3 | A2 E2 A2 -','square','triangle',.03,.07),
- boss:song(168,
-  'D5 D5 F5 D5 A5 . G5 F5 | E5 E5 G5 E5 C6 . Bb5 A5 | D5 D5 F5 D5 A5 . G5 F5 | E5 C#5 A4 C#5 E5 . . - | Bb4 D5 F5 Bb5 A5 . F5 D5 | C5 E5 G5 C6 Bb5 . G5 E5 | D5 F5 A5 D6 C#6 . A5 E5 | D5 . A4 . D5 . - -',
-  'D2 D3 D2 D3 | C2 C3 C2 C3 | D2 D3 D2 D3 | A1 A2 A1 A2 | Bb1 Bb2 Bb1 Bb2 | C2 C3 C2 C3 | D2 D3 A1 A2 | D2 A1 D2 -','square','triangle',.03,.07),
- dungeon:song(84,
-  'D4 . F4 . A4 . G4 F4 | E4 . . - C4 . . - | D4 . F4 . A4 . Bb4 A4 | G4 . . . . . - - | F4 . E4 . D4 . C4 D4 | E4 . A3 . C#4 . E4 . | D4 . . . . . - - | - - - - - - - -',
-  'D2 . A2 . | C2 . G2 . | Bb1 . F2 . | G1 . D2 . | D2 . A2 . | A1 . E2 . | D2 . A2 . | D2 . . -','triangle','triangle',.05,.06),
-};
-function playBgm(name){
-  Snd.want=name; if(Snd.cur===name) return;
-  stopBgm(); Snd.cur=name; Snd.want=name;
-  if(!Snd.ac||!name||!SONGS[name]) return;
-  Snd.song=SONGS[name]; Snd.t0=Snd.ac.currentTime+.08; Snd.ptr=0; Snd.loop=0;
-  Snd.timer=setInterval(bgmTick,40); bgmTick();
-}
-function stopBgm(){clearInterval(Snd.timer); Snd.timer=null; Snd.song=null; Snd.cur=null;}
-function bgmTick(){
-  const s=Snd.song, a=Snd.ac; if(!s||!a) return; const step=60/s.bpm/2, loopDur=s.len*step;
-  for(let guard=0;guard<64;guard++){
-    const e=s.ev[Snd.ptr]; const t=Snd.t0+Snd.loop*loopDur+e.st*step;
-    if(t>a.currentTime+.3) break;
-    if(t>=a.currentTime-.02) tone(e.f,t,e.len*step*.92,e.w,e.v);
-    if(++Snd.ptr>=s.ev.length){Snd.ptr=0; Snd.loop++;}
-  }
-}
+/* BGM は 03_music2.js（2さくめ せんよう の オーケストラ）*/
 function jingle(notes,unit=.11,type='square',vol=.05){
   const a=Snd.ac; if(!a) return 0; let t=a.currentTime+.02;
   for(const n of notes){const [nm,len=1]=n.split(':'); if(nm!=='-') tone(freq(nm),t,unit*len*.95,type,vol); t+=unit*len;}
@@ -634,6 +601,291 @@ class Menu{
 }
 async function yesNo(){const m=new Menu({items:['はい','いいえ'],style:{right:'3%',bottom:'35%',width:'24%'}}); const c=await m.pick(); m.close(); return c===0;}
 
+/* ===== 03_music2.js ===== */
+/* =========================================================
+   ほしかげの剣 II の おんがく（すべて オリジナル きょく）
+   ・がっき：きんかん・げん・フルート・ハープ・オルガン・ティンパニ・たいこ を WebAudio で ごうせい
+   ・ホールの ひびき（リバーブ）と コンプレッサー
+   ・きょくは「コード ＋ メロディ」で かき、 ハモり・ばんそう・ベース・だがっきは じどうで つける
+   ========================================================= */
+function fxBus(){
+  const a=Snd.ac; if(!a) return null; if(Snd.bus) return Snd.bus;
+  const comp=a.createDynamicsCompressor(); comp.threshold.value=-18; comp.ratio.value=3; comp.connect(Snd.master);
+  const len=Math.floor(a.sampleRate*2.6), ir=a.createBuffer(2,len,a.sampleRate);
+  for(let c=0;c<2;c++){const d=ir.getChannelData(c); for(let i=0;i<len;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/len,3.2);}
+  const conv=a.createConvolver(); conv.buffer=ir; const wet=a.createGain(); wet.gain.value=.3; conv.connect(wet); wet.connect(comp);
+  const bus=a.createGain(); bus.gain.value=.9; bus.connect(comp); bus.connect(conv);
+  return Snd.bus=bus;
+}
+function env(g,t,dur,v,atk,rel){g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(v,t+atk); g.gain.setValueAtTime(v,Math.max(t+atk,t+dur-rel)); g.gain.linearRampToValueAtTime(0,t+dur);}
+function osc(type,f,t,end,det=0){const o=Snd.ac.createOscillator(); o.type=type; o.frequency.setValueAtTime(f,t); o.detune.value=det; o.start(t); o.stop(end+.05); return o;}
+function vib(o,t,f,depth,delay=.18){const a=Snd.ac, l=a.createOscillator(), lg=a.createGain(); l.frequency.value=5.4; lg.gain.setValueAtTime(0,t); lg.gain.linearRampToValueAtTime(f*depth,t+delay+.2); l.connect(lg); lg.connect(o.frequency); l.start(t); l.stop(t+30);}
+function noiseBuf(){if(Snd.nb) return Snd.nb; const a=Snd.ac, n=a.sampleRate, b=a.createBuffer(1,n,a.sampleRate), d=b.getChannelData(0); for(let i=0;i<n;i++) d[i]=Math.random()*2-1; return Snd.nb=b;}
+function nz(t,dur,v,type,freq){const a=Snd.ac, s=a.createBufferSource(); s.buffer=noiseBuf(); const f=a.createBiquadFilter(); f.type=type; f.frequency.value=freq; const g=a.createGain();
+  g.gain.setValueAtTime(v,t); g.gain.exponentialRampToValueAtTime(.001,t+dur); s.connect(f); f.connect(g); g.connect(fxBus()); s.start(t); s.stop(t+dur+.02);}
+const INST={
+  brass(f,t,d,v){const a=Snd.ac, o=osc('sawtooth',f,t,t+d), o2=osc('sawtooth',f,t,t+d,8), lp=a.createBiquadFilter(), g=a.createGain();
+    lp.type='lowpass'; lp.frequency.setValueAtTime(500,t); lp.frequency.linearRampToValueAtTime(2600,t+.06); lp.frequency.linearRampToValueAtTime(1700,t+.3);
+    vib(o,t,f,.006); vib(o2,t,f,.006); o.connect(lp); o2.connect(lp); lp.connect(g); env(g,t,d,v*.55,.035,Math.min(.12,d/3)); g.connect(fxBus());},
+  strings(f,t,d,v){const a=Snd.ac, lp=a.createBiquadFilter(), g=a.createGain(); lp.type='lowpass'; lp.frequency.value=1500;
+    for(const det of [-9,0,9]){const o=osc('sawtooth',f,t,t+d,det); vib(o,t,f,.004,.3); o.connect(lp);} lp.connect(g); env(g,t,d,v*.32,Math.min(.18,d/3),Math.min(.3,d/3)); g.connect(fxBus());},
+  flute(f,t,d,v){const a=Snd.ac, o=osc('triangle',f,t,t+d), o2=osc('sine',f*2,t,t+d), g=a.createGain(), g2=a.createGain(); g2.gain.value=.18; vib(o,t,f,.008,.12);
+    o.connect(g); o2.connect(g2); g2.connect(g); env(g,t,d,v*1.1,.05,Math.min(.1,d/3)); g.connect(fxBus()); nz(t,.05,v*.15,'highpass',4000);},
+  organ(f,t,d,v){const a=Snd.ac, lp=a.createBiquadFilter(), g=a.createGain(); lp.type='lowpass'; lp.frequency.value=3200;
+    for(const [m,l] of [[1,1],[2,.35],[.5,.5]]){const o=osc('square',f*m,t,t+d), og=a.createGain(); og.gain.value=l; o.connect(og); og.connect(lp);} lp.connect(g); env(g,t,d,v*.32,.01,.05); g.connect(fxBus());},
+  harp(f,t,d,v){const a=Snd.ac, o=osc('triangle',f,t,t+1.4), g=a.createGain(); g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(v*1.2,t+.005); g.gain.exponentialRampToValueAtTime(.001,t+Math.max(.5,Math.min(1.4,d*1.6))); o.connect(g); g.connect(fxBus());},
+  bass(f,t,d,v){const a=Snd.ac, o=osc('triangle',f,t,t+d), o2=osc('sawtooth',f,t,t+d), lp=a.createBiquadFilter(), g=a.createGain(), g2=a.createGain(); lp.type='lowpass'; lp.frequency.value=420; g2.gain.value=.35;
+    o2.connect(g2); g2.connect(lp); o.connect(lp); lp.connect(g); env(g,t,d,v*1.3,.01,Math.min(.08,d/3)); g.connect(fxBus());},
+  timp(f,t,d,v){const a=Snd.ac, o=osc('sine',f,t,t+.9), g=a.createGain(); o.frequency.exponentialRampToValueAtTime(f*.82,t+.4); g.gain.setValueAtTime(v*2.2,t); g.gain.exponentialRampToValueAtTime(.001,t+.9); o.connect(g); g.connect(fxBus()); nz(t,.12,v*.6,'lowpass',500);},
+  kick(f,t,d,v){const a=Snd.ac, o=osc('sine',130,t,t+.25), g=a.createGain(); o.frequency.exponentialRampToValueAtTime(42,t+.14); g.gain.setValueAtTime(v*3,t); g.gain.exponentialRampToValueAtTime(.001,t+.25); o.connect(g); g.connect(fxBus());},
+  snare(f,t,d,v){nz(t,.16,v*1.6,'highpass',1200); const a=Snd.ac, o=osc('triangle',190,t,t+.08), g=a.createGain(); g.gain.setValueAtTime(v,t); g.gain.exponentialRampToValueAtTime(.001,t+.08); o.connect(g); g.connect(fxBus());},
+  hat(f,t,d,v){nz(t,.035,v*.7,'highpass',7500);},
+  cym(f,t,d,v){nz(t,1.4,v*.9,'highpass',5000);},
+};
+/* ---------- きょくの くみたて ---------- */
+const CHORD_Q={'':[0,4,7],m:[0,3,7],'7':[0,4,7,10],m7:[0,3,7,10],maj7:[0,4,7,11],dim:[0,3,6],sus4:[0,5,7],m7b5:[0,3,6,10]};
+function chordPcs(sym){const m=sym.match(/^([A-G][#b]?)(m7b5|maj7|m7|m|7|dim|sus4)?$/); const r=NOTE[m[1]]; return {root:r,pcs:CHORD_Q[m[2]||''].map(i=>(r+i)%12)};}
+const mf=n=>440*Math.pow(2,(n-69)/12);
+const midiOf=n=>{const m=n.match(/^([A-G][#b]?)(\d)$/); return NOTE[m[1]]+(+m[2]+1)*12;};
+function nearBelow(pcs,top,lo){for(let n=top;n>=lo;n--) if(pcs.includes(((n%12)+12)%12)) return n; return null;}
+// o = {bpm, beat:8|6, lead, harm, pad, bass:'march'|'pulse'|'waltz'|'long'|'walk', arp, drums:'march'|'battle'|'heavy'|'soft'|'', timp, bars:[[chord, melody]...]}
+function score(o){
+  const ev=[], BL=o.beat||8, add=(inst,st,len,f,v)=>ev.push({inst,st,len,f,v});
+  o.bars.forEach(([ch,mel],bi)=>{
+    const st0=bi*BL, C=chordPcs(ch), toks=mel.trim().split(/\s+/);
+    if(toks.length!==BL) console.warn('bar',bi,'len',toks.length,mel);
+    // メロディと ハモり
+    let cur=null; toks.forEach((tk,i)=>{ if(tk==='.'){if(cur) cur.len++;} else if(tk==='-') cur=null; else {cur={inst:o.lead,st:st0+i,len:1,f:mf(midiOf(tk)),v:o.lv||.09,m:midiOf(tk)}; ev.push(cur);} });
+    if(o.harm) for(const e of ev.filter(e=>e.m&&e.st>=st0&&e.st<st0+BL)){const h=nearBelow(C.pcs,e.m-3,e.m-9); if(h) add(o.harm,e.st,e.len,mf(h),(o.hv||.05));}
+    // パッド（げんの ちょうおん）
+    if(o.pad){const base=55; for(const pc of C.pcs.slice(0,3)){let n=base+((pc-base%12+12)%12); add(o.pad,st0,BL,mf(n),o.pv||.05);}}
+    // ベース
+    const R=36+((C.root-0+12)%12), F5=R+7;
+    const bs=o.bass;
+    if(bs==='march') [0,2,4,6].forEach((b,i)=>add('bass',st0+b,1.6,mf(i%2?F5-12+12:R),.1));
+    if(bs==='pulse') for(let b=0;b<BL;b++) add('bass',st0+b,.8,mf(b%4===3?R+12:R),.09);
+    if(bs==='long') add('bass',st0,BL,mf(R),.1);
+    if(bs==='walk') [0,2,4,6].forEach((b,i)=>add('bass',st0+b,1.8,mf([R,R+7,R+12,R+7][i]),.09));
+    if(bs==='waltz'){add('bass',st0,2,mf(R),.1); for(const b of [2,4]) for(const pc of C.pcs.slice(0,3)) add('harp',st0+b,1.5,mf(60+((pc-0+12)%12)),.035);}
+    // アルペジオ（ハープ）
+    if(o.arp){const ns=[]; for(let n=60;n<84&&ns.length<8;n++) if(C.pcs.includes(n%12)) ns.push(n); const pat=[0,1,2,3,4,3,2,1]; for(let b=0;b<BL;b++) add('harp',st0+b,1,mf(ns[pat[b%8]%ns.length]),o.av||.03);}
+    // だがっき
+    const D=o.drums;
+    if(D==='march'){add('snare',st0+3,1,0,.05); add('snare',st0+3.5,1,0,.04); add('snare',st0+7,1,0,.05); add('kick',st0,1,0,.08); add('kick',st0+4,1,0,.06);}
+    if(D==='battle'||D==='heavy'){for(let b=0;b<BL;b++) add('hat',st0+b,1,0,.05); add('kick',st0,1,0,.1); add('kick',st0+4,1,0,.1); if(D==='heavy') add('kick',st0+5,1,0,.08); add('snare',st0+2,1,0,.07); add('snare',st0+6,1,0,.07);}
+    if(D==='soft'){add('hat',st0+2,1,0,.03); add('hat',st0+6,1,0,.03);}
+    if(o.timp&&bi%o.timp===0) add('timp',st0,2,mf(R),.09);
+    if(o.cym&&bi%o.cym===0) add('cym',st0,2,0,.05);
+  });
+  ev.sort((a,b)=>a.st-b.st);
+  return {bpm:o.bpm,ev,len:o.bars.length*BL};
+}
+const BARS=(s)=>s.trim().split('\n').map(l=>{const i=l.indexOf(':'); return [l.slice(0,i).trim(),l.slice(i+1).trim()];});
+const SONGS={
+ // タイトル：ほしかげの じょきょく（ニちょうちょうの マーチ）
+ title:score({bpm:96,lead:'brass',harm:'brass',pad:'strings',bass:'march',drums:'march',timp:4,cym:8,bars:BARS(`
+  D: D5 . . . A4 . D5 E5
+  G: F#5 . E5 D5 E5 . . -
+  Bm: D5 . . . F#4 . B4 C#5
+  A: D5 . C#5 B4 A4 . . -
+  G: B4 . . . G4 . B4 D5
+  D: A5 . . F#5 D5 . E5 F#5
+  Em: G5 . F#5 E5 D5 . C#5 D5
+  A7: E5 . . . . . - -
+  D: D5 . A4 . D5 . F#5 .
+  F#m: A5 . . G5 F#5 . E5 .
+  G: D5 . E5 F#5 G5 . . .
+  Em: G5 . F#5 E5 B4 . . -
+  Bm: D5 . C#5 B4 F#5 . . .
+  G: G5 . A5 B5 D6 . . .
+  A7: C#6 . B5 A5 G5 . E5 .
+  D: D5 . . . . . - -`)}),
+ // フィールド：あおばの たびじ
+ field:score({bpm:112,lead:'brass',harm:'strings',pad:'strings',bass:'walk',arp:1,drums:'soft',timp:8,bars:BARS(`
+  F: C5 . . A4 F4 . A4 C5
+  Bb: D5 . . C5 Bb4 . A4 G4
+  F: A4 . . G4 F4 . G4 A4
+  C: G4 . . . . . - -
+  Dm: A4 . . F4 D4 . F4 A4
+  Bb: D5 . . F5 E5 . D5 C5
+  G7: B4 . C5 D5 G4 . A4 B4
+  C7: C5 . . . . . - -
+  F: F5 . . E5 D5 . C5 .
+  Am: E5 . . D5 C5 . A4 .
+  Bb: D5 . . C5 Bb4 . D5 F5
+  F: A5 . . G5 F5 . . -
+  Gm: G5 . F5 E5 D5 . Bb4 .
+  C: E5 . D5 C5 G4 . A4 Bb4
+  C7: A4 . Bb4 C5 D5 . E5 .
+  F: F5 . . . . . - -`)}),
+ // まち：ともしびの ワルツ
+ town:score({bpm:150,beat:6,lead:'flute',pad:'strings',pv:.03,bass:'waltz',bars:BARS(`
+  G: B4 . D5 . G5 .
+  D: F#5 . E5 . D5 .
+  C: E5 . . . C5 .
+  G: D5 . . . - -
+  Em: G4 . B4 . E5 .
+  Am: E5 . D5 . C5 .
+  D7: D5 . C5 . A4 .
+  G: B4 . . . - -
+  C: E5 . G5 . E5 .
+  G: D5 . B4 . G4 .
+  Am: C5 . E5 . A5 .
+  D: F#5 . . . D5 .
+  G: G5 . F#5 . E5 .
+  Em: B4 . . . E5 .
+  D7: D5 . C5 . F#4 .
+  G: G4 . . . - -`)}),
+ // ダンジョン：わすれられた みち
+ dungeon:score({bpm:72,lead:'strings',lv:.1,pad:'strings',pv:.035,bass:'long',timp:4,bars:BARS(`
+  Dm: D4 . . . F4 . . .
+  Bb: E4 . D4 . F4 . . .
+  Gm: G4 . . . Bb4 . A4 G4
+  A: A4 . . . . . - -
+  Dm: D5 . . . C5 . A4 .
+  Bb: Bb4 . . . A4 . F4 .
+  Gm: G4 . F4 . E4 . F4 G4
+  A7: A4 . . . C#4 . . .
+  F: F4 . A4 . C5 . . .
+  Gm: Bb4 . A4 . G4 . . .
+  Eb: G4 . F4 . Eb4 . D4 .
+  A: C#4 . . . . . - -`)}),
+ // せんとう：たたかいの とき
+ battle:score({bpm:160,lead:'brass',harm:'brass',hv:.04,pad:'strings',pv:.03,bass:'pulse',drums:'battle',cym:8,bars:BARS(`
+  Em: E5 . B4 . E5 F#5 G5 .
+  C: G5 F#5 E5 . C5 . E5 .
+  D: F#5 . D5 . F#5 G5 A5 .
+  B: B5 . A5 G5 F#5 . D#5 .
+  Em: E5 . G5 . B5 . A5 G5
+  Am: A5 . E5 . C5 . E5 .
+  B7: F#5 . E5 D#5 E5 . F#5 .
+  Em: E5 . . . B4 . - -
+  C: C5 . E5 . G5 . E5 .
+  D: D5 . F#5 . A5 . F#5 .
+  G: G5 . B4 . D5 . G5 .
+  Em: B5 . . . E5 . . .
+  Am: A5 . G5 F#5 E5 . C5 .
+  B: D#5 . F#5 . B5 . A5 .
+  C: G5 . F#5 . E5 . D#5 .
+  B7: B4 . D#5 F#5 B5 . - -`)}),
+ // ボス：たちはだかる もの
+ boss:score({bpm:172,lead:'brass',harm:'organ',hv:.04,pad:'strings',pv:.035,bass:'pulse',drums:'heavy',timp:2,cym:8,bars:BARS(`
+  Cm: C5 . G4 . C5 D5 Eb5 .
+  Cm: G5 . F5 Eb5 D5 . C5 .
+  Ab: Ab5 . G5 F5 Eb5 . C5 .
+  G: D5 . G4 . B4 . D5 .
+  Fm: F5 . Ab5 . C6 . Ab5 .
+  Cm: G5 . Eb5 . C5 . G4 .
+  Ab: Ab4 . C5 . Eb5 . G5 .
+  G7: F5 . D5 . B4 . G4 .
+  Cm: C6 . . . G5 . Eb5 .
+  Bb: D5 . F5 . Bb5 . . .
+  Ab: C6 . Ab5 . Eb5 . C5 .
+  G: B4 . D5 . G5 . . .
+  Fm: Ab5 . G5 F5 Eb5 . F5 .
+  Db: F5 . Ab5 . Db6 . C6 .
+  G: B5 . . . G5 . F5 .
+  G7: D5 . B4 . G4 . - -`)}),
+ // うみ：かぜを うけて（ふね）
+ sea:score({bpm:120,beat:6,lead:'strings',lv:.11,harm:'flute',hv:.035,bass:'waltz',arp:0,timp:8,bars:BARS(`
+  A: E5 . . . C#5 .
+  D: F#5 . E5 . D5 .
+  A: C#5 . . . A4 .
+  E: B4 . . . - -
+  F#m: C#5 . . . A4 .
+  D: D5 . F#5 . A5 .
+  E: G#5 . F#5 . E5 .
+  A: A5 . . . - -
+  D: F#5 . . . D5 .
+  A: E5 . . . C#5 .
+  Bm: D5 . C#5 . B4 .
+  E: E5 . . . - -
+  D: A5 . . . F#5 .
+  A: E5 . . . C#5 .
+  E7: D5 . B4 . G#4 .
+  A: A4 . . . - -`)}),
+ // そら：ほしの つばさ（ひこうせん）
+ sky:score({bpm:126,lead:'brass',harm:'strings',pad:'strings',bass:'walk',arp:1,av:.025,drums:'soft',timp:4,cym:8,bars:BARS(`
+  Eb: Bb4 . Eb5 . G5 . . .
+  Ab: Ab5 . G5 F5 Eb5 . . .
+  Bb: F5 . D5 . Bb4 . D5 F5
+  Eb: G5 . . . . . - -
+  Cm: G5 . Eb5 . C5 . Eb5 G5
+  Ab: C6 . . Bb5 Ab5 . G5 .
+  F: A5 . F5 . C5 . F5 A5
+  Bb: Bb5 . . . . . - -
+  Eb: Eb6 . . D6 C6 . Bb5 .
+  Gm: Bb5 . G5 . D5 . G5 .
+  Ab: Ab5 . C6 . Eb6 . C6 .
+  Eb: G5 . . . Bb5 . . .
+  Cm: C6 . Bb5 Ab5 G5 . Eb5 .
+  Ab: F5 . G5 Ab5 C6 . Bb5 .
+  Bb7: Ab5 . G5 . F5 . D5 .
+  Eb: Eb5 . . . . . - -`)}),
+ // うらがえしの せかい
+ mirror:score({bpm:92,beat:6,lead:'flute',lv:.08,pad:'strings',pv:.04,bass:'waltz',timp:4,bars:BARS(`
+  Bm: F#5 . . . B4 .
+  G: D5 . C#5 . B4 .
+  Em: G5 . . . E5 .
+  F#: A#4 . . . - -
+  Bm: B4 . D5 . F#5 .
+  G: G5 . F#5 . E5 .
+  C: E5 . . . C5 .
+  F#: C#5 . . . - -`)}),
+ // さいごの たたかい
+ last:score({bpm:184,lead:'organ',lv:.1,harm:'brass',hv:.045,pad:'strings',pv:.04,bass:'pulse',drums:'heavy',timp:2,cym:4,bars:BARS(`
+  F#m: F#5 . C#5 . F#5 . A5 .
+  D: A5 G#5 F#5 . D5 . F#5 .
+  E: G#5 . E5 . B4 . E5 .
+  C#: F5 . C#5 . G#4 . C#5 .
+  F#m: F#5 A5 C#6 . B5 A5 G#5 .
+  Bm: F#5 . D5 . B4 . D5 .
+  D: A5 . F#5 . D5 . A4 .
+  C#7: G#5 . F5 . C#5 . - -
+  D: D6 . . . A5 . F#5 .
+  E: E6 . . . B5 . G#5 .
+  C#m: C#6 . B5 A5 G#5 . E5 .
+  F#m: F#5 . . . C#5 . - -
+  Bm: D6 . C#6 B5 A5 . F#5 .
+  C#: G#5 . F5 . C#5 . F5 .
+  D: A5 . F#5 . D6 . C#6 .
+  C#7: B5 . G#5 . F5 . C#5 .`)}),
+ // エンディング：なまえを よぶ こえ
+ ending:score({bpm:72,lead:'strings',lv:.12,harm:'flute',hv:.03,pad:'strings',pv:.03,bass:'long',arp:1,av:.025,timp:8,bars:BARS(`
+  C: E5 . . . G4 . C5 D5
+  Am: E5 . . D5 C5 . . .
+  F: A4 . . . C5 . F5 E5
+  G: D5 . . . . . - -
+  Em: G5 . . . E5 . C5 E5
+  F: F5 . . E5 D5 . C5 .
+  Dm7: D5 . E5 F5 A5 . G5 F5
+  G: E5 . . . D5 . . .
+  F: C6 . . . A5 . F5 .
+  G: B5 . . . G5 . D5 .
+  Em: G5 . . . E5 . B4 .
+  Am: C5 . . . E5 . A5 .
+  F: A5 . . . G5 . F5 .
+  C: E5 . . . G5 . C6 .
+  Dm: F5 . E5 . D5 . G5 .
+  C: C5 . . . . . - -`)}),
+};
+function playBgm(name){
+  Snd.want=name; if(Snd.cur===name) return;
+  stopBgm(); Snd.cur=name; Snd.want=name;
+  if(!Snd.ac||!name||!SONGS[name]) return;
+  Snd.song=SONGS[name]; Snd.t0=Snd.ac.currentTime+.1; Snd.ptr=0; Snd.loop=0;
+  Snd.timer=setInterval(bgmTick,40); bgmTick();
+}
+function stopBgm(){clearInterval(Snd.timer); Snd.timer=null; Snd.song=null; Snd.cur=null;}
+function bgmTick(){
+  const s=Snd.song, a=Snd.ac; if(!s||!a) return; const step=60/s.bpm/2, loopDur=s.len*step;
+  for(let guard=0;guard<400;guard++){
+    const e=s.ev[Snd.ptr]; const t=Snd.t0+Snd.loop*loopDur+e.st*step;
+    if(t>a.currentTime+.35) break;
+    if(t>=a.currentTime-.02){try{INST[e.inst](e.f,t,e.len*step*.95,e.v);}catch(err){}}
+    if(++Snd.ptr>=s.ev.length){Snd.ptr=0; Snd.loop++;}
+  }
+}
 /* ===== 03_t2.js ===== */
 /* =========================================================
    ほしかげの剣 II — タイル・家具・ランドマーク
@@ -1519,7 +1771,7 @@ function buildDungeons(){
         const busy=new Set([...chests,...npcs].map(o=>o.x+','+o.y).concat([startN.join(',')]));
         for(let y=1;y<D.h-1;y++) for(let x=1;x<D.w-1;x++) if(g[y][x]===D.floor&&!busy.has(x+','+y)&&F.r()<D.lava) g[y][x]='L';
       }
-      MAPS[id]={name:D.name+(D.floors>1?(D.up?` ${f}かい`:` ちか${f}かい`):''),out:D.wall,floor:D.floor,bgm:last&&D.bossBgm?D.bossBgm:'dungeon',world:D.world,worldMap:D.worldMap||'world',
+      MAPS[id]={name:D.name+(D.floors>1?(D.up?` ${f}かい`:` ちか${f}かい`):''),out:D.wall,floor:D.floor,bgm:last&&D.bossBgm?D.bossBgm:(D.bgm||'dungeon'),world:D.world,worldMap:D.worldMap||'world',
         entry:[startN[0],startN[1],'up'],enc:()=>D.zone,area:D.area,dark:D.dark&&D.dark[f-1]!==undefined?D.dark[f-1]:D.darkAll,links,npcs,chests,rows:g.map(r=>r.join('')),dg:D.id,floor:D.floor,fl:f,
         guards:feat.includes('guard'),objs:[]};
     });
@@ -1578,6 +1830,7 @@ async function showGoal(){
 
 /* ---------- マップと しかけ ---------- */
 function curMap(){return MAPS[S.map];}
+function mapBgm(){return S.veh==='ship'?'sea':S.veh==='air'?'sky':curMap().bgm;}
 const FLOOR_OF=m=>m.floor||(m.town?'道':'.');
 function rawTile(x,y){const m=curMap(); if(m.dyn){const d=m.dyn[x+','+y]; if(d) return d();} const r=m.rows[y]; if(!r||x<0||x>=r.length) return m.out; return r[x];}
 function tileAt(x,y){
@@ -1626,10 +1879,10 @@ function tryMove(d){
     if(onShip()){
       if(t==='~'){P.fx=P.x; P.fy=P.y; P.x=nx; P.y=ny; P.t=0; P.moving=true; return;}
       if(SOLID.has(t)||t==='='){bump(); return;}
-      S.ship={x:P.x,y:P.y,map:S.map}; S.veh=null; trail=[];
+      S.ship={x:P.x,y:P.y,map:S.map}; S.veh=null; trail=[]; playBgm(mapBgm());
     }
-    if(S.ship&&S.ship.map===S.map&&S.ship.x===nx&&S.ship.y===ny){S.veh='ship'; trail=[]; sfx.ok(); P.fx=P.x; P.fy=P.y; P.x=nx; P.y=ny; P.t=0; P.moving=true; return;}
-    if(S.air&&S.air.map===S.map&&S.air.x===nx&&S.air.y===ny){S.veh='air'; S.air=null; trail=[]; sfx.magic(); P.fx=P.x; P.fy=P.y; P.x=nx; P.y=ny; P.t=0; P.moving=true; return;}
+    if(S.ship&&S.ship.map===S.map&&S.ship.x===nx&&S.ship.y===ny){S.veh='ship'; trail=[]; sfx.ok(); playBgm('sea'); P.fx=P.x; P.fy=P.y; P.x=nx; P.y=ny; P.t=0; P.moving=true; return;}
+    if(S.air&&S.air.map===S.map&&S.air.x===nx&&S.air.y===ny){S.veh='air'; S.air=null; trail=[]; sfx.magic(); playBgm('sky'); P.fx=P.x; P.fy=P.y; P.x=nx; P.y=ny; P.t=0; P.moving=true; return;}
     const gate=ICON_GATE[S.map+':'+nx+','+ny]&&ICON_GATE[S.map+':'+nx+','+ny]();
     if(gate){run(()=>lines(gate)); return;}
   }
@@ -1697,7 +1950,7 @@ async function gotoMap(id,x,y,dir){
   if(!MAPS[id].kind||MAPS[id].kind!=='world'){ if(S.veh==='ship') S.ship={x:P.x,y:P.y,map:S.map}; S.veh=null; }
   S.map=id; P.x=x; P.y=y; P.dir=dir; P.moving=false; trail=[]; stepsSince=0;
   if(curMap().kind==='world'&&rawTile(x,y)==='~'&&!(curMap().links||{})[x+','+y]){S.veh='ship'; S.ship={x,y,map:id};}
-  loadNPCs(); playBgm(onShip()?'field':curMap().bgm);
+  loadNPCs(); playBgm(mapBgm());
   if(curMap().town){S.visited=S.visited||[]; if(!S.visited.includes(id)) S.visited.push(id); S.lastTown=id;}
   await fadeIn(); if(!curMap().interior) toast(curMap().name);
   const m=curMap(); if(m.onEnter) await m.onEnter();
@@ -1742,7 +1995,7 @@ async function giveLoot(L){
 async function landAir(){
   const t=tileAt(P.x,P.y);
   if(t==='~'||SOLID.has(t)||(curMap().links||{})[P.x+','+P.y]||t==='='){await lines(['ここには おりられない。 ひらけた ちめんの うえで おりよう。']); return;}
-  S.air={x:P.x,y:P.y,map:S.map}; S.veh=null; trail=[]; sfx.ok();
+  S.air={x:P.x,y:P.y,map:S.map}; S.veh=null; trail=[]; sfx.ok(); playBgm(mapBgm());
 }
 async function openChest(c){
   msgClear();
@@ -2026,7 +2279,7 @@ async function inn(per,name){
   await say('では ごゆっくり おやすみください。',{wait:'auto'});
   msgClose(); g.remove(); stopBgm(); await fadeOut(500);
   const ms=sfx.inn(); await sleep(Math.max(1200,ms||0));
-  restoreAll(); S.time=night?.66:.05; loadNPCs(); saveGame(); playBgm(curMap().bgm);
+  restoreAll(); S.time=night?.66:.05; loadNPCs(); saveGame(); playBgm(mapBgm());
   await fadeIn(500);
   msgClear(); await say(night?'こんばんは。 よるの まちは ひるとは ちがう かおを みせますよ。':'おはようございます。 みなさん すっかり げんきに なりましたね。');
   await say('（ぼうけんのしょに きろくしました）'); msgClose();
@@ -2119,7 +2372,7 @@ async function joinParty(cls,name,minLv,eq,o={}){
   const m=mkMember(cls,name,lv,eq); Object.assign(m,o);
   if(S.party.length<4) S.party.push(m); else {S.reserve=S.reserve||[]; S.reserve.push(m);}
   S.flags['join_'+cls]=1; loadNPCs(); trail=[];
-  stopBgm(); const ms=sfx.lvl(); await say(`${name}が なかまに くわわった！`+(S.party.includes(m)?'':'（ひかえに はいった。 メニューの「ならびかえ」で いれかえられる）'),{wait:'auto',ms:Math.max(900,ms||0)}); playBgm(curMap().bgm);
+  stopBgm(); const ms=sfx.lvl(); await say(`${name}が なかまに くわわった！`+(S.party.includes(m)?'':'（ひかえに はいった。 メニューの「ならびかえ」で いれかえられる）'),{wait:'auto',ms:Math.max(900,ms||0)}); playBgm(mapBgm());
   return m;
 }
 function memberOf(cls){return [...S.party,...(S.reserve||[])].find(m=>m.cls===cls);}
@@ -2192,7 +2445,7 @@ async function battle(ids,opt={}){
   await encounterFx(opt.boss);
   B={en:ids.map(id=>mkEnemy(id,opt.zone)),area:opt.area||'field',zone:opt.zone,boss:!!opt.boss,guard:false,hi:-1,act:-1,lastCmd:[],turn:0};
   labelEnemies(B.en); layoutEnemies(); clearBuffs();
-  mode='battle'; playBgm(opt.boss?'boss':'battle'); msgClear();
+  mode='battle'; playBgm(opt.bgm||(opt.boss?'boss':'battle')); msgClear();
   showStatus({left:'3%',top:'2.5%'});
   await fadeIn(160);
   if(B.en.length===1) await say(`${B.en[0].name}が あらわれた！`,{wait:'auto'});
@@ -2228,7 +2481,7 @@ async function battle(ids,opt={}){
   if(res==='win') await victory();
   clearBuffs();
   if(res==='lose'&&!opt.noDefeat){await defeat(); return 'lose';}
-  await fadeOut(220); hideStatus(); msgClose(); B=null; mode='field'; playBgm(curMap().bgm); await fadeIn(220);
+  await fadeOut(220); hideStatus(); msgClose(); B=null; mode='field'; playBgm(mapBgm()); await fadeIn(220);
   return res;
 }
 async function partyCommands(){
@@ -3283,7 +3536,7 @@ async function smithTalk(){
   if(n<3){await say(`かじや「おれは なまえの こもった ぶきしか うたん。 なまえを まもる ための ぶきなら うってやる。」`); await say(`かじや「ほのおの こうせき、 ほしの てっこう、 りゅうの うろこ。 みっつ もってこい。（いま ${n}／3）」`); msgClose(); return;}
   for(const id of need) delItem(id);
   await say('かじや「…そろったな。 よし、 うつぞ。」'); msgClose(); stopBgm(); await fadeOut(500);
-  for(let i=0;i<4;i++){sfx.hit(); await sleep(300);} await fadeIn(500); playBgm(curMap().bgm);
+  for(let i=0;i<4;i++){sfx.hit(); await sleep(300);} await fadeIn(500); playBgm(mapBgm());
   msgClear(); addItem('legend'); addItem('legendS'); sfx.lvl();
   await say(`かじや「できた。『なまえの つるぎ』と『なまえの たて』だ。 つかいてが じぶんの なまえを よぶ たびに、 つよく ひかる。」`);
   await say(`${HN()}は なまえの つるぎと なまえの たてを てにいれた！`);
@@ -3363,12 +3616,12 @@ function makeMirror(){
   // かわを わたれる ように
   for(let y=54;y<118;y++){const x=WW-1-67; if(rows[y][x]==='~'&&y===86){} }
   for(const x of [91,92,93]) rows[86]=rows[86].slice(0,x)+'='+rows[86].slice(x+1);
-  MAPS.mirror={id:'mirror',name:'うらがえしの せかい',rows,out:'~',bgm:'dungeon',kind:'world',enc:()=>'mirror',links:{},npcs:[],chests:[],objs:[],tint:'rgba(80,0,90,.28)',hid:[]};
+  MAPS.mirror={id:'mirror',name:'うらがえしの せかい',rows,out:'~',bgm:'mirror',kind:'world',enc:()=>'mirror',links:{},npcs:[],chests:[],objs:[],tint:'rgba(80,0,90,.28)',hid:[]};
 }
 const MX=x=>WW-1-x;
 function defineCh18(){
   makeMirror();
-  buildTown({id:'makari',name:'うらがえしの アカリ',type:'harbor',w:34,seed:1801,bands:['park','bld','road','plaza','bld','road','pier'],landmark:'lighthouse',roofs:['黒','紫'],trees:['Y'],ground:'x',road:'道',bgm:'dungeon',
+  buildTown({id:'makari',name:'うらがえしの アカリ',type:'harbor',w:34,seed:1801,bands:['park','bld','road','plaza','bld','road','pier'],landmark:'lighthouse',roofs:['黒','紫'],trees:['Y'],ground:'x',road:'道',bgm:'mirror',
     sign:'うらがえしの アカリ　―わすれられた ものの まち―',barrels:2,pots:2,loot:['frag','herb3'],
     bld:[{t:'house',name:'うらがえしの じぶんの いえ',npcs:[{pal:'mio',shadow:1,talk:by([true,['かがみの ミオ「ここは、 だれかに わすれられた ものが くる せかい。」','かがみの ミオ「わたしも 5ねん、 ここに いたの。 …あなたが みつけて くれるまで。」']])}],loot:['frag']},
       {t:'inn',price:22},{t:'item',goods:['herb2','herb3','antidote','bell','drop','life','smoke']},{t:'arms',goods:['sword12','knife12','axe11','staff11','heavy12','light12','robe12','shield12']},{t:'church'}],
@@ -3381,7 +3634,7 @@ function defineCh18(){
   const L=MAPS.akari_lh; L.rows[2]=L.rows[2].slice(0,1)+'釦'.replace('釦','u')+L.rows[2].slice(2); L.links['1,2']=['makari',0,0];
   LINK_GATE['akari_lh:1,2']=()=>has('mirrorShard')?null:['かべに ふしぎな かがみの わくが ある。 なにかを はめこめそうだ…'];
   addDoor('makari',lmM.x,lmM.y+lmM.h-1,'akari_lh',1,3,'down');
-  DUNGEONS.push({id:'mlight',name:'かがみの とうだい',floors:4,w:19,h:15,wall:'l',floor:'i',rooms:2,loops:.07,up:1,zone:'mlight',area:'dark',seed:1818,per:2,worldMap:'mirror',
+  DUNGEONS.push({id:'mlight',bgm:'mirror',name:'かがみの とうだい',floors:4,w:19,h:15,wall:'l',floor:'i',rooms:2,loops:.07,up:1,zone:'mlight',area:'dark',seed:1818,per:2,worldMap:'mirror',
     loot:['herb3','frag',{gold:1800},'life','drop','frag','herb3'],feat:['lock','switch','lock secret','switch lock'],darkAll:1,boss:'mirrorme',reward:'frag',
     intro:['「…よく きたな。 おれ。」','かがみの じぶん「おれは おまえが わすれた おまえ。 いもうとを わすれて へいきで くらしていた、 5ねんぶんの おまえだ。」','かがみの じぶん「おまえに、 ひとを すくう しかくが あるのか？」']});
   icon('mirror',MX(10),102,'R','mlight1');
@@ -3392,13 +3645,13 @@ function defineCh18(){
   GOALS[18]=()=>!S.flags.boss_mlight?'かがみの かけらを もって アカリの とうだいへ。 うらがえしの せかいの『かがみの とうだい』を のぼろう。':'うらがえしの とりでへ。（にし）';
 }
 function defineCh19(){
-  buildTown({id:'mfort',name:'うらがえしの とりで',type:'castle',w:30,seed:1901,bands:['castle','road','bld','road'],roofs:['黒'],ground:'x',edge:'X',plaza:'s',bgm:'dungeon',
+  buildTown({id:'mfort',name:'うらがえしの とりで',type:'castle',w:30,seed:1901,bands:['castle','road','bld','road'],roofs:['黒'],ground:'x',edge:'X',plaza:'s',bgm:'mirror',
     castle:{name:'うらがえしの おおひろま',npcs:[{pal:'guard',shadow:1,at:[8,3],talk:by([true,['わすれられた へいし「たいちょうの たましいは、 ちかの くろい へやで まだ たたかっている。」']])}]},
     bld:[{t:'inn',price:24},{t:'item',goods:['herb3','antidote','bell','drop','life','smoke']},{t:'arms',goods:['sword12','axe11','heavy12','shield12']}],
     npcs:[{at:'gate',pal:'guard',shadow:1,talk:by([true,['わすれられた へいし「ここは わすれられた へいしの とりで。 ガルム… おまえの ことは みんな おぼえている。」']])}]});
   icon('mirror',MX(78),62,'K','mfort');
   const from=stairsIn('mfort_castle',14,11,'mfortD1');
-  DUNGEONS.push({id:'mfortD',name:'かがみの ちかどう',floors:4,w:21,h:15,wall:'X',floor:'s',rooms:2,loops:.07,zone:'mfort',area:'dark',seed:1919,per:2,worldMap:'mirror',from:['mfort_castle',13,11,'left'],
+  DUNGEONS.push({id:'mfortD',bgm:'mirror',name:'かがみの ちかどう',floors:4,w:21,h:15,wall:'X',floor:'s',rooms:2,loops:.07,zone:'mfort',area:'dark',seed:1919,per:2,worldMap:'mirror',from:['mfort_castle',13,11,'left'],
     loot:['herb3','frag',{gold:2000},'life','drop','frag','herb3'],feat:['switch','lock','crack lock','switch secret'],boss:'truecaptain',reward:'oathMail',
     intro:['「…ガルム。 おおきく なったな。」','たいちょう バルドの たましい「わたしは ここで わすれの かみと たたかい つづけて きた。 だが もう、 こころが のまれかけて いる。」','バルド「ガルム、 おまえの ちかいで わたしを とめろ！」']});
   IT.oathMail={n:'ちかいの よろい',slot:'a',def:80,only:['garm'],price:0,d:'たいちょう バルドの よろい。'};
@@ -3409,7 +3662,7 @@ function defineCh19(){
   GOALS[19]=()=>!S.flags.boss_mfortD?'うらがえしの とりでの ちかどうで、 たいちょう バルドの たましいと むきあおう。':'うらがえしの サンドラへ。（ひがし）';
 }
 function defineCh20(){
-  buildTown({id:'msandra',name:'うらがえしの サンドラ',type:'market',w:34,seed:2001,ground:':',bands:['bld','road','market','road','bld','road'],roofs:['黒','紫'],trees:['k'],edge:'D',plaza:'s',bgm:'dungeon',
+  buildTown({id:'msandra',name:'うらがえしの サンドラ',type:'market',w:34,seed:2001,ground:':',bands:['bld','road','market','road','bld','road'],roofs:['黒','紫'],trees:['k'],edge:'D',plaza:'s',bgm:'mirror',
     sign:'うらがえしの サンドラ　―なまえいしに なった ひとびとの まち―',barrels:3,pots:2,loot:['frag','herb3'],
     bld:[{t:'guild',name:'かげの ギルド',talk:by([true,['かげの うけつけ「おやかたは ちかで なまえいしを かぞえて いる。」']]),pal:'merchant'},{t:'inn',price:26},{t:'item',goods:['herb3','antidote','bell','drop','life','smoke']},
       {t:'house',name:'リリの かぞくの いえ',npcs:[{pal:'woman',shadow:1,talk:ririFamily},{pal:'kid',shadow:1,talk:ririFamily}],loot:['frag']}],
@@ -3417,7 +3670,7 @@ function defineCh20(){
   icon('mirror',MX(80),80,'G','msandra');
   const gm=mapByName('かげの ギルド');
   stairsIn(gm,11,7,'mvault1');
-  DUNGEONS.push({id:'mvault',name:'うらがえしの ちかこ',floors:4,w:21,h:15,wall:'X',floor:'s',rooms:1,loops:.06,zone:'mvault',area:'dark',seed:2020,per:2,worldMap:'mirror',from:[gm,10,7,'left'],
+  DUNGEONS.push({id:'mvault',bgm:'mirror',name:'うらがえしの ちかこ',floors:4,w:21,h:15,wall:'X',floor:'s',rooms:1,loops:.06,zone:'mvault',area:'dark',seed:2020,per:2,worldMap:'mirror',from:[gm,10,7,'left'],
     loot:['herb3','frag',{gold:2200},'life','drop','frag','herb3'],feat:['guard','guard lock','switch secret','guard lock'],guardsPer:3,boss:'oyakata',reward:'frag',
     intro:['「くっくっ… なまえいしは すべて わたしの もの。」','かげの おやかた「その こむすめの かぞくの いしも なあ！」','リリ「かえして！ あたしの かぞくを かえして！」']});
   MON.oyakata=B_(Object.assign({n:'かげの おやかた',s:'lord',p:{1:'#3a3a3a',2:'#1a1a1a',3:'#e0c040',w:'#a0a0a0',e:'#ff4040'},scale:4},bstat(48,20,{turns:13}),{
@@ -3442,7 +3695,7 @@ async function ririFamily(){
   await lines(['かげの おんな「…あなたは だれ？ どこかで あった きが する…」']);
 }
 function defineCh21(){
-  DUNGEONS.push({id:'waste',name:'わすれの こうや',floors:4,w:23,h:15,wall:'I',floor:'i',rooms:3,loops:.08,zone:'waste',area:'abyss',seed:2121,per:2,worldMap:'mirror',
+  DUNGEONS.push({id:'waste',bgm:'mirror',name:'わすれの こうや',floors:4,w:23,h:15,wall:'I',floor:'i',rooms:3,loops:.08,zone:'waste',area:'abyss',seed:2121,per:2,worldMap:'mirror',
     loot:['herb3','frag',{gold:2400},'life','drop','frag','herb3'],feat:['crack','switch lock','secret','lock'],darkAll:1,boss:'kyojin',reward:'frag',
     intro:['「…ズシン… ズシン… この さきには いかせぬ…」','わすれの きょじん「この おとこは わすれの かみへの いけにえ！」','とうだいもりの ちち「…ミオ？ その こえは ミオ なのか！」']});
   icon('mirror',MX(84),104,'C','waste1');
@@ -3500,7 +3753,7 @@ async function pastKing(){
   await say('――『おまえを わすれた ものたちに、 わすれられる いたみを おしえて やれ』と。');
   msgClose(); await fadeOut(1000);
   Object.assign(S,{party:S.saved.party,reserve:S.saved.reserve,guest:S.saved.guest}); const sv=S.saved; delete S.saved;
-  S.map=sv.map; P.x=sv.x; P.y=sv.y; trail=[]; loadNPCs(); playBgm(curMap().bgm); await fadeIn(1000);
+  S.map=sv.map; P.x=sv.x; P.y=sv.y; trail=[]; loadNPCs(); playBgm(mapBgm()); await fadeIn(1000);
   msgClear();
   await say('ミオ「…いまの、 ムメイの きおく。 ムメイの ほんとうの なまえは…」');
   await say(`${HN()}は その なまえを むねに きざんだ。`);
@@ -3512,7 +3765,7 @@ MON.wasurekami0=B_(Object.assign({n:'わすれの かみ',s:'eye',p:{1:'#f0f0f0'
 
 /* ---------- 23〜24しょう わすれの とう ---------- */
 function defineCh23(){
-  DUNGEONS.push({id:'final',name:'わすれの とう',floors:7,w:21,h:15,wall:'l',floor:'i',rooms:2,loops:.07,up:1,zone:'final',area:'nox',seed:2323,per:2,worldMap:'mirror',bossBgm:'boss',
+  DUNGEONS.push({id:'final',name:'わすれの とう',floors:7,w:21,h:15,wall:'l',floor:'i',rooms:2,loops:.07,up:1,zone:'final',area:'nox',seed:2323,per:2,worldMap:'mirror',bgm:'mirror',bossBgm:'dungeon',
     loot:['herb3','frag','life','drop','herb3','frag','life','drop','herb3','frag'],feat:['lock','switch','lock secret','switch lock','lock','switch secret',''],darkAll:1,
     mids:[{floor:2,mon:'gen1',intro:['わすれの しと ヴェール「ここから さきは とおさぬ。」']},{floor:4,mon:'gen2',intro:['わすれの しと ネル「なまえなど、 くさりに すぎない。」']},{floor:6,mon:'gen3',intro:['わすれの しと オブリ「ムメイさまの いたみを しれ。」']}],
     boss:'mumei',reward:null,
@@ -3552,7 +3805,7 @@ async function afterMumei(){
   await say('セイル「…ありがとう。 だが きを つけろ。 わたしの なかから、 かみが でてくる…！」'); shake(); flash('#ffffff',600);
   await say('セイルの からだから、 まっしろな なにかが あふれだした！');
   msgClose();
-  const r=await battle(['oblivion'],{boss:1,area:'nox'});
+  const r=await battle(['oblivion'],{boss:1,area:'nox',bgm:'last'});
   if(r==='win') await ending2();
   else {delete S.flags.boss_final; loadNPCs(); msgClear(); await say('（わすれの とうの ちょうじょうで、 もういちど わすれの かみに いどもう）'); msgClose();}
 }
@@ -3578,7 +3831,7 @@ async function ending2(){
   await say('セイル「わたしの なまえを、 ときどき よんで おくれ。 それだけで いい。」');
   await say('セイルは ほほえんで、 ほしの ひかりに とけていった。');
   S.flags.clear=1; S.ch=25; S.guest=null; msgClose(); await fadeOut(1200);
-  mode='ending'; endStars=0; playBgm('town'); await fadeIn(1200);
+  mode='ending'; endStars=0; playBgm('ending'); await fadeIn(1200);
   const grow=setInterval(()=>{endStars=Math.min(stars.length,endStars+1);},120);
   msgClear();
   const roll=[
@@ -3786,7 +4039,7 @@ async function dungeonBoss(D){
   if(D.id==='final') await startChapter(24);
   if(D.id==='final'&&S.flags.mumeiDown){S.flags.boss_final=1; loadNPCs(); await afterMumei(); return;}
   msgClear(); for(const t of D.intro||[]) await say(t); msgClose();
-  const r=await battle(D.group||[D.boss],{boss:1,area:D.area});
+  const r=await battle(D.group||[D.boss],{boss:1,area:D.area,bgm:D.id==='final'?'last':D.id==='ruins7'?'last':null});
   if(r!=='win') return;
   S.flags['boss_'+D.id]=1; loadNPCs();
   if(AFTER[D.id]) await AFTER[D.id]();
@@ -3886,7 +4139,7 @@ function drawSky(now,count){
 
 /* ---------- タイトル ---------- */
 async function titleScreen(){
-  mode='title'; playBgm('town');
+  mode='title'; playBgm('title');
   titleUI=document.createElement('div'); titleUI.className='title';
   titleUI.innerHTML='<div class="logo">ほしかげの剣 II</div><div class="sub">― なまえを なくした せかい ―</div><div class="foot">A：けってい　B：もどる</div>';
   ui.appendChild(titleUI);
@@ -3899,7 +4152,7 @@ async function titleScreen(){
     titleUI.remove(); titleUI=null;
     await fadeOut(300);
     S=sv; if(!MAPS[S.map]) S.map='akari';
-    P.x=S.x; P.y=S.y; P.dir=S.dir||'down'; P.moving=false; trail=[]; mode='field'; loadNPCs(); playBgm(curMap().bgm);
+    P.x=S.x; P.y=S.y; P.dir=S.dir||'down'; P.moving=false; trail=[]; mode='field'; loadNPCs(); playBgm(mapBgm());
     await fadeIn(300); toast(curMap().name||'フィールド');
     return;
   }
@@ -3909,7 +4162,7 @@ async function titleScreen(){
 }
 async function beginStory(name){
   newGame(name); await fadeOut(400);
-  mode='ending'; endStars=stars.length; stopBgm(); await fadeIn(400);
+  mode='ending'; endStars=stars.length; playBgm('title'); await fadeIn(400);
   msgClear();
   await say('この せかいでは、 ひとは にど しぬ と いわれている。');
   await say('いちどめは、 いのちが つきた とき。 にどめは、 だれにも なまえを よばれなく なった とき。');

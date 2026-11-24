@@ -64,7 +64,7 @@ async function battle(ids,opt={}){
   await encounterFx(opt.boss);
   B={en:ids.map(id=>mkEnemy(id,opt.zone)),area:opt.area||'field',zone:opt.zone,boss:!!opt.boss,guard:false,hi:-1,act:-1,lastCmd:[],turn:0};
   labelEnemies(B.en); layoutEnemies(); clearBuffs();
-  mode='battle'; playBgm(opt.boss?'boss':'battle'); msgClear();
+  mode='battle'; playBgm(opt.bgm||(opt.boss?'boss':'battle')); msgClear();
   showStatus({left:'3%',top:'2.5%'});
   await fadeIn(160);
   if(B.en.length===1) await say(`${B.en[0].name}が あらわれた！`,{wait:'auto'});
@@ -100,7 +100,7 @@ async function battle(ids,opt={}){
   if(res==='win') await victory();
   clearBuffs();
   if(res==='lose'&&!opt.noDefeat){await defeat(); return 'lose';}
-  await fadeOut(220); hideStatus(); msgClose(); B=null; mode='field'; playBgm(curMap().bgm); await fadeIn(220);
+  await fadeOut(220); hideStatus(); msgClose(); B=null; mode='field'; playBgm(mapBgm()); await fadeIn(220);
   return res;
 }
 async function partyCommands(){

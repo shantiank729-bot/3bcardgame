@@ -176,7 +176,7 @@ async function inn(per,name){
   await say('では ごゆっくり おやすみください。',{wait:'auto'});
   msgClose(); g.remove(); stopBgm(); await fadeOut(500);
   const ms=sfx.inn(); await sleep(Math.max(1200,ms||0));
-  restoreAll(); S.time=night?.66:.05; loadNPCs(); saveGame(); playBgm(curMap().bgm);
+  restoreAll(); S.time=night?.66:.05; loadNPCs(); saveGame(); playBgm(mapBgm());
   await fadeIn(500);
   msgClear(); await say(night?'こんばんは。 よるの まちは ひるとは ちがう かおを みせますよ。':'おはようございます。 みなさん すっかり げんきに なりましたね。');
   await say('（ぼうけんのしょに きろくしました）'); msgClose();
@@ -269,7 +269,7 @@ async function joinParty(cls,name,minLv,eq,o={}){
   const m=mkMember(cls,name,lv,eq); Object.assign(m,o);
   if(S.party.length<4) S.party.push(m); else {S.reserve=S.reserve||[]; S.reserve.push(m);}
   S.flags['join_'+cls]=1; loadNPCs(); trail=[];
-  stopBgm(); const ms=sfx.lvl(); await say(`${name}が なかまに くわわった！`+(S.party.includes(m)?'':'（ひかえに はいった。 メニューの「ならびかえ」で いれかえられる）'),{wait:'auto',ms:Math.max(900,ms||0)}); playBgm(curMap().bgm);
+  stopBgm(); const ms=sfx.lvl(); await say(`${name}が なかまに くわわった！`+(S.party.includes(m)?'':'（ひかえに はいった。 メニューの「ならびかえ」で いれかえられる）'),{wait:'auto',ms:Math.max(900,ms||0)}); playBgm(mapBgm());
   return m;
 }
 function memberOf(cls){return [...S.party,...(S.reserve||[])].find(m=>m.cls===cls);}

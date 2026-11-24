@@ -129,7 +129,7 @@ function buildDungeons(){
         const busy=new Set([...chests,...npcs].map(o=>o.x+','+o.y).concat([startN.join(',')]));
         for(let y=1;y<D.h-1;y++) for(let x=1;x<D.w-1;x++) if(g[y][x]===D.floor&&!busy.has(x+','+y)&&F.r()<D.lava) g[y][x]='L';
       }
-      MAPS[id]={name:D.name+(D.floors>1?(D.up?` ${f}かい`:` ちか${f}かい`):''),out:D.wall,floor:D.floor,bgm:last&&D.bossBgm?D.bossBgm:'dungeon',world:D.world,worldMap:D.worldMap||'world',
+      MAPS[id]={name:D.name+(D.floors>1?(D.up?` ${f}かい`:` ちか${f}かい`):''),out:D.wall,floor:D.floor,bgm:last&&D.bossBgm?D.bossBgm:(D.bgm||'dungeon'),world:D.world,worldMap:D.worldMap||'world',
         entry:[startN[0],startN[1],'up'],enc:()=>D.zone,area:D.area,dark:D.dark&&D.dark[f-1]!==undefined?D.dark[f-1]:D.darkAll,links,npcs,chests,rows:g.map(r=>r.join('')),dg:D.id,floor:D.floor,fl:f,
         guards:feat.includes('guard'),objs:[]};
     });
