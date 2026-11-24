@@ -1,0 +1,6541 @@
+{
+ "gamesPerPair": 16,
+ "table": [
+  {
+   "level": 1,
+   "elo": 0,
+   "scoreVsNext": 0.375
+  },
+  {
+   "level": 2,
+   "elo": 112,
+   "scoreVsNext": 0.1875
+  },
+  {
+   "level": 3,
+   "elo": 236,
+   "scoreVsNext": 0.3125
+  },
+  {
+   "level": 4,
+   "elo": 433,
+   "scoreVsNext": 0.375
+  },
+  {
+   "level": 5,
+   "elo": 591,
+   "scoreVsNext": 0.4375
+  },
+  {
+   "level": 6,
+   "elo": 574,
+   "scoreVsNext": 0.5625
+  },
+  {
+   "level": 7,
+   "elo": 856,
+   "scoreVsNext": 0.625
+  },
+  {
+   "level": 8,
+   "elo": 953,
+   "scoreVsNext": 0.3125
+  },
+  {
+   "level": 9,
+   "elo": 799,
+   "scoreVsNext": 0.1875
+  },
+  {
+   "level": 10,
+   "elo": 1100,
+   "scoreVsNext": 0.3125
+  },
+  {
+   "level": 11,
+   "elo": 1444,
+   "scoreVsNext": 0.3125
+  },
+  {
+   "level": 12,
+   "elo": 1356,
+   "scoreVsNext": 0.6875
+  },
+  {
+   "level": 13,
+   "elo": 1259,
+   "scoreVsNext": 0.3125
+  },
+  {
+   "level": 14,
+   "elo": 1755,
+   "scoreVsNext": 0.375
+  },
+  {
+   "level": 15,
+   "elo": 1668,
+   "scoreVsNext": 0.25
+  },
+  {
+   "level": 16,
+   "elo": 1718,
+   "scoreVsNext": 0.5
+  },
+  {
+   "level": 17,
+   "elo": 1982,
+   "scoreVsNext": 0.5
+  },
+  {
+   "level": 18,
+   "elo": 2149,
+   "scoreVsNext": 0.25
+  },
+  {
+   "level": 19,
+   "elo": 2029,
+   "scoreVsNext": 0.625
+  },
+  {
+   "level": 20,
+   "elo": 2050,
+   "scoreVsNext": 0.375
+  },
+  {
+   "level": 21,
+   "elo": 2517,
+   "scoreVsNext": 0.5
+  },
+  {
+   "level": 22,
+   "elo": 2240,
+   "scoreVsNext": 0.5
+  },
+  {
+   "level": 23,
+   "elo": 2324,
+   "scoreVsNext": 0.40625
+  },
+  {
+   "level": 24,
+   "elo": 2813,
+   "scoreVsNext": 0.3125
+  },
+  {
+   "level": 25,
+   "elo": 2751,
+   "scoreVsNext": 0.625
+  },
+  {
+   "level": 26,
+   "elo": 2565,
+   "scoreVsNext": 0.625
+  },
+  {
+   "level": 27,
+   "elo": 3034,
+   "scoreVsNext": 0.3125
+  },
+  {
+   "level": 28,
+   "elo": 3100,
+   "scoreVsNext": 0.5625
+  },
+  {
+   "level": 29,
+   "elo": 2835,
+   "scoreVsNext": 0.4375
+  },
+  {
+   "level": 30,
+   "elo": 3100,
+   "scoreVsNext": null
+  }
+ ],
+ "results": [
+  {
+   "a": 1,
+   "b": 2,
+   "scoreA": 1,
+   "plies": 19,
+   "reason": "投了"
+  },
+  {
+   "a": 1,
+   "b": 2,
+   "scoreA": 0,
+   "plies": 56,
+   "reason": "投了"
+  },
+  {
+   "a": 1,
+   "b": 2,
+   "scoreA": 0,
+   "plies": 79,
+   "reason": "投了"
+  },
+  {
+   "a": 1,
+   "b": 2,
+   "scoreA": 0,
+   "plies": 92,
+   "reason": "投了"
+  },
+  {
+   "a": 1,
+   "b": 2,
+   "scoreA": 0,
+   "plies": 77,
+   "reason": "詰み"
+  },
+  {
+   "a": 1,
+   "b": 2,
+   "scoreA": 1,
+   "plies": 55,
+   "reason": "詰み"
+  },
+  {
+   "a": 1,
+   "b": 2,
+   "scoreA": 1,
+   "plies": 150,
+   "reason": "投了"
+  },
+  {
+   "a": 1,
+   "b": 2,
+   "scoreA": 1,
+   "plies": 48,
+   "reason": "投了"
+  },
+  {
+   "a": 1,
+   "b": 2,
+   "scoreA": 0,
+   "plies": 74,
+   "reason": "投了"
+  },
+  {
+   "a": 1,
+   "b": 2,
+   "scoreA": 1,
+   "plies": 102,
+   "reason": "投了"
+  },
+  {
+   "a": 1,
+   "b": 2,
+   "scoreA": 0,
+   "plies": 108,
+   "reason": "投了"
+  },
+  {
+   "a": 1,
+   "b": 2,
+   "scoreA": 0,
+   "plies": 76,
+   "reason": "投了"
+  },
+  {
+   "a": 1,
+   "b": 2,
+   "scoreA": 0,
+   "plies": 68,
+   "reason": "投了"
+  },
+  {
+   "a": 1,
+   "b": 2,
+   "scoreA": 1,
+   "plies": 126,
+   "reason": "投了"
+  },
+  {
+   "a": 1,
+   "b": 2,
+   "scoreA": 0,
+   "plies": 109,
+   "reason": "投了"
+  },
+  {
+   "a": 1,
+   "b": 3,
+   "scoreA": 0,
+   "plies": 29,
+   "reason": "投了"
+  },
+  {
+   "a": 1,
+   "b": 2,
+   "scoreA": 0,
+   "plies": 59,
+   "reason": "投了"
+  },
+  {
+   "a": 1,
+   "b": 3,
+   "scoreA": 0,
+   "plies": 58,
+   "reason": "投了"
+  },
+  {
+   "a": 1,
+   "b": 3,
+   "scoreA": 0,
+   "plies": 33,
+   "reason": "投了"
+  },
+  {
+   "a": 1,
+   "b": 3,
+   "scoreA": 0,
+   "plies": 64,
+   "reason": "投了"
+  },
+  {
+   "a": 1,
+   "b": 3,
+   "scoreA": 0,
+   "plies": 68,
+   "reason": "投了"
+  },
+  {
+   "a": 1,
+   "b": 3,
+   "scoreA": 0,
+   "plies": 32,
+   "reason": "投了"
+  },
+  {
+   "a": 1,
+   "b": 3,
+   "scoreA": 1,
+   "plies": 99,
+   "reason": "投了"
+  },
+  {
+   "a": 1,
+   "b": 3,
+   "scoreA": 1,
+   "plies": 120,
+   "reason": "投了"
+  },
+  {
+   "a": 1,
+   "b": 3,
+   "scoreA": 0,
+   "plies": 141,
+   "reason": "投了"
+  },
+  {
+   "a": 1,
+   "b": 3,
+   "scoreA": 0,
+   "plies": 60,
+   "reason": "詰み"
+  },
+  {
+   "a": 1,
+   "b": 3,
+   "scoreA": 0,
+   "plies": 35,
+   "reason": "投了"
+  },
+  {
+   "a": 1,
+   "b": 3,
+   "scoreA": 0,
+   "plies": 127,
+   "reason": "投了"
+  },
+  {
+   "a": 1,
+   "b": 3,
+   "scoreA": 0,
+   "plies": 102,
+   "reason": "投了"
+  },
+  {
+   "a": 1,
+   "b": 3,
+   "scoreA": 0,
+   "plies": 105,
+   "reason": "投了"
+  },
+  {
+   "a": 1,
+   "b": 3,
+   "scoreA": 0,
+   "plies": 128,
+   "reason": "投了"
+  },
+  {
+   "a": 1,
+   "b": 3,
+   "scoreA": 0,
+   "plies": 91,
+   "reason": "投了"
+  },
+  {
+   "a": 2,
+   "b": 3,
+   "scoreA": 0,
+   "plies": 72,
+   "reason": "投了"
+  },
+  {
+   "a": 2,
+   "b": 3,
+   "scoreA": 0,
+   "plies": 80,
+   "reason": "投了"
+  },
+  {
+   "a": 2,
+   "b": 3,
+   "scoreA": 1,
+   "plies": 96,
+   "reason": "投了"
+  },
+  {
+   "a": 2,
+   "b": 3,
+   "scoreA": 0,
+   "plies": 25,
+   "reason": "投了"
+  },
+  {
+   "a": 2,
+   "b": 3,
+   "scoreA": 0,
+   "plies": 95,
+   "reason": "投了"
+  },
+  {
+   "a": 2,
+   "b": 3,
+   "scoreA": 0,
+   "plies": 30,
+   "reason": "投了"
+  },
+  {
+   "a": 2,
+   "b": 3,
+   "scoreA": 0,
+   "plies": 100,
+   "reason": "投了"
+  },
+  {
+   "a": 2,
+   "b": 3,
+   "scoreA": 0,
+   "plies": 70,
+   "reason": "投了"
+  },
+  {
+   "a": 2,
+   "b": 3,
+   "scoreA": 0,
+   "plies": 103,
+   "reason": "投了"
+  },
+  {
+   "a": 2,
+   "b": 3,
+   "scoreA": 0,
+   "plies": 77,
+   "reason": "詰み"
+  },
+  {
+   "a": 2,
+   "b": 3,
+   "scoreA": 0,
+   "plies": 84,
+   "reason": "投了"
+  },
+  {
+   "a": 2,
+   "b": 3,
+   "scoreA": 0,
+   "plies": 113,
+   "reason": "投了"
+  },
+  {
+   "a": 2,
+   "b": 3,
+   "scoreA": 0,
+   "plies": 80,
+   "reason": "投了"
+  },
+  {
+   "a": 2,
+   "b": 3,
+   "scoreA": 1,
+   "plies": 106,
+   "reason": "投了"
+  },
+  {
+   "a": 2,
+   "b": 3,
+   "scoreA": 0,
+   "plies": 96,
+   "reason": "詰み"
+  },
+  {
+   "a": 2,
+   "b": 3,
+   "scoreA": 1,
+   "plies": 74,
+   "reason": "詰み"
+  },
+  {
+   "a": 2,
+   "b": 4,
+   "scoreA": 0,
+   "plies": 120,
+   "reason": "投了"
+  },
+  {
+   "a": 2,
+   "b": 4,
+   "scoreA": 0,
+   "plies": 115,
+   "reason": "投了"
+  },
+  {
+   "a": 2,
+   "b": 4,
+   "scoreA": 0,
+   "plies": 115,
+   "reason": "投了"
+  },
+  {
+   "a": 2,
+   "b": 4,
+   "scoreA": 1,
+   "plies": 151,
+   "reason": "投了"
+  },
+  {
+   "a": 2,
+   "b": 4,
+   "scoreA": 0,
+   "plies": 80,
+   "reason": "投了"
+  },
+  {
+   "a": 2,
+   "b": 4,
+   "scoreA": 0,
+   "plies": 121,
+   "reason": "投了"
+  },
+  {
+   "a": 2,
+   "b": 4,
+   "scoreA": 0,
+   "plies": 97,
+   "reason": "投了"
+  },
+  {
+   "a": 2,
+   "b": 4,
+   "scoreA": 0,
+   "plies": 132,
+   "reason": "投了"
+  },
+  {
+   "a": 2,
+   "b": 4,
+   "scoreA": 0,
+   "plies": 74,
+   "reason": "投了"
+  },
+  {
+   "a": 2,
+   "b": 4,
+   "scoreA": 0,
+   "plies": 133,
+   "reason": "投了"
+  },
+  {
+   "a": 2,
+   "b": 4,
+   "scoreA": 1,
+   "plies": 96,
+   "reason": "投了"
+  },
+  {
+   "a": 2,
+   "b": 4,
+   "scoreA": 1,
+   "plies": 53,
+   "reason": "投了"
+  },
+  {
+   "a": 2,
+   "b": 4,
+   "scoreA": 0.5,
+   "plies": 256,
+   "reason": "持将棋"
+  },
+  {
+   "a": 2,
+   "b": 4,
+   "scoreA": 1,
+   "plies": 74,
+   "reason": "投了"
+  },
+  {
+   "a": 2,
+   "b": 4,
+   "scoreA": 0,
+   "plies": 98,
+   "reason": "投了"
+  },
+  {
+   "a": 2,
+   "b": 4,
+   "scoreA": 0,
+   "plies": 101,
+   "reason": "投了"
+  },
+  {
+   "a": 3,
+   "b": 4,
+   "scoreA": 0,
+   "plies": 80,
+   "reason": "投了"
+  },
+  {
+   "a": 3,
+   "b": 4,
+   "scoreA": 0,
+   "plies": 121,
+   "reason": "投了"
+  },
+  {
+   "a": 3,
+   "b": 4,
+   "scoreA": 1,
+   "plies": 88,
+   "reason": "詰み"
+  },
+  {
+   "a": 3,
+   "b": 4,
+   "scoreA": 0,
+   "plies": 104,
+   "reason": "投了"
+  },
+  {
+   "a": 3,
+   "b": 4,
+   "scoreA": 0,
+   "plies": 128,
+   "reason": "投了"
+  },
+  {
+   "a": 3,
+   "b": 4,
+   "scoreA": 0,
+   "plies": 75,
+   "reason": "詰み"
+  },
+  {
+   "a": 3,
+   "b": 4,
+   "scoreA": 0,
+   "plies": 66,
+   "reason": "詰み"
+  },
+  {
+   "a": 3,
+   "b": 4,
+   "scoreA": 1,
+   "plies": 70,
+   "reason": "投了"
+  },
+  {
+   "a": 3,
+   "b": 4,
+   "scoreA": 0,
+   "plies": 108,
+   "reason": "投了"
+  },
+  {
+   "a": 3,
+   "b": 4,
+   "scoreA": 1,
+   "plies": 132,
+   "reason": "投了"
+  },
+  {
+   "a": 3,
+   "b": 4,
+   "scoreA": 0,
+   "plies": 90,
+   "reason": "投了"
+  },
+  {
+   "a": 3,
+   "b": 4,
+   "scoreA": 1,
+   "plies": 46,
+   "reason": "投了"
+  },
+  {
+   "a": 3,
+   "b": 4,
+   "scoreA": 0,
+   "plies": 85,
+   "reason": "投了"
+  },
+  {
+   "a": 3,
+   "b": 4,
+   "scoreA": 0,
+   "plies": 82,
+   "reason": "投了"
+  },
+  {
+   "a": 3,
+   "b": 4,
+   "scoreA": 0,
+   "plies": 110,
+   "reason": "投了"
+  },
+  {
+   "a": 3,
+   "b": 5,
+   "scoreA": 0,
+   "plies": 51,
+   "reason": "投了"
+  },
+  {
+   "a": 3,
+   "b": 5,
+   "scoreA": 0,
+   "plies": 74,
+   "reason": "投了"
+  },
+  {
+   "a": 3,
+   "b": 4,
+   "scoreA": 1,
+   "plies": 92,
+   "reason": "投了"
+  },
+  {
+   "a": 3,
+   "b": 5,
+   "scoreA": 1,
+   "plies": 72,
+   "reason": "詰み"
+  },
+  {
+   "a": 3,
+   "b": 5,
+   "scoreA": 0,
+   "plies": 95,
+   "reason": "投了"
+  },
+  {
+   "a": 3,
+   "b": 5,
+   "scoreA": 0,
+   "plies": 132,
+   "reason": "投了"
+  },
+  {
+   "a": 3,
+   "b": 5,
+   "scoreA": 1,
+   "plies": 85,
+   "reason": "投了"
+  },
+  {
+   "a": 3,
+   "b": 5,
+   "scoreA": 0,
+   "plies": 27,
+   "reason": "投了"
+  },
+  {
+   "a": 3,
+   "b": 5,
+   "scoreA": 0,
+   "plies": 172,
+   "reason": "投了"
+  },
+  {
+   "a": 3,
+   "b": 5,
+   "scoreA": 0,
+   "plies": 75,
+   "reason": "投了"
+  },
+  {
+   "a": 3,
+   "b": 5,
+   "scoreA": 1,
+   "plies": 125,
+   "reason": "投了"
+  },
+  {
+   "a": 3,
+   "b": 5,
+   "scoreA": 0,
+   "plies": 54,
+   "reason": "詰み"
+  },
+  {
+   "a": 3,
+   "b": 5,
+   "scoreA": 0,
+   "plies": 63,
+   "reason": "投了"
+  },
+  {
+   "a": 3,
+   "b": 5,
+   "scoreA": 0,
+   "plies": 129,
+   "reason": "投了"
+  },
+  {
+   "a": 3,
+   "b": 5,
+   "scoreA": 0,
+   "plies": 144,
+   "reason": "投了"
+  },
+  {
+   "a": 3,
+   "b": 5,
+   "scoreA": 0,
+   "plies": 82,
+   "reason": "投了"
+  },
+  {
+   "a": 3,
+   "b": 5,
+   "scoreA": 0,
+   "plies": 81,
+   "reason": "投了"
+  },
+  {
+   "a": 4,
+   "b": 5,
+   "scoreA": 1,
+   "plies": 102,
+   "reason": "投了"
+  },
+  {
+   "a": 4,
+   "b": 5,
+   "scoreA": 1,
+   "plies": 131,
+   "reason": "投了"
+  },
+  {
+   "a": 4,
+   "b": 5,
+   "scoreA": 0,
+   "plies": 83,
+   "reason": "投了"
+  },
+  {
+   "a": 4,
+   "b": 5,
+   "scoreA": 0,
+   "plies": 194,
+   "reason": "投了"
+  },
+  {
+   "a": 4,
+   "b": 5,
+   "scoreA": 0,
+   "plies": 67,
+   "reason": "投了"
+  },
+  {
+   "a": 4,
+   "b": 5,
+   "scoreA": 0,
+   "plies": 132,
+   "reason": "投了"
+  },
+  {
+   "a": 4,
+   "b": 5,
+   "scoreA": 1,
+   "plies": 91,
+   "reason": "投了"
+  },
+  {
+   "a": 4,
+   "b": 5,
+   "scoreA": 0,
+   "plies": 62,
+   "reason": "投了"
+  },
+  {
+   "a": 4,
+   "b": 5,
+   "scoreA": 0,
+   "plies": 45,
+   "reason": "投了"
+  },
+  {
+   "a": 4,
+   "b": 5,
+   "scoreA": 1,
+   "plies": 110,
+   "reason": "投了"
+  },
+  {
+   "a": 4,
+   "b": 5,
+   "scoreA": 0,
+   "plies": 61,
+   "reason": "投了"
+  },
+  {
+   "a": 4,
+   "b": 5,
+   "scoreA": 1,
+   "plies": 61,
+   "reason": "投了"
+  },
+  {
+   "a": 4,
+   "b": 5,
+   "scoreA": 0,
+   "plies": 148,
+   "reason": "投了"
+  },
+  {
+   "a": 4,
+   "b": 5,
+   "scoreA": 0,
+   "plies": 74,
+   "reason": "投了"
+  },
+  {
+   "a": 4,
+   "b": 5,
+   "scoreA": 1,
+   "plies": 74,
+   "reason": "投了"
+  },
+  {
+   "a": 4,
+   "b": 5,
+   "scoreA": 0,
+   "plies": 135,
+   "reason": "投了"
+  },
+  {
+   "a": 4,
+   "b": 6,
+   "scoreA": 0,
+   "plies": 52,
+   "reason": "投了"
+  },
+  {
+   "a": 4,
+   "b": 6,
+   "scoreA": 0,
+   "plies": 39,
+   "reason": "投了"
+  },
+  {
+   "a": 4,
+   "b": 6,
+   "scoreA": 0,
+   "plies": 65,
+   "reason": "投了"
+  },
+  {
+   "a": 4,
+   "b": 6,
+   "scoreA": 0,
+   "plies": 90,
+   "reason": "投了"
+  },
+  {
+   "a": 4,
+   "b": 6,
+   "scoreA": 0,
+   "plies": 116,
+   "reason": "投了"
+  },
+  {
+   "a": 4,
+   "b": 6,
+   "scoreA": 0,
+   "plies": 99,
+   "reason": "投了"
+  },
+  {
+   "a": 4,
+   "b": 6,
+   "scoreA": 0,
+   "plies": 114,
+   "reason": "投了"
+  },
+  {
+   "a": 4,
+   "b": 6,
+   "scoreA": 0,
+   "plies": 65,
+   "reason": "投了"
+  },
+  {
+   "a": 4,
+   "b": 6,
+   "scoreA": 0,
+   "plies": 141,
+   "reason": "投了"
+  },
+  {
+   "a": 4,
+   "b": 6,
+   "scoreA": 0,
+   "plies": 162,
+   "reason": "投了"
+  },
+  {
+   "a": 4,
+   "b": 6,
+   "scoreA": 0,
+   "plies": 26,
+   "reason": "投了"
+  },
+  {
+   "a": 4,
+   "b": 6,
+   "scoreA": 0,
+   "plies": 107,
+   "reason": "詰み"
+  },
+  {
+   "a": 4,
+   "b": 6,
+   "scoreA": 0,
+   "plies": 66,
+   "reason": "投了"
+  },
+  {
+   "a": 4,
+   "b": 6,
+   "scoreA": 0,
+   "plies": 51,
+   "reason": "投了"
+  },
+  {
+   "a": 4,
+   "b": 6,
+   "scoreA": 0,
+   "plies": 91,
+   "reason": "投了"
+  },
+  {
+   "a": 5,
+   "b": 6,
+   "scoreA": 0,
+   "plies": 78,
+   "reason": "投了"
+  },
+  {
+   "a": 4,
+   "b": 6,
+   "scoreA": 0.5,
+   "plies": 256,
+   "reason": "持将棋"
+  },
+  {
+   "a": 5,
+   "b": 6,
+   "scoreA": 0,
+   "plies": 118,
+   "reason": "投了"
+  },
+  {
+   "a": 5,
+   "b": 6,
+   "scoreA": 0,
+   "plies": 69,
+   "reason": "投了"
+  },
+  {
+   "a": 5,
+   "b": 6,
+   "scoreA": 1,
+   "plies": 136,
+   "reason": "詰み"
+  },
+  {
+   "a": 5,
+   "b": 6,
+   "scoreA": 0,
+   "plies": 43,
+   "reason": "詰み"
+  },
+  {
+   "a": 5,
+   "b": 6,
+   "scoreA": 0,
+   "plies": 104,
+   "reason": "投了"
+  },
+  {
+   "a": 5,
+   "b": 6,
+   "scoreA": 1,
+   "plies": 55,
+   "reason": "投了"
+  },
+  {
+   "a": 5,
+   "b": 6,
+   "scoreA": 0,
+   "plies": 86,
+   "reason": "投了"
+  },
+  {
+   "a": 5,
+   "b": 6,
+   "scoreA": 0,
+   "plies": 103,
+   "reason": "投了"
+  },
+  {
+   "a": 5,
+   "b": 6,
+   "scoreA": 1,
+   "plies": 78,
+   "reason": "投了"
+  },
+  {
+   "a": 5,
+   "b": 6,
+   "scoreA": 0,
+   "plies": 81,
+   "reason": "詰み"
+  },
+  {
+   "a": 5,
+   "b": 6,
+   "scoreA": 0,
+   "plies": 100,
+   "reason": "詰み"
+  },
+  {
+   "a": 5,
+   "b": 6,
+   "scoreA": 1,
+   "plies": 92,
+   "reason": "投了"
+  },
+  {
+   "a": 5,
+   "b": 7,
+   "scoreA": 1,
+   "plies": 31,
+   "reason": "投了"
+  },
+  {
+   "a": 5,
+   "b": 6,
+   "scoreA": 1,
+   "plies": 195,
+   "reason": "投了"
+  },
+  {
+   "a": 5,
+   "b": 6,
+   "scoreA": 1,
+   "plies": 119,
+   "reason": "投了"
+  },
+  {
+   "a": 5,
+   "b": 6,
+   "scoreA": 1,
+   "plies": 86,
+   "reason": "投了"
+  },
+  {
+   "a": 5,
+   "b": 7,
+   "scoreA": 0,
+   "plies": 43,
+   "reason": "投了"
+  },
+  {
+   "a": 5,
+   "b": 7,
+   "scoreA": 1,
+   "plies": 45,
+   "reason": "投了"
+  },
+  {
+   "a": 5,
+   "b": 7,
+   "scoreA": 0,
+   "plies": 76,
+   "reason": "投了"
+  },
+  {
+   "a": 5,
+   "b": 7,
+   "scoreA": 0,
+   "plies": 68,
+   "reason": "投了"
+  },
+  {
+   "a": 5,
+   "b": 7,
+   "scoreA": 0,
+   "plies": 105,
+   "reason": "投了"
+  },
+  {
+   "a": 5,
+   "b": 7,
+   "scoreA": 1,
+   "plies": 92,
+   "reason": "投了"
+  },
+  {
+   "a": 5,
+   "b": 7,
+   "scoreA": 1,
+   "plies": 47,
+   "reason": "投了"
+  },
+  {
+   "a": 5,
+   "b": 7,
+   "scoreA": 0,
+   "plies": 79,
+   "reason": "投了"
+  },
+  {
+   "a": 5,
+   "b": 7,
+   "scoreA": 0,
+   "plies": 84,
+   "reason": "投了"
+  },
+  {
+   "a": 5,
+   "b": 7,
+   "scoreA": 0,
+   "plies": 77,
+   "reason": "投了"
+  },
+  {
+   "a": 5,
+   "b": 7,
+   "scoreA": 0,
+   "plies": 53,
+   "reason": "投了"
+  },
+  {
+   "a": 5,
+   "b": 7,
+   "scoreA": 0,
+   "plies": 92,
+   "reason": "投了"
+  },
+  {
+   "a": 5,
+   "b": 7,
+   "scoreA": 0,
+   "plies": 103,
+   "reason": "投了"
+  },
+  {
+   "a": 5,
+   "b": 7,
+   "scoreA": 0,
+   "plies": 112,
+   "reason": "詰み"
+  },
+  {
+   "a": 5,
+   "b": 7,
+   "scoreA": 0,
+   "plies": 125,
+   "reason": "投了"
+  },
+  {
+   "a": 6,
+   "b": 7,
+   "scoreA": 1,
+   "plies": 109,
+   "reason": "詰み"
+  },
+  {
+   "a": 6,
+   "b": 7,
+   "scoreA": 1,
+   "plies": 128,
+   "reason": "詰み"
+  },
+  {
+   "a": 6,
+   "b": 7,
+   "scoreA": 0,
+   "plies": 104,
+   "reason": "投了"
+  },
+  {
+   "a": 6,
+   "b": 7,
+   "scoreA": 1,
+   "plies": 88,
+   "reason": "投了"
+  },
+  {
+   "a": 6,
+   "b": 7,
+   "scoreA": 0,
+   "plies": 100,
+   "reason": "投了"
+  },
+  {
+   "a": 6,
+   "b": 7,
+   "scoreA": 1,
+   "plies": 101,
+   "reason": "投了"
+  },
+  {
+   "a": 6,
+   "b": 7,
+   "scoreA": 1,
+   "plies": 126,
+   "reason": "投了"
+  },
+  {
+   "a": 6,
+   "b": 7,
+   "scoreA": 1,
+   "plies": 92,
+   "reason": "投了"
+  },
+  {
+   "a": 6,
+   "b": 7,
+   "scoreA": 1,
+   "plies": 66,
+   "reason": "投了"
+  },
+  {
+   "a": 6,
+   "b": 7,
+   "scoreA": 0,
+   "plies": 118,
+   "reason": "投了"
+  },
+  {
+   "a": 6,
+   "b": 7,
+   "scoreA": 0,
+   "plies": 118,
+   "reason": "投了"
+  },
+  {
+   "a": 6,
+   "b": 7,
+   "scoreA": 0,
+   "plies": 91,
+   "reason": "投了"
+  },
+  {
+   "a": 6,
+   "b": 7,
+   "scoreA": 1,
+   "plies": 63,
+   "reason": "詰み"
+  },
+  {
+   "a": 6,
+   "b": 8,
+   "scoreA": 0,
+   "plies": 66,
+   "reason": "詰み"
+  },
+  {
+   "a": 6,
+   "b": 7,
+   "scoreA": 1,
+   "plies": 112,
+   "reason": "投了"
+  },
+  {
+   "a": 6,
+   "b": 7,
+   "scoreA": 0,
+   "plies": 106,
+   "reason": "投了"
+  },
+  {
+   "a": 6,
+   "b": 7,
+   "scoreA": 0,
+   "plies": 119,
+   "reason": "投了"
+  },
+  {
+   "a": 6,
+   "b": 8,
+   "scoreA": 1,
+   "plies": 63,
+   "reason": "投了"
+  },
+  {
+   "a": 6,
+   "b": 8,
+   "scoreA": 1,
+   "plies": 109,
+   "reason": "投了"
+  },
+  {
+   "a": 6,
+   "b": 8,
+   "scoreA": 0,
+   "plies": 121,
+   "reason": "投了"
+  },
+  {
+   "a": 6,
+   "b": 8,
+   "scoreA": 1,
+   "plies": 120,
+   "reason": "投了"
+  },
+  {
+   "a": 6,
+   "b": 8,
+   "scoreA": 0,
+   "plies": 34,
+   "reason": "投了"
+  },
+  {
+   "a": 6,
+   "b": 8,
+   "scoreA": 0,
+   "plies": 99,
+   "reason": "投了"
+  },
+  {
+   "a": 6,
+   "b": 8,
+   "scoreA": 0,
+   "plies": 105,
+   "reason": "投了"
+  },
+  {
+   "a": 6,
+   "b": 8,
+   "scoreA": 1,
+   "plies": 113,
+   "reason": "投了"
+  },
+  {
+   "a": 6,
+   "b": 8,
+   "scoreA": 0,
+   "plies": 151,
+   "reason": "投了"
+  },
+  {
+   "a": 6,
+   "b": 8,
+   "scoreA": 0,
+   "plies": 83,
+   "reason": "投了"
+  },
+  {
+   "a": 6,
+   "b": 8,
+   "scoreA": 0,
+   "plies": 20,
+   "reason": "投了"
+  },
+  {
+   "a": 6,
+   "b": 8,
+   "scoreA": 1,
+   "plies": 157,
+   "reason": "投了"
+  },
+  {
+   "a": 6,
+   "b": 8,
+   "scoreA": 1,
+   "plies": 117,
+   "reason": "投了"
+  },
+  {
+   "a": 6,
+   "b": 8,
+   "scoreA": 0,
+   "plies": 115,
+   "reason": "投了"
+  },
+  {
+   "a": 7,
+   "b": 8,
+   "scoreA": 0,
+   "plies": 66,
+   "reason": "投了"
+  },
+  {
+   "a": 6,
+   "b": 8,
+   "scoreA": 0,
+   "plies": 113,
+   "reason": "投了"
+  },
+  {
+   "a": 7,
+   "b": 8,
+   "scoreA": 1,
+   "plies": 111,
+   "reason": "投了"
+  },
+  {
+   "a": 7,
+   "b": 8,
+   "scoreA": 1,
+   "plies": 142,
+   "reason": "投了"
+  },
+  {
+   "a": 7,
+   "b": 8,
+   "scoreA": 1,
+   "plies": 67,
+   "reason": "投了"
+  },
+  {
+   "a": 7,
+   "b": 8,
+   "scoreA": 0,
+   "plies": 125,
+   "reason": "投了"
+  },
+  {
+   "a": 7,
+   "b": 8,
+   "scoreA": 1,
+   "plies": 106,
+   "reason": "投了"
+  },
+  {
+   "a": 7,
+   "b": 8,
+   "scoreA": 1,
+   "plies": 75,
+   "reason": "投了"
+  },
+  {
+   "a": 7,
+   "b": 8,
+   "scoreA": 1,
+   "plies": 113,
+   "reason": "投了"
+  },
+  {
+   "a": 7,
+   "b": 8,
+   "scoreA": 1,
+   "plies": 98,
+   "reason": "投了"
+  },
+  {
+   "a": 7,
+   "b": 8,
+   "scoreA": 0,
+   "plies": 75,
+   "reason": "詰み"
+  },
+  {
+   "a": 7,
+   "b": 8,
+   "scoreA": 1,
+   "plies": 67,
+   "reason": "投了"
+  },
+  {
+   "a": 7,
+   "b": 8,
+   "scoreA": 0,
+   "plies": 102,
+   "reason": "投了"
+  },
+  {
+   "a": 7,
+   "b": 8,
+   "scoreA": 0,
+   "plies": 115,
+   "reason": "投了"
+  },
+  {
+   "a": 7,
+   "b": 8,
+   "scoreA": 0,
+   "plies": 51,
+   "reason": "投了"
+  },
+  {
+   "a": 7,
+   "b": 8,
+   "scoreA": 1,
+   "plies": 59,
+   "reason": "投了"
+  },
+  {
+   "a": 7,
+   "b": 9,
+   "scoreA": 0,
+   "plies": 64,
+   "reason": "投了"
+  },
+  {
+   "a": 7,
+   "b": 9,
+   "scoreA": 0,
+   "plies": 85,
+   "reason": "投了"
+  },
+  {
+   "a": 7,
+   "b": 8,
+   "scoreA": 1,
+   "plies": 172,
+   "reason": "投了"
+  },
+  {
+   "a": 7,
+   "b": 9,
+   "scoreA": 0,
+   "plies": 130,
+   "reason": "投了"
+  },
+  {
+   "a": 7,
+   "b": 9,
+   "scoreA": 0,
+   "plies": 81,
+   "reason": "投了"
+  },
+  {
+   "a": 7,
+   "b": 9,
+   "scoreA": 0,
+   "plies": 128,
+   "reason": "投了"
+  },
+  {
+   "a": 7,
+   "b": 9,
+   "scoreA": 1,
+   "plies": 64,
+   "reason": "投了"
+  },
+  {
+   "a": 7,
+   "b": 9,
+   "scoreA": 0,
+   "plies": 126,
+   "reason": "投了"
+  },
+  {
+   "a": 7,
+   "b": 9,
+   "scoreA": 1,
+   "plies": 132,
+   "reason": "投了"
+  },
+  {
+   "a": 7,
+   "b": 9,
+   "scoreA": 1,
+   "plies": 87,
+   "reason": "投了"
+  },
+  {
+   "a": 7,
+   "b": 9,
+   "scoreA": 0,
+   "plies": 62,
+   "reason": "投了"
+  },
+  {
+   "a": 7,
+   "b": 9,
+   "scoreA": 0,
+   "plies": 51,
+   "reason": "投了"
+  },
+  {
+   "a": 7,
+   "b": 9,
+   "scoreA": 0,
+   "plies": 127,
+   "reason": "投了"
+  },
+  {
+   "a": 7,
+   "b": 9,
+   "scoreA": 0,
+   "plies": 64,
+   "reason": "投了"
+  },
+  {
+   "a": 7,
+   "b": 9,
+   "scoreA": 0,
+   "plies": 39,
+   "reason": "投了"
+  },
+  {
+   "a": 8,
+   "b": 9,
+   "scoreA": 0,
+   "plies": 62,
+   "reason": "詰み"
+  },
+  {
+   "a": 7,
+   "b": 9,
+   "scoreA": 0,
+   "plies": 93,
+   "reason": "投了"
+  },
+  {
+   "a": 8,
+   "b": 9,
+   "scoreA": 1,
+   "plies": 106,
+   "reason": "投了"
+  },
+  {
+   "a": 7,
+   "b": 9,
+   "scoreA": 0,
+   "plies": 150,
+   "reason": "詰み"
+  },
+  {
+   "a": 8,
+   "b": 9,
+   "scoreA": 0,
+   "plies": 84,
+   "reason": "投了"
+  },
+  {
+   "a": 8,
+   "b": 9,
+   "scoreA": 0,
+   "plies": 125,
+   "reason": "投了"
+  },
+  {
+   "a": 8,
+   "b": 9,
+   "scoreA": 1,
+   "plies": 88,
+   "reason": "投了"
+  },
+  {
+   "a": 8,
+   "b": 9,
+   "scoreA": 1,
+   "plies": 105,
+   "reason": "詰み"
+  },
+  {
+   "a": 8,
+   "b": 9,
+   "scoreA": 0,
+   "plies": 90,
+   "reason": "投了"
+  },
+  {
+   "a": 8,
+   "b": 9,
+   "scoreA": 0,
+   "plies": 73,
+   "reason": "投了"
+  },
+  {
+   "a": 8,
+   "b": 9,
+   "scoreA": 0,
+   "plies": 45,
+   "reason": "投了"
+  },
+  {
+   "a": 8,
+   "b": 9,
+   "scoreA": 0,
+   "plies": 56,
+   "reason": "投了"
+  },
+  {
+   "a": 8,
+   "b": 9,
+   "scoreA": 0,
+   "plies": 102,
+   "reason": "投了"
+  },
+  {
+   "a": 8,
+   "b": 9,
+   "scoreA": 0,
+   "plies": 178,
+   "reason": "投了"
+  },
+  {
+   "a": 8,
+   "b": 9,
+   "scoreA": 0,
+   "plies": 73,
+   "reason": "投了"
+  },
+  {
+   "a": 8,
+   "b": 9,
+   "scoreA": 1,
+   "plies": 162,
+   "reason": "投了"
+  },
+  {
+   "a": 8,
+   "b": 10,
+   "scoreA": 0,
+   "plies": 44,
+   "reason": "詰み"
+  },
+  {
+   "a": 8,
+   "b": 9,
+   "scoreA": 0,
+   "plies": 95,
+   "reason": "投了"
+  },
+  {
+   "a": 8,
+   "b": 10,
+   "scoreA": 0,
+   "plies": 56,
+   "reason": "投了"
+  },
+  {
+   "a": 8,
+   "b": 9,
+   "scoreA": 1,
+   "plies": 189,
+   "reason": "投了"
+  },
+  {
+   "a": 8,
+   "b": 10,
+   "scoreA": 0,
+   "plies": 69,
+   "reason": "投了"
+  },
+  {
+   "a": 8,
+   "b": 10,
+   "scoreA": 1,
+   "plies": 190,
+   "reason": "投了"
+  },
+  {
+   "a": 8,
+   "b": 10,
+   "scoreA": 1,
+   "plies": 135,
+   "reason": "投了"
+  },
+  {
+   "a": 8,
+   "b": 10,
+   "scoreA": 0,
+   "plies": 92,
+   "reason": "投了"
+  },
+  {
+   "a": 8,
+   "b": 10,
+   "scoreA": 1,
+   "plies": 124,
+   "reason": "投了"
+  },
+  {
+   "a": 8,
+   "b": 10,
+   "scoreA": 0,
+   "plies": 30,
+   "reason": "投了"
+  },
+  {
+   "a": 8,
+   "b": 10,
+   "scoreA": 0,
+   "plies": 123,
+   "reason": "投了"
+  },
+  {
+   "a": 8,
+   "b": 10,
+   "scoreA": 0,
+   "plies": 84,
+   "reason": "詰み"
+  },
+  {
+   "a": 8,
+   "b": 10,
+   "scoreA": 0,
+   "plies": 99,
+   "reason": "投了"
+  },
+  {
+   "a": 8,
+   "b": 10,
+   "scoreA": 0,
+   "plies": 165,
+   "reason": "投了"
+  },
+  {
+   "a": 8,
+   "b": 10,
+   "scoreA": 0,
+   "plies": 81,
+   "reason": "投了"
+  },
+  {
+   "a": 8,
+   "b": 10,
+   "scoreA": 1,
+   "plies": 45,
+   "reason": "投了"
+  },
+  {
+   "a": 8,
+   "b": 10,
+   "scoreA": 1,
+   "plies": 115,
+   "reason": "投了"
+  },
+  {
+   "a": 9,
+   "b": 10,
+   "scoreA": 0,
+   "plies": 65,
+   "reason": "投了"
+  },
+  {
+   "a": 9,
+   "b": 10,
+   "scoreA": 1,
+   "plies": 83,
+   "reason": "投了"
+  },
+  {
+   "a": 9,
+   "b": 10,
+   "scoreA": 0,
+   "plies": 38,
+   "reason": "投了"
+  },
+  {
+   "a": 8,
+   "b": 10,
+   "scoreA": 1,
+   "plies": 158,
+   "reason": "投了"
+  },
+  {
+   "a": 9,
+   "b": 10,
+   "scoreA": 0,
+   "plies": 75,
+   "reason": "投了"
+  },
+  {
+   "a": 9,
+   "b": 10,
+   "scoreA": 0,
+   "plies": 118,
+   "reason": "投了"
+  },
+  {
+   "a": 9,
+   "b": 10,
+   "scoreA": 0,
+   "plies": 99,
+   "reason": "投了"
+  },
+  {
+   "a": 9,
+   "b": 10,
+   "scoreA": 0,
+   "plies": 71,
+   "reason": "詰み"
+  },
+  {
+   "a": 9,
+   "b": 10,
+   "scoreA": 0,
+   "plies": 90,
+   "reason": "投了"
+  },
+  {
+   "a": 9,
+   "b": 10,
+   "scoreA": 0,
+   "plies": 112,
+   "reason": "投了"
+  },
+  {
+   "a": 9,
+   "b": 10,
+   "scoreA": 1,
+   "plies": 34,
+   "reason": "投了"
+  },
+  {
+   "a": 9,
+   "b": 10,
+   "scoreA": 0,
+   "plies": 37,
+   "reason": "投了"
+  },
+  {
+   "a": 9,
+   "b": 10,
+   "scoreA": 0,
+   "plies": 67,
+   "reason": "詰み"
+  },
+  {
+   "a": 9,
+   "b": 10,
+   "scoreA": 0,
+   "plies": 132,
+   "reason": "投了"
+  },
+  {
+   "a": 9,
+   "b": 10,
+   "scoreA": 0,
+   "plies": 96,
+   "reason": "投了"
+  },
+  {
+   "a": 9,
+   "b": 11,
+   "scoreA": 0,
+   "plies": 109,
+   "reason": "投了"
+  },
+  {
+   "a": 9,
+   "b": 11,
+   "scoreA": 1,
+   "plies": 131,
+   "reason": "投了"
+  },
+  {
+   "a": 9,
+   "b": 10,
+   "scoreA": 1,
+   "plies": 209,
+   "reason": "投了"
+  },
+  {
+   "a": 9,
+   "b": 10,
+   "scoreA": 0,
+   "plies": 179,
+   "reason": "投了"
+  },
+  {
+   "a": 9,
+   "b": 11,
+   "scoreA": 0,
+   "plies": 66,
+   "reason": "投了"
+  },
+  {
+   "a": 9,
+   "b": 11,
+   "scoreA": 0,
+   "plies": 67,
+   "reason": "投了"
+  },
+  {
+   "a": 9,
+   "b": 11,
+   "scoreA": 0,
+   "plies": 107,
+   "reason": "投了"
+  },
+  {
+   "a": 9,
+   "b": 11,
+   "scoreA": 0,
+   "plies": 120,
+   "reason": "投了"
+  },
+  {
+   "a": 9,
+   "b": 11,
+   "scoreA": 0,
+   "plies": 83,
+   "reason": "投了"
+  },
+  {
+   "a": 9,
+   "b": 11,
+   "scoreA": 0,
+   "plies": 136,
+   "reason": "投了"
+  },
+  {
+   "a": 9,
+   "b": 11,
+   "scoreA": 0,
+   "plies": 70,
+   "reason": "投了"
+  },
+  {
+   "a": 9,
+   "b": 11,
+   "scoreA": 1,
+   "plies": 50,
+   "reason": "投了"
+  },
+  {
+   "a": 9,
+   "b": 11,
+   "scoreA": 0,
+   "plies": 105,
+   "reason": "投了"
+  },
+  {
+   "a": 9,
+   "b": 11,
+   "scoreA": 1,
+   "plies": 113,
+   "reason": "投了"
+  },
+  {
+   "a": 9,
+   "b": 11,
+   "scoreA": 0,
+   "plies": 98,
+   "reason": "投了"
+  },
+  {
+   "a": 9,
+   "b": 11,
+   "scoreA": 1,
+   "plies": 53,
+   "reason": "詰み"
+  },
+  {
+   "a": 10,
+   "b": 11,
+   "scoreA": 1,
+   "plies": 42,
+   "reason": "投了"
+  },
+  {
+   "a": 9,
+   "b": 11,
+   "scoreA": 0,
+   "plies": 93,
+   "reason": "投了"
+  },
+  {
+   "a": 10,
+   "b": 11,
+   "scoreA": 0,
+   "plies": 102,
+   "reason": "投了"
+  },
+  {
+   "a": 9,
+   "b": 11,
+   "scoreA": 0,
+   "plies": 161,
+   "reason": "投了"
+  },
+  {
+   "a": 10,
+   "b": 11,
+   "scoreA": 0,
+   "plies": 70,
+   "reason": "投了"
+  },
+  {
+   "a": 10,
+   "b": 11,
+   "scoreA": 0,
+   "plies": 111,
+   "reason": "投了"
+  },
+  {
+   "a": 10,
+   "b": 11,
+   "scoreA": 1,
+   "plies": 85,
+   "reason": "投了"
+  },
+  {
+   "a": 10,
+   "b": 11,
+   "scoreA": 0,
+   "plies": 87,
+   "reason": "投了"
+  },
+  {
+   "a": 10,
+   "b": 11,
+   "scoreA": 0,
+   "plies": 84,
+   "reason": "投了"
+  },
+  {
+   "a": 10,
+   "b": 11,
+   "scoreA": 0,
+   "plies": 54,
+   "reason": "投了"
+  },
+  {
+   "a": 10,
+   "b": 11,
+   "scoreA": 0,
+   "plies": 58,
+   "reason": "投了"
+  },
+  {
+   "a": 10,
+   "b": 11,
+   "scoreA": 1,
+   "plies": 118,
+   "reason": "投了"
+  },
+  {
+   "a": 10,
+   "b": 11,
+   "scoreA": 1,
+   "plies": 116,
+   "reason": "投了"
+  },
+  {
+   "a": 10,
+   "b": 11,
+   "scoreA": 0,
+   "plies": 66,
+   "reason": "投了"
+  },
+  {
+   "a": 10,
+   "b": 11,
+   "scoreA": 0,
+   "plies": 113,
+   "reason": "投了"
+  },
+  {
+   "a": 10,
+   "b": 11,
+   "scoreA": 0,
+   "plies": 119,
+   "reason": "投了"
+  },
+  {
+   "a": 10,
+   "b": 11,
+   "scoreA": 1,
+   "plies": 109,
+   "reason": "投了"
+  },
+  {
+   "a": 10,
+   "b": 11,
+   "scoreA": 0,
+   "plies": 127,
+   "reason": "投了"
+  },
+  {
+   "a": 10,
+   "b": 12,
+   "scoreA": 1,
+   "plies": 90,
+   "reason": "投了"
+  },
+  {
+   "a": 10,
+   "b": 12,
+   "scoreA": 0,
+   "plies": 84,
+   "reason": "投了"
+  },
+  {
+   "a": 10,
+   "b": 12,
+   "scoreA": 0,
+   "plies": 154,
+   "reason": "投了"
+  },
+  {
+   "a": 10,
+   "b": 12,
+   "scoreA": 0,
+   "plies": 48,
+   "reason": "投了"
+  },
+  {
+   "a": 10,
+   "b": 12,
+   "scoreA": 0,
+   "plies": 119,
+   "reason": "投了"
+  },
+  {
+   "a": 10,
+   "b": 12,
+   "scoreA": 0,
+   "plies": 103,
+   "reason": "投了"
+  },
+  {
+   "a": 10,
+   "b": 12,
+   "scoreA": 0,
+   "plies": 86,
+   "reason": "投了"
+  },
+  {
+   "a": 10,
+   "b": 12,
+   "scoreA": 1,
+   "plies": 126,
+   "reason": "投了"
+  },
+  {
+   "a": 10,
+   "b": 12,
+   "scoreA": 1,
+   "plies": 115,
+   "reason": "投了"
+  },
+  {
+   "a": 10,
+   "b": 12,
+   "scoreA": 1,
+   "plies": 96,
+   "reason": "投了"
+  },
+  {
+   "a": 10,
+   "b": 12,
+   "scoreA": 0,
+   "plies": 110,
+   "reason": "投了"
+  },
+  {
+   "a": 10,
+   "b": 12,
+   "scoreA": 0,
+   "plies": 63,
+   "reason": "投了"
+  },
+  {
+   "a": 10,
+   "b": 12,
+   "scoreA": 1,
+   "plies": 58,
+   "reason": "投了"
+  },
+  {
+   "a": 10,
+   "b": 12,
+   "scoreA": 0,
+   "plies": 138,
+   "reason": "投了"
+  },
+  {
+   "a": 10,
+   "b": 12,
+   "scoreA": 0,
+   "plies": 84,
+   "reason": "詰み"
+  },
+  {
+   "a": 11,
+   "b": 12,
+   "scoreA": 0,
+   "plies": 84,
+   "reason": "詰み"
+  },
+  {
+   "a": 10,
+   "b": 12,
+   "scoreA": 0,
+   "plies": 115,
+   "reason": "投了"
+  },
+  {
+   "a": 11,
+   "b": 12,
+   "scoreA": 1,
+   "plies": 94,
+   "reason": "投了"
+  },
+  {
+   "a": 11,
+   "b": 12,
+   "scoreA": 1,
+   "plies": 99,
+   "reason": "投了"
+  },
+  {
+   "a": 11,
+   "b": 12,
+   "scoreA": 0,
+   "plies": 127,
+   "reason": "詰み"
+  },
+  {
+   "a": 11,
+   "b": 12,
+   "scoreA": 1,
+   "plies": 141,
+   "reason": "投了"
+  },
+  {
+   "a": 11,
+   "b": 12,
+   "scoreA": 0,
+   "plies": 76,
+   "reason": "投了"
+  },
+  {
+   "a": 11,
+   "b": 12,
+   "scoreA": 0,
+   "plies": 173,
+   "reason": "投了"
+  },
+  {
+   "a": 11,
+   "b": 12,
+   "scoreA": 0,
+   "plies": 101,
+   "reason": "投了"
+  },
+  {
+   "a": 11,
+   "b": 12,
+   "scoreA": 0,
+   "plies": 118,
+   "reason": "投了"
+  },
+  {
+   "a": 11,
+   "b": 12,
+   "scoreA": 1,
+   "plies": 146,
+   "reason": "投了"
+  },
+  {
+   "a": 11,
+   "b": 12,
+   "scoreA": 0,
+   "plies": 67,
+   "reason": "投了"
+  },
+  {
+   "a": 11,
+   "b": 12,
+   "scoreA": 1,
+   "plies": 81,
+   "reason": "投了"
+  },
+  {
+   "a": 11,
+   "b": 12,
+   "scoreA": 0,
+   "plies": 88,
+   "reason": "投了"
+  },
+  {
+   "a": 11,
+   "b": 12,
+   "scoreA": 0,
+   "plies": 73,
+   "reason": "投了"
+  },
+  {
+   "a": 11,
+   "b": 12,
+   "scoreA": 0,
+   "plies": 76,
+   "reason": "投了"
+  },
+  {
+   "a": 11,
+   "b": 12,
+   "scoreA": 0,
+   "plies": 103,
+   "reason": "投了"
+  },
+  {
+   "a": 11,
+   "b": 13,
+   "scoreA": 1,
+   "plies": 72,
+   "reason": "投了"
+  },
+  {
+   "a": 11,
+   "b": 13,
+   "scoreA": 0,
+   "plies": 102,
+   "reason": "投了"
+  },
+  {
+   "a": 11,
+   "b": 13,
+   "scoreA": 1,
+   "plies": 137,
+   "reason": "投了"
+  },
+  {
+   "a": 11,
+   "b": 13,
+   "scoreA": 0,
+   "plies": 125,
+   "reason": "詰み"
+  },
+  {
+   "a": 11,
+   "b": 13,
+   "scoreA": 0,
+   "plies": 82,
+   "reason": "詰み"
+  },
+  {
+   "a": 11,
+   "b": 13,
+   "scoreA": 0,
+   "plies": 87,
+   "reason": "投了"
+  },
+  {
+   "a": 11,
+   "b": 13,
+   "scoreA": 0,
+   "plies": 87,
+   "reason": "投了"
+  },
+  {
+   "a": 11,
+   "b": 13,
+   "scoreA": 0,
+   "plies": 73,
+   "reason": "投了"
+  },
+  {
+   "a": 11,
+   "b": 13,
+   "scoreA": 0,
+   "plies": 76,
+   "reason": "投了"
+  },
+  {
+   "a": 11,
+   "b": 13,
+   "scoreA": 1,
+   "plies": 237,
+   "reason": "投了"
+  },
+  {
+   "a": 11,
+   "b": 13,
+   "scoreA": 0,
+   "plies": 88,
+   "reason": "投了"
+  },
+  {
+   "a": 11,
+   "b": 13,
+   "scoreA": 0,
+   "plies": 59,
+   "reason": "投了"
+  },
+  {
+   "a": 11,
+   "b": 13,
+   "scoreA": 0,
+   "plies": 94,
+   "reason": "投了"
+  },
+  {
+   "a": 11,
+   "b": 13,
+   "scoreA": 1,
+   "plies": 68,
+   "reason": "投了"
+  },
+  {
+   "a": 11,
+   "b": 13,
+   "scoreA": 0,
+   "plies": 66,
+   "reason": "投了"
+  },
+  {
+   "a": 11,
+   "b": 13,
+   "scoreA": 0,
+   "plies": 73,
+   "reason": "投了"
+  },
+  {
+   "a": 12,
+   "b": 13,
+   "scoreA": 1,
+   "plies": 90,
+   "reason": "投了"
+  },
+  {
+   "a": 12,
+   "b": 13,
+   "scoreA": 1,
+   "plies": 111,
+   "reason": "投了"
+  },
+  {
+   "a": 12,
+   "b": 13,
+   "scoreA": 1,
+   "plies": 107,
+   "reason": "投了"
+  },
+  {
+   "a": 12,
+   "b": 13,
+   "scoreA": 1,
+   "plies": 124,
+   "reason": "投了"
+  },
+  {
+   "a": 12,
+   "b": 13,
+   "scoreA": 1,
+   "plies": 96,
+   "reason": "投了"
+  },
+  {
+   "a": 12,
+   "b": 13,
+   "scoreA": 0,
+   "plies": 118,
+   "reason": "投了"
+  },
+  {
+   "a": 12,
+   "b": 13,
+   "scoreA": 1,
+   "plies": 119,
+   "reason": "投了"
+  },
+  {
+   "a": 12,
+   "b": 13,
+   "scoreA": 1,
+   "plies": 108,
+   "reason": "詰み"
+  },
+  {
+   "a": 12,
+   "b": 13,
+   "scoreA": 0,
+   "plies": 56,
+   "reason": "投了"
+  },
+  {
+   "a": 12,
+   "b": 13,
+   "scoreA": 1,
+   "plies": 93,
+   "reason": "投了"
+  },
+  {
+   "a": 12,
+   "b": 13,
+   "scoreA": 1,
+   "plies": 126,
+   "reason": "投了"
+  },
+  {
+   "a": 12,
+   "b": 13,
+   "scoreA": 1,
+   "plies": 60,
+   "reason": "投了"
+  },
+  {
+   "a": 12,
+   "b": 13,
+   "scoreA": 0,
+   "plies": 121,
+   "reason": "投了"
+  },
+  {
+   "a": 12,
+   "b": 13,
+   "scoreA": 1,
+   "plies": 105,
+   "reason": "投了"
+  },
+  {
+   "a": 12,
+   "b": 13,
+   "scoreA": 0,
+   "plies": 160,
+   "reason": "投了"
+  },
+  {
+   "a": 12,
+   "b": 13,
+   "scoreA": 0,
+   "plies": 99,
+   "reason": "投了"
+  },
+  {
+   "a": 12,
+   "b": 14,
+   "scoreA": 0,
+   "plies": 94,
+   "reason": "投了"
+  },
+  {
+   "a": 12,
+   "b": 14,
+   "scoreA": 0,
+   "plies": 54,
+   "reason": "投了"
+  },
+  {
+   "a": 12,
+   "b": 14,
+   "scoreA": 1,
+   "plies": 100,
+   "reason": "投了"
+  },
+  {
+   "a": 12,
+   "b": 14,
+   "scoreA": 0,
+   "plies": 81,
+   "reason": "投了"
+  },
+  {
+   "a": 12,
+   "b": 14,
+   "scoreA": 0,
+   "plies": 122,
+   "reason": "投了"
+  },
+  {
+   "a": 12,
+   "b": 14,
+   "scoreA": 1,
+   "plies": 92,
+   "reason": "投了"
+  },
+  {
+   "a": 12,
+   "b": 14,
+   "scoreA": 1,
+   "plies": 125,
+   "reason": "投了"
+  },
+  {
+   "a": 12,
+   "b": 14,
+   "scoreA": 1,
+   "plies": 128,
+   "reason": "投了"
+  },
+  {
+   "a": 12,
+   "b": 14,
+   "scoreA": 0,
+   "plies": 69,
+   "reason": "投了"
+  },
+  {
+   "a": 12,
+   "b": 14,
+   "scoreA": 1,
+   "plies": 117,
+   "reason": "投了"
+  },
+  {
+   "a": 12,
+   "b": 14,
+   "scoreA": 0,
+   "plies": 92,
+   "reason": "投了"
+  },
+  {
+   "a": 12,
+   "b": 14,
+   "scoreA": 0,
+   "plies": 117,
+   "reason": "投了"
+  },
+  {
+   "a": 12,
+   "b": 14,
+   "scoreA": 0,
+   "plies": 118,
+   "reason": "投了"
+  },
+  {
+   "a": 12,
+   "b": 14,
+   "scoreA": 0,
+   "plies": 83,
+   "reason": "投了"
+  },
+  {
+   "a": 12,
+   "b": 14,
+   "scoreA": 1,
+   "plies": 113,
+   "reason": "投了"
+  },
+  {
+   "a": 12,
+   "b": 14,
+   "scoreA": 0,
+   "plies": 183,
+   "reason": "投了"
+  },
+  {
+   "a": 13,
+   "b": 14,
+   "scoreA": 1,
+   "plies": 109,
+   "reason": "投了"
+  },
+  {
+   "a": 13,
+   "b": 14,
+   "scoreA": 1,
+   "plies": 76,
+   "reason": "投了"
+  },
+  {
+   "a": 13,
+   "b": 14,
+   "scoreA": 1,
+   "plies": 39,
+   "reason": "投了"
+  },
+  {
+   "a": 13,
+   "b": 14,
+   "scoreA": 0,
+   "plies": 74,
+   "reason": "投了"
+  },
+  {
+   "a": 13,
+   "b": 14,
+   "scoreA": 0,
+   "plies": 81,
+   "reason": "投了"
+  },
+  {
+   "a": 13,
+   "b": 14,
+   "scoreA": 0,
+   "plies": 81,
+   "reason": "投了"
+  },
+  {
+   "a": 13,
+   "b": 14,
+   "scoreA": 0,
+   "plies": 114,
+   "reason": "投了"
+  },
+  {
+   "a": 13,
+   "b": 14,
+   "scoreA": 0,
+   "plies": 113,
+   "reason": "詰み"
+  },
+  {
+   "a": 13,
+   "b": 14,
+   "scoreA": 1,
+   "plies": 159,
+   "reason": "投了"
+  },
+  {
+   "a": 13,
+   "b": 14,
+   "scoreA": 0,
+   "plies": 93,
+   "reason": "投了"
+  },
+  {
+   "a": 13,
+   "b": 14,
+   "scoreA": 0,
+   "plies": 80,
+   "reason": "投了"
+  },
+  {
+   "a": 13,
+   "b": 14,
+   "scoreA": 0,
+   "plies": 105,
+   "reason": "投了"
+  },
+  {
+   "a": 13,
+   "b": 14,
+   "scoreA": 1,
+   "plies": 107,
+   "reason": "投了"
+  },
+  {
+   "a": 13,
+   "b": 14,
+   "scoreA": 0,
+   "plies": 105,
+   "reason": "投了"
+  },
+  {
+   "a": 13,
+   "b": 14,
+   "scoreA": 0,
+   "plies": 84,
+   "reason": "詰み"
+  },
+  {
+   "a": 13,
+   "b": 14,
+   "scoreA": 0,
+   "plies": 69,
+   "reason": "投了"
+  },
+  {
+   "a": 13,
+   "b": 15,
+   "scoreA": 0,
+   "plies": 80,
+   "reason": "詰み"
+  },
+  {
+   "a": 13,
+   "b": 15,
+   "scoreA": 0,
+   "plies": 103,
+   "reason": "投了"
+  },
+  {
+   "a": 13,
+   "b": 15,
+   "scoreA": 0,
+   "plies": 91,
+   "reason": "投了"
+  },
+  {
+   "a": 13,
+   "b": 15,
+   "scoreA": 0,
+   "plies": 150,
+   "reason": "投了"
+  },
+  {
+   "a": 13,
+   "b": 15,
+   "scoreA": 0,
+   "plies": 106,
+   "reason": "投了"
+  },
+  {
+   "a": 13,
+   "b": 15,
+   "scoreA": 1,
+   "plies": 49,
+   "reason": "投了"
+  },
+  {
+   "a": 13,
+   "b": 15,
+   "scoreA": 0,
+   "plies": 89,
+   "reason": "投了"
+  },
+  {
+   "a": 13,
+   "b": 15,
+   "scoreA": 0,
+   "plies": 83,
+   "reason": "投了"
+  },
+  {
+   "a": 13,
+   "b": 15,
+   "scoreA": 0,
+   "plies": 92,
+   "reason": "投了"
+  },
+  {
+   "a": 13,
+   "b": 15,
+   "scoreA": 1,
+   "plies": 132,
+   "reason": "詰み"
+  },
+  {
+   "a": 13,
+   "b": 15,
+   "scoreA": 0,
+   "plies": 100,
+   "reason": "投了"
+  },
+  {
+   "a": 13,
+   "b": 15,
+   "scoreA": 1,
+   "plies": 85,
+   "reason": "投了"
+  },
+  {
+   "a": 13,
+   "b": 15,
+   "scoreA": 1,
+   "plies": 138,
+   "reason": "投了"
+  },
+  {
+   "a": 13,
+   "b": 15,
+   "scoreA": 0,
+   "plies": 72,
+   "reason": "投了"
+  },
+  {
+   "a": 13,
+   "b": 15,
+   "scoreA": 1,
+   "plies": 106,
+   "reason": "投了"
+  },
+  {
+   "a": 13,
+   "b": 15,
+   "scoreA": 1,
+   "plies": 146,
+   "reason": "投了"
+  },
+  {
+   "a": 14,
+   "b": 15,
+   "scoreA": 1,
+   "plies": 100,
+   "reason": "投了"
+  },
+  {
+   "a": 14,
+   "b": 15,
+   "scoreA": 0,
+   "plies": 120,
+   "reason": "投了"
+  },
+  {
+   "a": 14,
+   "b": 15,
+   "scoreA": 0,
+   "plies": 102,
+   "reason": "投了"
+  },
+  {
+   "a": 14,
+   "b": 15,
+   "scoreA": 0,
+   "plies": 71,
+   "reason": "投了"
+  },
+  {
+   "a": 14,
+   "b": 15,
+   "scoreA": 0,
+   "plies": 66,
+   "reason": "投了"
+  },
+  {
+   "a": 14,
+   "b": 15,
+   "scoreA": 1,
+   "plies": 116,
+   "reason": "投了"
+  },
+  {
+   "a": 14,
+   "b": 15,
+   "scoreA": 0,
+   "plies": 112,
+   "reason": "投了"
+  },
+  {
+   "a": 14,
+   "b": 15,
+   "scoreA": 0,
+   "plies": 81,
+   "reason": "投了"
+  },
+  {
+   "a": 14,
+   "b": 15,
+   "scoreA": 1,
+   "plies": 67,
+   "reason": "投了"
+  },
+  {
+   "a": 14,
+   "b": 15,
+   "scoreA": 0,
+   "plies": 114,
+   "reason": "投了"
+  },
+  {
+   "a": 14,
+   "b": 15,
+   "scoreA": 0,
+   "plies": 101,
+   "reason": "投了"
+  },
+  {
+   "a": 14,
+   "b": 15,
+   "scoreA": 1,
+   "plies": 62,
+   "reason": "投了"
+  },
+  {
+   "a": 14,
+   "b": 15,
+   "scoreA": 1,
+   "plies": 93,
+   "reason": "詰み"
+  },
+  {
+   "a": 14,
+   "b": 15,
+   "scoreA": 1,
+   "plies": 88,
+   "reason": "投了"
+  },
+  {
+   "a": 14,
+   "b": 15,
+   "scoreA": 0,
+   "plies": 122,
+   "reason": "詰み"
+  },
+  {
+   "a": 14,
+   "b": 16,
+   "scoreA": 1,
+   "plies": 85,
+   "reason": "投了"
+  },
+  {
+   "a": 14,
+   "b": 15,
+   "scoreA": 0,
+   "plies": 163,
+   "reason": "投了"
+  },
+  {
+   "a": 14,
+   "b": 16,
+   "scoreA": 1,
+   "plies": 47,
+   "reason": "投了"
+  },
+  {
+   "a": 14,
+   "b": 16,
+   "scoreA": 0,
+   "plies": 111,
+   "reason": "詰み"
+  },
+  {
+   "a": 14,
+   "b": 16,
+   "scoreA": 0,
+   "plies": 79,
+   "reason": "投了"
+  },
+  {
+   "a": 14,
+   "b": 16,
+   "scoreA": 0,
+   "plies": 114,
+   "reason": "投了"
+  },
+  {
+   "a": 14,
+   "b": 16,
+   "scoreA": 0,
+   "plies": 119,
+   "reason": "投了"
+  },
+  {
+   "a": 14,
+   "b": 16,
+   "scoreA": 1,
+   "plies": 99,
+   "reason": "投了"
+  },
+  {
+   "a": 14,
+   "b": 16,
+   "scoreA": 0,
+   "plies": 97,
+   "reason": "投了"
+  },
+  {
+   "a": 14,
+   "b": 16,
+   "scoreA": 0,
+   "plies": 92,
+   "reason": "投了"
+  },
+  {
+   "a": 14,
+   "b": 16,
+   "scoreA": 0,
+   "plies": 93,
+   "reason": "投了"
+  },
+  {
+   "a": 14,
+   "b": 16,
+   "scoreA": 0,
+   "plies": 80,
+   "reason": "投了"
+  },
+  {
+   "a": 14,
+   "b": 16,
+   "scoreA": 0,
+   "plies": 60,
+   "reason": "投了"
+  },
+  {
+   "a": 14,
+   "b": 16,
+   "scoreA": 0,
+   "plies": 117,
+   "reason": "投了"
+  },
+  {
+   "a": 14,
+   "b": 16,
+   "scoreA": 0,
+   "plies": 50,
+   "reason": "詰み"
+  },
+  {
+   "a": 14,
+   "b": 16,
+   "scoreA": 0,
+   "plies": 105,
+   "reason": "投了"
+  },
+  {
+   "a": 15,
+   "b": 16,
+   "scoreA": 0,
+   "plies": 76,
+   "reason": "投了"
+  },
+  {
+   "a": 14,
+   "b": 16,
+   "scoreA": 0,
+   "plies": 99,
+   "reason": "投了"
+  },
+  {
+   "a": 15,
+   "b": 16,
+   "scoreA": 0,
+   "plies": 64,
+   "reason": "投了"
+  },
+  {
+   "a": 15,
+   "b": 16,
+   "scoreA": 0,
+   "plies": 105,
+   "reason": "投了"
+  },
+  {
+   "a": 15,
+   "b": 16,
+   "scoreA": 1,
+   "plies": 112,
+   "reason": "投了"
+  },
+  {
+   "a": 15,
+   "b": 16,
+   "scoreA": 0,
+   "plies": 65,
+   "reason": "投了"
+  },
+  {
+   "a": 15,
+   "b": 16,
+   "scoreA": 0,
+   "plies": 94,
+   "reason": "投了"
+  },
+  {
+   "a": 15,
+   "b": 16,
+   "scoreA": 1,
+   "plies": 101,
+   "reason": "投了"
+  },
+  {
+   "a": 15,
+   "b": 16,
+   "scoreA": 0,
+   "plies": 111,
+   "reason": "投了"
+  },
+  {
+   "a": 15,
+   "b": 16,
+   "scoreA": 0,
+   "plies": 121,
+   "reason": "投了"
+  },
+  {
+   "a": 15,
+   "b": 16,
+   "scoreA": 0,
+   "plies": 88,
+   "reason": "投了"
+  },
+  {
+   "a": 15,
+   "b": 16,
+   "scoreA": 0,
+   "plies": 170,
+   "reason": "投了"
+  },
+  {
+   "a": 15,
+   "b": 16,
+   "scoreA": 1,
+   "plies": 116,
+   "reason": "詰み"
+  },
+  {
+   "a": 15,
+   "b": 16,
+   "scoreA": 0,
+   "plies": 62,
+   "reason": "投了"
+  },
+  {
+   "a": 15,
+   "b": 16,
+   "scoreA": 0,
+   "plies": 116,
+   "reason": "投了"
+  },
+  {
+   "a": 15,
+   "b": 16,
+   "scoreA": 0,
+   "plies": 91,
+   "reason": "投了"
+  },
+  {
+   "a": 15,
+   "b": 16,
+   "scoreA": 1,
+   "plies": 200,
+   "reason": "投了"
+  },
+  {
+   "a": 15,
+   "b": 17,
+   "scoreA": 0,
+   "plies": 85,
+   "reason": "投了"
+  },
+  {
+   "a": 15,
+   "b": 17,
+   "scoreA": 0,
+   "plies": 94,
+   "reason": "投了"
+  },
+  {
+   "a": 15,
+   "b": 17,
+   "scoreA": 1,
+   "plies": 83,
+   "reason": "投了"
+  },
+  {
+   "a": 15,
+   "b": 17,
+   "scoreA": 0,
+   "plies": 71,
+   "reason": "投了"
+  },
+  {
+   "a": 15,
+   "b": 17,
+   "scoreA": 0,
+   "plies": 143,
+   "reason": "投了"
+  },
+  {
+   "a": 15,
+   "b": 17,
+   "scoreA": 1,
+   "plies": 157,
+   "reason": "投了"
+  },
+  {
+   "a": 15,
+   "b": 17,
+   "scoreA": 0,
+   "plies": 168,
+   "reason": "投了"
+  },
+  {
+   "a": 15,
+   "b": 17,
+   "scoreA": 0,
+   "plies": 102,
+   "reason": "投了"
+  },
+  {
+   "a": 15,
+   "b": 17,
+   "scoreA": 1,
+   "plies": 168,
+   "reason": "投了"
+  },
+  {
+   "a": 15,
+   "b": 17,
+   "scoreA": 0,
+   "plies": 133,
+   "reason": "投了"
+  },
+  {
+   "a": 15,
+   "b": 17,
+   "scoreA": 0,
+   "plies": 71,
+   "reason": "投了"
+  },
+  {
+   "a": 15,
+   "b": 17,
+   "scoreA": 0,
+   "plies": 82,
+   "reason": "投了"
+  },
+  {
+   "a": 15,
+   "b": 17,
+   "scoreA": 0,
+   "plies": 98,
+   "reason": "投了"
+  },
+  {
+   "a": 15,
+   "b": 17,
+   "scoreA": 0,
+   "plies": 85,
+   "reason": "投了"
+  },
+  {
+   "a": 15,
+   "b": 17,
+   "scoreA": 0,
+   "plies": 71,
+   "reason": "投了"
+  },
+  {
+   "a": 16,
+   "b": 17,
+   "scoreA": 0,
+   "plies": 76,
+   "reason": "投了"
+  },
+  {
+   "a": 15,
+   "b": 17,
+   "scoreA": 1,
+   "plies": 107,
+   "reason": "投了"
+  },
+  {
+   "a": 16,
+   "b": 17,
+   "scoreA": 1,
+   "plies": 67,
+   "reason": "投了"
+  },
+  {
+   "a": 16,
+   "b": 17,
+   "scoreA": 1,
+   "plies": 88,
+   "reason": "投了"
+  },
+  {
+   "a": 16,
+   "b": 17,
+   "scoreA": 0,
+   "plies": 102,
+   "reason": "投了"
+  },
+  {
+   "a": 16,
+   "b": 17,
+   "scoreA": 0,
+   "plies": 115,
+   "reason": "投了"
+  },
+  {
+   "a": 16,
+   "b": 17,
+   "scoreA": 0,
+   "plies": 78,
+   "reason": "投了"
+  },
+  {
+   "a": 16,
+   "b": 17,
+   "scoreA": 0,
+   "plies": 93,
+   "reason": "投了"
+  },
+  {
+   "a": 16,
+   "b": 17,
+   "scoreA": 1,
+   "plies": 74,
+   "reason": "投了"
+  },
+  {
+   "a": 16,
+   "b": 17,
+   "scoreA": 0,
+   "plies": 163,
+   "reason": "投了"
+  },
+  {
+   "a": 16,
+   "b": 17,
+   "scoreA": 0,
+   "plies": 132,
+   "reason": "投了"
+  },
+  {
+   "a": 16,
+   "b": 17,
+   "scoreA": 1,
+   "plies": 85,
+   "reason": "投了"
+  },
+  {
+   "a": 16,
+   "b": 17,
+   "scoreA": 1,
+   "plies": 72,
+   "reason": "投了"
+  },
+  {
+   "a": 16,
+   "b": 17,
+   "scoreA": 1,
+   "plies": 95,
+   "reason": "投了"
+  },
+  {
+   "a": 16,
+   "b": 17,
+   "scoreA": 1,
+   "plies": 108,
+   "reason": "投了"
+  },
+  {
+   "a": 16,
+   "b": 17,
+   "scoreA": 0,
+   "plies": 108,
+   "reason": "投了"
+  },
+  {
+   "a": 16,
+   "b": 18,
+   "scoreA": 1,
+   "plies": 113,
+   "reason": "投了"
+  },
+  {
+   "a": 16,
+   "b": 18,
+   "scoreA": 1,
+   "plies": 88,
+   "reason": "投了"
+  },
+  {
+   "a": 16,
+   "b": 18,
+   "scoreA": 0,
+   "plies": 90,
+   "reason": "投了"
+  },
+  {
+   "a": 16,
+   "b": 17,
+   "scoreA": 1,
+   "plies": 196,
+   "reason": "投了"
+  },
+  {
+   "a": 16,
+   "b": 18,
+   "scoreA": 0,
+   "plies": 78,
+   "reason": "詰み"
+  },
+  {
+   "a": 16,
+   "b": 18,
+   "scoreA": 1,
+   "plies": 128,
+   "reason": "投了"
+  },
+  {
+   "a": 16,
+   "b": 18,
+   "scoreA": 0,
+   "plies": 140,
+   "reason": "投了"
+  },
+  {
+   "a": 16,
+   "b": 18,
+   "scoreA": 0,
+   "plies": 64,
+   "reason": "投了"
+  },
+  {
+   "a": 16,
+   "b": 18,
+   "scoreA": 1,
+   "plies": 194,
+   "reason": "投了"
+  },
+  {
+   "a": 16,
+   "b": 18,
+   "scoreA": 0,
+   "plies": 95,
+   "reason": "投了"
+  },
+  {
+   "a": 16,
+   "b": 18,
+   "scoreA": 0,
+   "plies": 149,
+   "reason": "投了"
+  },
+  {
+   "a": 16,
+   "b": 18,
+   "scoreA": 1,
+   "plies": 86,
+   "reason": "投了"
+  },
+  {
+   "a": 16,
+   "b": 18,
+   "scoreA": 0,
+   "plies": 82,
+   "reason": "投了"
+  },
+  {
+   "a": 16,
+   "b": 18,
+   "scoreA": 0,
+   "plies": 83,
+   "reason": "投了"
+  },
+  {
+   "a": 16,
+   "b": 18,
+   "scoreA": 0,
+   "plies": 178,
+   "reason": "投了"
+  },
+  {
+   "a": 17,
+   "b": 18,
+   "scoreA": 1,
+   "plies": 81,
+   "reason": "投了"
+  },
+  {
+   "a": 16,
+   "b": 18,
+   "scoreA": 0,
+   "plies": 120,
+   "reason": "投了"
+  },
+  {
+   "a": 16,
+   "b": 18,
+   "scoreA": 1,
+   "plies": 112,
+   "reason": "投了"
+  },
+  {
+   "a": 17,
+   "b": 18,
+   "scoreA": 0,
+   "plies": 85,
+   "reason": "投了"
+  },
+  {
+   "a": 17,
+   "b": 18,
+   "scoreA": 0,
+   "plies": 82,
+   "reason": "投了"
+  },
+  {
+   "a": 17,
+   "b": 18,
+   "scoreA": 1,
+   "plies": 94,
+   "reason": "投了"
+  },
+  {
+   "a": 17,
+   "b": 18,
+   "scoreA": 0,
+   "plies": 109,
+   "reason": "投了"
+  },
+  {
+   "a": 17,
+   "b": 18,
+   "scoreA": 1,
+   "plies": 123,
+   "reason": "投了"
+  },
+  {
+   "a": 17,
+   "b": 18,
+   "scoreA": 1,
+   "plies": 91,
+   "reason": "投了"
+  },
+  {
+   "a": 17,
+   "b": 18,
+   "scoreA": 1,
+   "plies": 89,
+   "reason": "投了"
+  },
+  {
+   "a": 17,
+   "b": 18,
+   "scoreA": 0,
+   "plies": 87,
+   "reason": "投了"
+  },
+  {
+   "a": 17,
+   "b": 18,
+   "scoreA": 1,
+   "plies": 108,
+   "reason": "投了"
+  },
+  {
+   "a": 17,
+   "b": 18,
+   "scoreA": 1,
+   "plies": 109,
+   "reason": "投了"
+  },
+  {
+   "a": 17,
+   "b": 18,
+   "scoreA": 0,
+   "plies": 102,
+   "reason": "投了"
+  },
+  {
+   "a": 17,
+   "b": 18,
+   "scoreA": 0,
+   "plies": 133,
+   "reason": "投了"
+  },
+  {
+   "a": 17,
+   "b": 18,
+   "scoreA": 1,
+   "plies": 152,
+   "reason": "投了"
+  },
+  {
+   "a": 17,
+   "b": 18,
+   "scoreA": 0,
+   "plies": 105,
+   "reason": "投了"
+  },
+  {
+   "a": 17,
+   "b": 18,
+   "scoreA": 0,
+   "plies": 142,
+   "reason": "投了"
+  },
+  {
+   "a": 17,
+   "b": 19,
+   "scoreA": 0,
+   "plies": 57,
+   "reason": "投了"
+  },
+  {
+   "a": 17,
+   "b": 19,
+   "scoreA": 1,
+   "plies": 97,
+   "reason": "投了"
+  },
+  {
+   "a": 17,
+   "b": 19,
+   "scoreA": 0,
+   "plies": 126,
+   "reason": "投了"
+  },
+  {
+   "a": 17,
+   "b": 19,
+   "scoreA": 0,
+   "plies": 112,
+   "reason": "投了"
+  },
+  {
+   "a": 17,
+   "b": 19,
+   "scoreA": 0,
+   "plies": 113,
+   "reason": "投了"
+  },
+  {
+   "a": 17,
+   "b": 19,
+   "scoreA": 0,
+   "plies": 137,
+   "reason": "投了"
+  },
+  {
+   "a": 17,
+   "b": 19,
+   "scoreA": 1,
+   "plies": 79,
+   "reason": "投了"
+  },
+  {
+   "a": 17,
+   "b": 19,
+   "scoreA": 0,
+   "plies": 99,
+   "reason": "投了"
+  },
+  {
+   "a": 17,
+   "b": 19,
+   "scoreA": 0,
+   "plies": 124,
+   "reason": "投了"
+  },
+  {
+   "a": 17,
+   "b": 19,
+   "scoreA": 1,
+   "plies": 91,
+   "reason": "投了"
+  },
+  {
+   "a": 17,
+   "b": 19,
+   "scoreA": 0,
+   "plies": 147,
+   "reason": "投了"
+  },
+  {
+   "a": 17,
+   "b": 19,
+   "scoreA": 1,
+   "plies": 119,
+   "reason": "投了"
+  },
+  {
+   "a": 17,
+   "b": 19,
+   "scoreA": 0,
+   "plies": 163,
+   "reason": "投了"
+  },
+  {
+   "a": 17,
+   "b": 19,
+   "scoreA": 0,
+   "plies": 83,
+   "reason": "投了"
+  },
+  {
+   "a": 17,
+   "b": 19,
+   "scoreA": 1,
+   "plies": 113,
+   "reason": "投了"
+  },
+  {
+   "a": 17,
+   "b": 19,
+   "scoreA": 0,
+   "plies": 73,
+   "reason": "投了"
+  },
+  {
+   "a": 18,
+   "b": 19,
+   "scoreA": 0,
+   "plies": 93,
+   "reason": "投了"
+  },
+  {
+   "a": 18,
+   "b": 19,
+   "scoreA": 0,
+   "plies": 96,
+   "reason": "投了"
+  },
+  {
+   "a": 18,
+   "b": 19,
+   "scoreA": 0,
+   "plies": 95,
+   "reason": "投了"
+  },
+  {
+   "a": 18,
+   "b": 19,
+   "scoreA": 0,
+   "plies": 80,
+   "reason": "投了"
+  },
+  {
+   "a": 18,
+   "b": 19,
+   "scoreA": 1,
+   "plies": 145,
+   "reason": "投了"
+  },
+  {
+   "a": 18,
+   "b": 19,
+   "scoreA": 1,
+   "plies": 116,
+   "reason": "投了"
+  },
+  {
+   "a": 18,
+   "b": 19,
+   "scoreA": 0,
+   "plies": 80,
+   "reason": "投了"
+  },
+  {
+   "a": 18,
+   "b": 19,
+   "scoreA": 1,
+   "plies": 78,
+   "reason": "投了"
+  },
+  {
+   "a": 18,
+   "b": 19,
+   "scoreA": 0,
+   "plies": 110,
+   "reason": "投了"
+  },
+  {
+   "a": 18,
+   "b": 19,
+   "scoreA": 0,
+   "plies": 129,
+   "reason": "投了"
+  },
+  {
+   "a": 18,
+   "b": 19,
+   "scoreA": 0,
+   "plies": 96,
+   "reason": "投了"
+  },
+  {
+   "a": 18,
+   "b": 19,
+   "scoreA": 0,
+   "plies": 62,
+   "reason": "投了"
+  },
+  {
+   "a": 18,
+   "b": 19,
+   "scoreA": 0,
+   "plies": 101,
+   "reason": "投了"
+  },
+  {
+   "a": 18,
+   "b": 19,
+   "scoreA": 0,
+   "plies": 82,
+   "reason": "投了"
+  },
+  {
+   "a": 18,
+   "b": 19,
+   "scoreA": 0,
+   "plies": 59,
+   "reason": "詰み"
+  },
+  {
+   "a": 18,
+   "b": 19,
+   "scoreA": 1,
+   "plies": 112,
+   "reason": "投了"
+  },
+  {
+   "a": 18,
+   "b": 20,
+   "scoreA": 0,
+   "plies": 69,
+   "reason": "投了"
+  },
+  {
+   "a": 18,
+   "b": 20,
+   "scoreA": 0,
+   "plies": 98,
+   "reason": "投了"
+  },
+  {
+   "a": 18,
+   "b": 20,
+   "scoreA": 0,
+   "plies": 94,
+   "reason": "投了"
+  },
+  {
+   "a": 18,
+   "b": 20,
+   "scoreA": 1,
+   "plies": 110,
+   "reason": "投了"
+  },
+  {
+   "a": 18,
+   "b": 20,
+   "scoreA": 0,
+   "plies": 74,
+   "reason": "投了"
+  },
+  {
+   "a": 18,
+   "b": 20,
+   "scoreA": 0,
+   "plies": 90,
+   "reason": "投了"
+  },
+  {
+   "a": 18,
+   "b": 20,
+   "scoreA": 1,
+   "plies": 136,
+   "reason": "投了"
+  },
+  {
+   "a": 18,
+   "b": 20,
+   "scoreA": 0,
+   "plies": 117,
+   "reason": "投了"
+  },
+  {
+   "a": 18,
+   "b": 20,
+   "scoreA": 0,
+   "plies": 88,
+   "reason": "投了"
+  },
+  {
+   "a": 18,
+   "b": 20,
+   "scoreA": 1,
+   "plies": 94,
+   "reason": "投了"
+  },
+  {
+   "a": 18,
+   "b": 20,
+   "scoreA": 1,
+   "plies": 57,
+   "reason": "投了"
+  },
+  {
+   "a": 18,
+   "b": 20,
+   "scoreA": 0,
+   "plies": 66,
+   "reason": "投了"
+  },
+  {
+   "a": 18,
+   "b": 20,
+   "scoreA": 1,
+   "plies": 112,
+   "reason": "投了"
+  },
+  {
+   "a": 18,
+   "b": 20,
+   "scoreA": 0,
+   "plies": 76,
+   "reason": "詰み"
+  },
+  {
+   "a": 18,
+   "b": 20,
+   "scoreA": 0,
+   "plies": 91,
+   "reason": "投了"
+  },
+  {
+   "a": 18,
+   "b": 20,
+   "scoreA": 1,
+   "plies": 130,
+   "reason": "投了"
+  },
+  {
+   "a": 19,
+   "b": 20,
+   "scoreA": 0,
+   "plies": 98,
+   "reason": "投了"
+  },
+  {
+   "a": 19,
+   "b": 20,
+   "scoreA": 0,
+   "plies": 72,
+   "reason": "投了"
+  },
+  {
+   "a": 19,
+   "b": 20,
+   "scoreA": 1,
+   "plies": 88,
+   "reason": "投了"
+  },
+  {
+   "a": 19,
+   "b": 20,
+   "scoreA": 1,
+   "plies": 61,
+   "reason": "投了"
+  },
+  {
+   "a": 19,
+   "b": 20,
+   "scoreA": 0,
+   "plies": 99,
+   "reason": "投了"
+  },
+  {
+   "a": 19,
+   "b": 20,
+   "scoreA": 1,
+   "plies": 96,
+   "reason": "投了"
+  },
+  {
+   "a": 19,
+   "b": 20,
+   "scoreA": 1,
+   "plies": 125,
+   "reason": "投了"
+  },
+  {
+   "a": 19,
+   "b": 20,
+   "scoreA": 1,
+   "plies": 64,
+   "reason": "投了"
+  },
+  {
+   "a": 19,
+   "b": 20,
+   "scoreA": 1,
+   "plies": 136,
+   "reason": "投了"
+  },
+  {
+   "a": 19,
+   "b": 20,
+   "scoreA": 0,
+   "plies": 128,
+   "reason": "投了"
+  },
+  {
+   "a": 19,
+   "b": 20,
+   "scoreA": 1,
+   "plies": 95,
+   "reason": "投了"
+  },
+  {
+   "a": 19,
+   "b": 20,
+   "scoreA": 1,
+   "plies": 31,
+   "reason": "投了"
+  },
+  {
+   "a": 19,
+   "b": 20,
+   "scoreA": 1,
+   "plies": 86,
+   "reason": "投了"
+  },
+  {
+   "a": 19,
+   "b": 20,
+   "scoreA": 0,
+   "plies": 50,
+   "reason": "投了"
+  },
+  {
+   "a": 19,
+   "b": 20,
+   "scoreA": 1,
+   "plies": 72,
+   "reason": "投了"
+  },
+  {
+   "a": 19,
+   "b": 21,
+   "scoreA": 1,
+   "plies": 55,
+   "reason": "投了"
+  },
+  {
+   "a": 19,
+   "b": 20,
+   "scoreA": 0,
+   "plies": 101,
+   "reason": "投了"
+  },
+  {
+   "a": 19,
+   "b": 21,
+   "scoreA": 1,
+   "plies": 75,
+   "reason": "投了"
+  },
+  {
+   "a": 19,
+   "b": 21,
+   "scoreA": 1,
+   "plies": 88,
+   "reason": "投了"
+  },
+  {
+   "a": 19,
+   "b": 21,
+   "scoreA": 0,
+   "plies": 99,
+   "reason": "投了"
+  },
+  {
+   "a": 19,
+   "b": 21,
+   "scoreA": 1,
+   "plies": 81,
+   "reason": "投了"
+  },
+  {
+   "a": 19,
+   "b": 21,
+   "scoreA": 0,
+   "plies": 86,
+   "reason": "投了"
+  },
+  {
+   "a": 19,
+   "b": 21,
+   "scoreA": 1,
+   "plies": 88,
+   "reason": "投了"
+  },
+  {
+   "a": 19,
+   "b": 21,
+   "scoreA": 1,
+   "plies": 125,
+   "reason": "投了"
+  },
+  {
+   "a": 19,
+   "b": 21,
+   "scoreA": 0,
+   "plies": 137,
+   "reason": "投了"
+  },
+  {
+   "a": 19,
+   "b": 21,
+   "scoreA": 0,
+   "plies": 99,
+   "reason": "投了"
+  },
+  {
+   "a": 19,
+   "b": 21,
+   "scoreA": 1,
+   "plies": 97,
+   "reason": "投了"
+  },
+  {
+   "a": 19,
+   "b": 21,
+   "scoreA": 0,
+   "plies": 102,
+   "reason": "投了"
+  },
+  {
+   "a": 19,
+   "b": 21,
+   "scoreA": 0,
+   "plies": 111,
+   "reason": "投了"
+  },
+  {
+   "a": 19,
+   "b": 21,
+   "scoreA": 0,
+   "plies": 77,
+   "reason": "投了"
+  },
+  {
+   "a": 19,
+   "b": 21,
+   "scoreA": 0,
+   "plies": 85,
+   "reason": "投了"
+  },
+  {
+   "a": 20,
+   "b": 21,
+   "scoreA": 0,
+   "plies": 100,
+   "reason": "投了"
+  },
+  {
+   "a": 20,
+   "b": 21,
+   "scoreA": 1,
+   "plies": 90,
+   "reason": "投了"
+  },
+  {
+   "a": 19,
+   "b": 21,
+   "scoreA": 0,
+   "plies": 168,
+   "reason": "投了"
+  },
+  {
+   "a": 20,
+   "b": 21,
+   "scoreA": 0,
+   "plies": 78,
+   "reason": "投了"
+  },
+  {
+   "a": 20,
+   "b": 21,
+   "scoreA": 0,
+   "plies": 107,
+   "reason": "投了"
+  },
+  {
+   "a": 20,
+   "b": 21,
+   "scoreA": 0,
+   "plies": 114,
+   "reason": "投了"
+  },
+  {
+   "a": 20,
+   "b": 21,
+   "scoreA": 0,
+   "plies": 59,
+   "reason": "投了"
+  },
+  {
+   "a": 20,
+   "b": 21,
+   "scoreA": 1,
+   "plies": 118,
+   "reason": "投了"
+  },
+  {
+   "a": 20,
+   "b": 21,
+   "scoreA": 0,
+   "plies": 122,
+   "reason": "詰み"
+  },
+  {
+   "a": 20,
+   "b": 21,
+   "scoreA": 1,
+   "plies": 97,
+   "reason": "投了"
+  },
+  {
+   "a": 20,
+   "b": 21,
+   "scoreA": 1,
+   "plies": 114,
+   "reason": "投了"
+  },
+  {
+   "a": 20,
+   "b": 21,
+   "scoreA": 1,
+   "plies": 129,
+   "reason": "投了"
+  },
+  {
+   "a": 20,
+   "b": 21,
+   "scoreA": 0,
+   "plies": 145,
+   "reason": "投了"
+  },
+  {
+   "a": 20,
+   "b": 21,
+   "scoreA": 0,
+   "plies": 63,
+   "reason": "投了"
+  },
+  {
+   "a": 20,
+   "b": 21,
+   "scoreA": 0,
+   "plies": 96,
+   "reason": "投了"
+  },
+  {
+   "a": 20,
+   "b": 21,
+   "scoreA": 0,
+   "plies": 124,
+   "reason": "投了"
+  },
+  {
+   "a": 20,
+   "b": 21,
+   "scoreA": 1,
+   "plies": 114,
+   "reason": "詰み"
+  },
+  {
+   "a": 20,
+   "b": 22,
+   "scoreA": 0,
+   "plies": 128,
+   "reason": "投了"
+  },
+  {
+   "a": 20,
+   "b": 22,
+   "scoreA": 0,
+   "plies": 129,
+   "reason": "投了"
+  },
+  {
+   "a": 20,
+   "b": 22,
+   "scoreA": 0,
+   "plies": 96,
+   "reason": "投了"
+  },
+  {
+   "a": 20,
+   "b": 22,
+   "scoreA": 1,
+   "plies": 90,
+   "reason": "投了"
+  },
+  {
+   "a": 20,
+   "b": 22,
+   "scoreA": 1,
+   "plies": 85,
+   "reason": "投了"
+  },
+  {
+   "a": 20,
+   "b": 22,
+   "scoreA": 1,
+   "plies": 88,
+   "reason": "投了"
+  },
+  {
+   "a": 20,
+   "b": 22,
+   "scoreA": 0,
+   "plies": 75,
+   "reason": "詰み"
+  },
+  {
+   "a": 20,
+   "b": 22,
+   "scoreA": 0,
+   "plies": 112,
+   "reason": "投了"
+  },
+  {
+   "a": 20,
+   "b": 22,
+   "scoreA": 0,
+   "plies": 98,
+   "reason": "投了"
+  },
+  {
+   "a": 20,
+   "b": 22,
+   "scoreA": 0,
+   "plies": 111,
+   "reason": "投了"
+  },
+  {
+   "a": 20,
+   "b": 22,
+   "scoreA": 0,
+   "plies": 114,
+   "reason": "投了"
+  },
+  {
+   "a": 20,
+   "b": 22,
+   "scoreA": 0,
+   "plies": 93,
+   "reason": "投了"
+  },
+  {
+   "a": 20,
+   "b": 22,
+   "scoreA": 1,
+   "plies": 85,
+   "reason": "投了"
+  },
+  {
+   "a": 20,
+   "b": 22,
+   "scoreA": 0,
+   "plies": 107,
+   "reason": "投了"
+  },
+  {
+   "a": 20,
+   "b": 22,
+   "scoreA": 0,
+   "plies": 118,
+   "reason": "投了"
+  },
+  {
+   "a": 21,
+   "b": 22,
+   "scoreA": 1,
+   "plies": 85,
+   "reason": "投了"
+  },
+  {
+   "a": 20,
+   "b": 22,
+   "scoreA": 0,
+   "plies": 149,
+   "reason": "投了"
+  },
+  {
+   "a": 21,
+   "b": 22,
+   "scoreA": 0,
+   "plies": 119,
+   "reason": "投了"
+  },
+  {
+   "a": 21,
+   "b": 22,
+   "scoreA": 0,
+   "plies": 73,
+   "reason": "投了"
+  },
+  {
+   "a": 21,
+   "b": 22,
+   "scoreA": 0,
+   "plies": 100,
+   "reason": "投了"
+  },
+  {
+   "a": 21,
+   "b": 22,
+   "scoreA": 0,
+   "plies": 128,
+   "reason": "投了"
+  },
+  {
+   "a": 21,
+   "b": 22,
+   "scoreA": 1,
+   "plies": 104,
+   "reason": "投了"
+  },
+  {
+   "a": 21,
+   "b": 22,
+   "scoreA": 0,
+   "plies": 110,
+   "reason": "詰み"
+  },
+  {
+   "a": 21,
+   "b": 22,
+   "scoreA": 1,
+   "plies": 108,
+   "reason": "投了"
+  },
+  {
+   "a": 21,
+   "b": 22,
+   "scoreA": 1,
+   "plies": 64,
+   "reason": "投了"
+  },
+  {
+   "a": 21,
+   "b": 22,
+   "scoreA": 1,
+   "plies": 95,
+   "reason": "投了"
+  },
+  {
+   "a": 21,
+   "b": 22,
+   "scoreA": 1,
+   "plies": 112,
+   "reason": "投了"
+  },
+  {
+   "a": 21,
+   "b": 22,
+   "scoreA": 0,
+   "plies": 80,
+   "reason": "投了"
+  },
+  {
+   "a": 21,
+   "b": 22,
+   "scoreA": 0,
+   "plies": 85,
+   "reason": "投了"
+  },
+  {
+   "a": 21,
+   "b": 22,
+   "scoreA": 1,
+   "plies": 185,
+   "reason": "投了"
+  },
+  {
+   "a": 21,
+   "b": 22,
+   "scoreA": 1,
+   "plies": 72,
+   "reason": "投了"
+  },
+  {
+   "a": 21,
+   "b": 22,
+   "scoreA": 0,
+   "plies": 104,
+   "reason": "投了"
+  },
+  {
+   "a": 21,
+   "b": 23,
+   "scoreA": 1,
+   "plies": 89,
+   "reason": "投了"
+  },
+  {
+   "a": 21,
+   "b": 23,
+   "scoreA": 0,
+   "plies": 101,
+   "reason": "投了"
+  },
+  {
+   "a": 21,
+   "b": 23,
+   "scoreA": 0,
+   "plies": 88,
+   "reason": "投了"
+  },
+  {
+   "a": 21,
+   "b": 23,
+   "scoreA": 1,
+   "plies": 86,
+   "reason": "投了"
+  },
+  {
+   "a": 21,
+   "b": 23,
+   "scoreA": 0,
+   "plies": 114,
+   "reason": "投了"
+  },
+  {
+   "a": 21,
+   "b": 23,
+   "scoreA": 0,
+   "plies": 91,
+   "reason": "投了"
+  },
+  {
+   "a": 21,
+   "b": 23,
+   "scoreA": 0,
+   "plies": 106,
+   "reason": "投了"
+  },
+  {
+   "a": 21,
+   "b": 23,
+   "scoreA": 0,
+   "plies": 99,
+   "reason": "投了"
+  },
+  {
+   "a": 21,
+   "b": 23,
+   "scoreA": 1,
+   "plies": 67,
+   "reason": "投了"
+  },
+  {
+   "a": 21,
+   "b": 23,
+   "scoreA": 1,
+   "plies": 112,
+   "reason": "投了"
+  },
+  {
+   "a": 21,
+   "b": 23,
+   "scoreA": 0,
+   "plies": 100,
+   "reason": "投了"
+  },
+  {
+   "a": 21,
+   "b": 23,
+   "scoreA": 1,
+   "plies": 116,
+   "reason": "投了"
+  },
+  {
+   "a": 21,
+   "b": 23,
+   "scoreA": 0,
+   "plies": 100,
+   "reason": "投了"
+  },
+  {
+   "a": 21,
+   "b": 23,
+   "scoreA": 0,
+   "plies": 75,
+   "reason": "投了"
+  },
+  {
+   "a": 21,
+   "b": 23,
+   "scoreA": 0,
+   "plies": 84,
+   "reason": "投了"
+  },
+  {
+   "a": 21,
+   "b": 23,
+   "scoreA": 0,
+   "plies": 99,
+   "reason": "投了"
+  },
+  {
+   "a": 22,
+   "b": 23,
+   "scoreA": 1,
+   "plies": 95,
+   "reason": "投了"
+  },
+  {
+   "a": 22,
+   "b": 23,
+   "scoreA": 0,
+   "plies": 127,
+   "reason": "投了"
+  },
+  {
+   "a": 22,
+   "b": 23,
+   "scoreA": 0,
+   "plies": 95,
+   "reason": "投了"
+  },
+  {
+   "a": 22,
+   "b": 23,
+   "scoreA": 1,
+   "plies": 179,
+   "reason": "投了"
+  },
+  {
+   "a": 22,
+   "b": 23,
+   "scoreA": 1,
+   "plies": 94,
+   "reason": "投了"
+  },
+  {
+   "a": 22,
+   "b": 23,
+   "scoreA": 1,
+   "plies": 117,
+   "reason": "投了"
+  },
+  {
+   "a": 22,
+   "b": 23,
+   "scoreA": 1,
+   "plies": 101,
+   "reason": "投了"
+  },
+  {
+   "a": 22,
+   "b": 23,
+   "scoreA": 0,
+   "plies": 129,
+   "reason": "投了"
+  },
+  {
+   "a": 22,
+   "b": 23,
+   "scoreA": 0,
+   "plies": 62,
+   "reason": "投了"
+  },
+  {
+   "a": 22,
+   "b": 23,
+   "scoreA": 1,
+   "plies": 36,
+   "reason": "投了"
+  },
+  {
+   "a": 22,
+   "b": 23,
+   "scoreA": 0,
+   "plies": 93,
+   "reason": "投了"
+  },
+  {
+   "a": 22,
+   "b": 23,
+   "scoreA": 0,
+   "plies": 86,
+   "reason": "投了"
+  },
+  {
+   "a": 22,
+   "b": 23,
+   "scoreA": 0,
+   "plies": 69,
+   "reason": "詰み"
+  },
+  {
+   "a": 22,
+   "b": 23,
+   "scoreA": 1,
+   "plies": 95,
+   "reason": "投了"
+  },
+  {
+   "a": 22,
+   "b": 23,
+   "scoreA": 0,
+   "plies": 96,
+   "reason": "投了"
+  },
+  {
+   "a": 22,
+   "b": 23,
+   "scoreA": 1,
+   "plies": 90,
+   "reason": "投了"
+  },
+  {
+   "a": 22,
+   "b": 24,
+   "scoreA": 1,
+   "plies": 89,
+   "reason": "投了"
+  },
+  {
+   "a": 22,
+   "b": 24,
+   "scoreA": 0,
+   "plies": 99,
+   "reason": "投了"
+  },
+  {
+   "a": 22,
+   "b": 24,
+   "scoreA": 0,
+   "plies": 97,
+   "reason": "投了"
+  },
+  {
+   "a": 22,
+   "b": 24,
+   "scoreA": 0,
+   "plies": 72,
+   "reason": "投了"
+  },
+  {
+   "a": 22,
+   "b": 24,
+   "scoreA": 0,
+   "plies": 89,
+   "reason": "投了"
+  },
+  {
+   "a": 22,
+   "b": 24,
+   "scoreA": 0,
+   "plies": 60,
+   "reason": "投了"
+  },
+  {
+   "a": 22,
+   "b": 24,
+   "scoreA": 1,
+   "plies": 209,
+   "reason": "投了"
+  },
+  {
+   "a": 22,
+   "b": 24,
+   "scoreA": 1,
+   "plies": 98,
+   "reason": "投了"
+  },
+  {
+   "a": 22,
+   "b": 24,
+   "scoreA": 0,
+   "plies": 136,
+   "reason": "投了"
+  },
+  {
+   "a": 22,
+   "b": 24,
+   "scoreA": 0,
+   "plies": 63,
+   "reason": "投了"
+  },
+  {
+   "a": 22,
+   "b": 24,
+   "scoreA": 1,
+   "plies": 76,
+   "reason": "投了"
+  },
+  {
+   "a": 22,
+   "b": 24,
+   "scoreA": 0,
+   "plies": 64,
+   "reason": "投了"
+  },
+  {
+   "a": 22,
+   "b": 24,
+   "scoreA": 0,
+   "plies": 116,
+   "reason": "投了"
+  },
+  {
+   "a": 22,
+   "b": 24,
+   "scoreA": 0,
+   "plies": 131,
+   "reason": "投了"
+  },
+  {
+   "a": 22,
+   "b": 24,
+   "scoreA": 0,
+   "plies": 116,
+   "reason": "詰み"
+  },
+  {
+   "a": 23,
+   "b": 24,
+   "scoreA": 0,
+   "plies": 92,
+   "reason": "投了"
+  },
+  {
+   "a": 22,
+   "b": 24,
+   "scoreA": 0,
+   "plies": 149,
+   "reason": "投了"
+  },
+  {
+   "a": 23,
+   "b": 24,
+   "scoreA": 0,
+   "plies": 80,
+   "reason": "投了"
+  },
+  {
+   "a": 23,
+   "b": 24,
+   "scoreA": 0,
+   "plies": 140,
+   "reason": "投了"
+  },
+  {
+   "a": 23,
+   "b": 24,
+   "scoreA": 0,
+   "plies": 131,
+   "reason": "詰み"
+  },
+  {
+   "a": 23,
+   "b": 24,
+   "scoreA": 0,
+   "plies": 101,
+   "reason": "投了"
+  },
+  {
+   "a": 23,
+   "b": 24,
+   "scoreA": 1,
+   "plies": 91,
+   "reason": "投了"
+  },
+  {
+   "a": 23,
+   "b": 24,
+   "scoreA": 1,
+   "plies": 110,
+   "reason": "投了"
+  },
+  {
+   "a": 23,
+   "b": 24,
+   "scoreA": 0.5,
+   "plies": 256,
+   "reason": "持将棋"
+  },
+  {
+   "a": 23,
+   "b": 24,
+   "scoreA": 1,
+   "plies": 91,
+   "reason": "投了"
+  },
+  {
+   "a": 23,
+   "b": 24,
+   "scoreA": 0,
+   "plies": 87,
+   "reason": "投了"
+  },
+  {
+   "a": 23,
+   "b": 24,
+   "scoreA": 1,
+   "plies": 101,
+   "reason": "投了"
+  },
+  {
+   "a": 23,
+   "b": 24,
+   "scoreA": 1,
+   "plies": 112,
+   "reason": "投了"
+  },
+  {
+   "a": 23,
+   "b": 24,
+   "scoreA": 0,
+   "plies": 150,
+   "reason": "投了"
+  },
+  {
+   "a": 23,
+   "b": 24,
+   "scoreA": 1,
+   "plies": 144,
+   "reason": "投了"
+  },
+  {
+   "a": 23,
+   "b": 24,
+   "scoreA": 0,
+   "plies": 113,
+   "reason": "投了"
+  },
+  {
+   "a": 23,
+   "b": 24,
+   "scoreA": 0,
+   "plies": 146,
+   "reason": "投了"
+  },
+  {
+   "a": 23,
+   "b": 25,
+   "scoreA": 0,
+   "plies": 96,
+   "reason": "投了"
+  },
+  {
+   "a": 23,
+   "b": 25,
+   "scoreA": 0,
+   "plies": 86,
+   "reason": "投了"
+  },
+  {
+   "a": 23,
+   "b": 25,
+   "scoreA": 0,
+   "plies": 95,
+   "reason": "投了"
+  },
+  {
+   "a": 23,
+   "b": 25,
+   "scoreA": 1,
+   "plies": 81,
+   "reason": "投了"
+  },
+  {
+   "a": 23,
+   "b": 25,
+   "scoreA": 0,
+   "plies": 82,
+   "reason": "投了"
+  },
+  {
+   "a": 23,
+   "b": 25,
+   "scoreA": 0,
+   "plies": 91,
+   "reason": "投了"
+  },
+  {
+   "a": 23,
+   "b": 25,
+   "scoreA": 0,
+   "plies": 157,
+   "reason": "投了"
+  },
+  {
+   "a": 23,
+   "b": 25,
+   "scoreA": 0,
+   "plies": 62,
+   "reason": "投了"
+  },
+  {
+   "a": 23,
+   "b": 25,
+   "scoreA": 1,
+   "plies": 116,
+   "reason": "投了"
+  },
+  {
+   "a": 23,
+   "b": 25,
+   "scoreA": 0,
+   "plies": 104,
+   "reason": "投了"
+  },
+  {
+   "a": 23,
+   "b": 25,
+   "scoreA": 1,
+   "plies": 124,
+   "reason": "投了"
+  },
+  {
+   "a": 23,
+   "b": 25,
+   "scoreA": 0,
+   "plies": 89,
+   "reason": "投了"
+  },
+  {
+   "a": 23,
+   "b": 25,
+   "scoreA": 0,
+   "plies": 91,
+   "reason": "投了"
+  },
+  {
+   "a": 23,
+   "b": 25,
+   "scoreA": 0,
+   "plies": 84,
+   "reason": "投了"
+  },
+  {
+   "a": 23,
+   "b": 25,
+   "scoreA": 0,
+   "plies": 138,
+   "reason": "投了"
+  },
+  {
+   "a": 23,
+   "b": 25,
+   "scoreA": 0,
+   "plies": 85,
+   "reason": "投了"
+  },
+  {
+   "a": 24,
+   "b": 25,
+   "scoreA": 0,
+   "plies": 118,
+   "reason": "投了"
+  },
+  {
+   "a": 24,
+   "b": 25,
+   "scoreA": 0,
+   "plies": 115,
+   "reason": "投了"
+  },
+  {
+   "a": 24,
+   "b": 25,
+   "scoreA": 1,
+   "plies": 125,
+   "reason": "詰み"
+  },
+  {
+   "a": 24,
+   "b": 25,
+   "scoreA": 1,
+   "plies": 116,
+   "reason": "投了"
+  },
+  {
+   "a": 24,
+   "b": 25,
+   "scoreA": 1,
+   "plies": 78,
+   "reason": "投了"
+  },
+  {
+   "a": 24,
+   "b": 25,
+   "scoreA": 0,
+   "plies": 96,
+   "reason": "投了"
+  },
+  {
+   "a": 24,
+   "b": 25,
+   "scoreA": 1,
+   "plies": 68,
+   "reason": "投了"
+  },
+  {
+   "a": 24,
+   "b": 25,
+   "scoreA": 0,
+   "plies": 120,
+   "reason": "投了"
+  },
+  {
+   "a": 24,
+   "b": 25,
+   "scoreA": 0,
+   "plies": 87,
+   "reason": "投了"
+  },
+  {
+   "a": 24,
+   "b": 25,
+   "scoreA": 0,
+   "plies": 66,
+   "reason": "投了"
+  },
+  {
+   "a": 24,
+   "b": 25,
+   "scoreA": 1,
+   "plies": 117,
+   "reason": "投了"
+  },
+  {
+   "a": 24,
+   "b": 25,
+   "scoreA": 0,
+   "plies": 78,
+   "reason": "投了"
+  },
+  {
+   "a": 24,
+   "b": 25,
+   "scoreA": 0,
+   "plies": 100,
+   "reason": "投了"
+  },
+  {
+   "a": 24,
+   "b": 25,
+   "scoreA": 0,
+   "plies": 147,
+   "reason": "投了"
+  },
+  {
+   "a": 24,
+   "b": 25,
+   "scoreA": 0,
+   "plies": 163,
+   "reason": "投了"
+  },
+  {
+   "a": 24,
+   "b": 26,
+   "scoreA": 0,
+   "plies": 110,
+   "reason": "投了"
+  },
+  {
+   "a": 24,
+   "b": 26,
+   "scoreA": 0,
+   "plies": 91,
+   "reason": "投了"
+  },
+  {
+   "a": 24,
+   "b": 26,
+   "scoreA": 0,
+   "plies": 112,
+   "reason": "投了"
+  },
+  {
+   "a": 24,
+   "b": 25,
+   "scoreA": 0,
+   "plies": 189,
+   "reason": "投了"
+  },
+  {
+   "a": 24,
+   "b": 26,
+   "scoreA": 0,
+   "plies": 85,
+   "reason": "投了"
+  },
+  {
+   "a": 24,
+   "b": 26,
+   "scoreA": 1,
+   "plies": 107,
+   "reason": "投了"
+  },
+  {
+   "a": 24,
+   "b": 26,
+   "scoreA": 1,
+   "plies": 150,
+   "reason": "投了"
+  },
+  {
+   "a": 24,
+   "b": 26,
+   "scoreA": 1,
+   "plies": 117,
+   "reason": "投了"
+  },
+  {
+   "a": 24,
+   "b": 26,
+   "scoreA": 0,
+   "plies": 111,
+   "reason": "投了"
+  },
+  {
+   "a": 24,
+   "b": 26,
+   "scoreA": 0,
+   "plies": 103,
+   "reason": "詰み"
+  },
+  {
+   "a": 24,
+   "b": 26,
+   "scoreA": 0,
+   "plies": 88,
+   "reason": "投了"
+  },
+  {
+   "a": 24,
+   "b": 26,
+   "scoreA": 0,
+   "plies": 120,
+   "reason": "投了"
+  },
+  {
+   "a": 24,
+   "b": 26,
+   "scoreA": 1,
+   "plies": 76,
+   "reason": "投了"
+  },
+  {
+   "a": 24,
+   "b": 26,
+   "scoreA": 1,
+   "plies": 79,
+   "reason": "投了"
+  },
+  {
+   "a": 24,
+   "b": 26,
+   "scoreA": 0,
+   "plies": 110,
+   "reason": "詰み"
+  },
+  {
+   "a": 24,
+   "b": 26,
+   "scoreA": 0,
+   "plies": 63,
+   "reason": "投了"
+  },
+  {
+   "a": 24,
+   "b": 26,
+   "scoreA": 1,
+   "plies": 138,
+   "reason": "投了"
+  },
+  {
+   "a": 25,
+   "b": 26,
+   "scoreA": 0,
+   "plies": 114,
+   "reason": "投了"
+  },
+  {
+   "a": 25,
+   "b": 26,
+   "scoreA": 1,
+   "plies": 111,
+   "reason": "投了"
+  },
+  {
+   "a": 25,
+   "b": 26,
+   "scoreA": 1,
+   "plies": 61,
+   "reason": "投了"
+  },
+  {
+   "a": 25,
+   "b": 26,
+   "scoreA": 0,
+   "plies": 145,
+   "reason": "投了"
+  },
+  {
+   "a": 25,
+   "b": 26,
+   "scoreA": 0,
+   "plies": 147,
+   "reason": "投了"
+  },
+  {
+   "a": 25,
+   "b": 26,
+   "scoreA": 1,
+   "plies": 98,
+   "reason": "投了"
+  },
+  {
+   "a": 25,
+   "b": 26,
+   "scoreA": 1,
+   "plies": 97,
+   "reason": "投了"
+  },
+  {
+   "a": 25,
+   "b": 26,
+   "scoreA": 1,
+   "plies": 98,
+   "reason": "投了"
+  },
+  {
+   "a": 25,
+   "b": 26,
+   "scoreA": 1,
+   "plies": 141,
+   "reason": "投了"
+  },
+  {
+   "a": 25,
+   "b": 26,
+   "scoreA": 1,
+   "plies": 105,
+   "reason": "詰み"
+  },
+  {
+   "a": 25,
+   "b": 26,
+   "scoreA": 1,
+   "plies": 104,
+   "reason": "投了"
+  },
+  {
+   "a": 25,
+   "b": 26,
+   "scoreA": 0,
+   "plies": 143,
+   "reason": "投了"
+  },
+  {
+   "a": 25,
+   "b": 26,
+   "scoreA": 0,
+   "plies": 55,
+   "reason": "投了"
+  },
+  {
+   "a": 25,
+   "b": 26,
+   "scoreA": 0,
+   "plies": 96,
+   "reason": "投了"
+  },
+  {
+   "a": 25,
+   "b": 26,
+   "scoreA": 1,
+   "plies": 78,
+   "reason": "投了"
+  },
+  {
+   "a": 25,
+   "b": 26,
+   "scoreA": 1,
+   "plies": 93,
+   "reason": "投了"
+  },
+  {
+   "a": 25,
+   "b": 27,
+   "scoreA": 1,
+   "plies": 107,
+   "reason": "投了"
+  },
+  {
+   "a": 25,
+   "b": 27,
+   "scoreA": 0,
+   "plies": 92,
+   "reason": "投了"
+  },
+  {
+   "a": 25,
+   "b": 27,
+   "scoreA": 1,
+   "plies": 130,
+   "reason": "投了"
+  },
+  {
+   "a": 25,
+   "b": 27,
+   "scoreA": 0,
+   "plies": 113,
+   "reason": "投了"
+  },
+  {
+   "a": 25,
+   "b": 27,
+   "scoreA": 0,
+   "plies": 47,
+   "reason": "投了"
+  },
+  {
+   "a": 25,
+   "b": 27,
+   "scoreA": 0,
+   "plies": 78,
+   "reason": "投了"
+  },
+  {
+   "a": 25,
+   "b": 27,
+   "scoreA": 1,
+   "plies": 66,
+   "reason": "投了"
+  },
+  {
+   "a": 25,
+   "b": 27,
+   "scoreA": 0,
+   "plies": 108,
+   "reason": "投了"
+  },
+  {
+   "a": 25,
+   "b": 27,
+   "scoreA": 1,
+   "plies": 97,
+   "reason": "投了"
+  },
+  {
+   "a": 25,
+   "b": 27,
+   "scoreA": 0,
+   "plies": 123,
+   "reason": "投了"
+  },
+  {
+   "a": 25,
+   "b": 27,
+   "scoreA": 0,
+   "plies": 94,
+   "reason": "投了"
+  },
+  {
+   "a": 25,
+   "b": 27,
+   "scoreA": 1,
+   "plies": 88,
+   "reason": "投了"
+  },
+  {
+   "a": 25,
+   "b": 27,
+   "scoreA": 0,
+   "plies": 89,
+   "reason": "投了"
+  },
+  {
+   "a": 25,
+   "b": 27,
+   "scoreA": 1,
+   "plies": 113,
+   "reason": "投了"
+  },
+  {
+   "a": 25,
+   "b": 27,
+   "scoreA": 0,
+   "plies": 94,
+   "reason": "投了"
+  },
+  {
+   "a": 25,
+   "b": 27,
+   "scoreA": 0,
+   "plies": 103,
+   "reason": "投了"
+  },
+  {
+   "a": 26,
+   "b": 27,
+   "scoreA": 1,
+   "plies": 88,
+   "reason": "投了"
+  },
+  {
+   "a": 26,
+   "b": 27,
+   "scoreA": 1,
+   "plies": 107,
+   "reason": "投了"
+  },
+  {
+   "a": 26,
+   "b": 27,
+   "scoreA": 1,
+   "plies": 89,
+   "reason": "投了"
+  },
+  {
+   "a": 26,
+   "b": 27,
+   "scoreA": 1,
+   "plies": 75,
+   "reason": "投了"
+  },
+  {
+   "a": 26,
+   "b": 27,
+   "scoreA": 1,
+   "plies": 80,
+   "reason": "投了"
+  },
+  {
+   "a": 26,
+   "b": 27,
+   "scoreA": 1,
+   "plies": 126,
+   "reason": "投了"
+  },
+  {
+   "a": 26,
+   "b": 27,
+   "scoreA": 0,
+   "plies": 94,
+   "reason": "投了"
+  },
+  {
+   "a": 26,
+   "b": 27,
+   "scoreA": 0,
+   "plies": 91,
+   "reason": "投了"
+  },
+  {
+   "a": 26,
+   "b": 27,
+   "scoreA": 1,
+   "plies": 166,
+   "reason": "投了"
+  },
+  {
+   "a": 26,
+   "b": 27,
+   "scoreA": 1,
+   "plies": 161,
+   "reason": "投了"
+  },
+  {
+   "a": 26,
+   "b": 27,
+   "scoreA": 1,
+   "plies": 94,
+   "reason": "投了"
+  },
+  {
+   "a": 26,
+   "b": 27,
+   "scoreA": 0,
+   "plies": 174,
+   "reason": "投了"
+  },
+  {
+   "a": 26,
+   "b": 27,
+   "scoreA": 1,
+   "plies": 92,
+   "reason": "投了"
+  },
+  {
+   "a": 26,
+   "b": 27,
+   "scoreA": 0,
+   "plies": 102,
+   "reason": "投了"
+  },
+  {
+   "a": 26,
+   "b": 27,
+   "scoreA": 0,
+   "plies": 68,
+   "reason": "投了"
+  },
+  {
+   "a": 26,
+   "b": 27,
+   "scoreA": 0,
+   "plies": 61,
+   "reason": "投了"
+  },
+  {
+   "a": 26,
+   "b": 28,
+   "scoreA": 1,
+   "plies": 116,
+   "reason": "投了"
+  },
+  {
+   "a": 26,
+   "b": 28,
+   "scoreA": 0,
+   "plies": 138,
+   "reason": "投了"
+  },
+  {
+   "a": 26,
+   "b": 28,
+   "scoreA": 0,
+   "plies": 138,
+   "reason": "投了"
+  },
+  {
+   "a": 26,
+   "b": 28,
+   "scoreA": 0,
+   "plies": 105,
+   "reason": "投了"
+  },
+  {
+   "a": 26,
+   "b": 28,
+   "scoreA": 0,
+   "plies": 70,
+   "reason": "投了"
+  },
+  {
+   "a": 26,
+   "b": 28,
+   "scoreA": 1,
+   "plies": 102,
+   "reason": "投了"
+  },
+  {
+   "a": 26,
+   "b": 28,
+   "scoreA": 0,
+   "plies": 118,
+   "reason": "投了"
+  },
+  {
+   "a": 26,
+   "b": 28,
+   "scoreA": 0,
+   "plies": 115,
+   "reason": "投了"
+  },
+  {
+   "a": 26,
+   "b": 28,
+   "scoreA": 0,
+   "plies": 86,
+   "reason": "投了"
+  },
+  {
+   "a": 26,
+   "b": 28,
+   "scoreA": 0,
+   "plies": 72,
+   "reason": "投了"
+  },
+  {
+   "a": 26,
+   "b": 28,
+   "scoreA": 0,
+   "plies": 113,
+   "reason": "投了"
+  },
+  {
+   "a": 26,
+   "b": 28,
+   "scoreA": 0,
+   "plies": 103,
+   "reason": "投了"
+  },
+  {
+   "a": 26,
+   "b": 28,
+   "scoreA": 1,
+   "plies": 97,
+   "reason": "投了"
+  },
+  {
+   "a": 26,
+   "b": 28,
+   "scoreA": 0,
+   "plies": 91,
+   "reason": "投了"
+  },
+  {
+   "a": 26,
+   "b": 28,
+   "scoreA": 1,
+   "plies": 73,
+   "reason": "投了"
+  },
+  {
+   "a": 26,
+   "b": 28,
+   "scoreA": 0,
+   "plies": 77,
+   "reason": "投了"
+  },
+  {
+   "a": 27,
+   "b": 28,
+   "scoreA": 1,
+   "plies": 97,
+   "reason": "投了"
+  },
+  {
+   "a": 27,
+   "b": 28,
+   "scoreA": 0,
+   "plies": 121,
+   "reason": "投了"
+  },
+  {
+   "a": 27,
+   "b": 28,
+   "scoreA": 0,
+   "plies": 104,
+   "reason": "投了"
+  },
+  {
+   "a": 27,
+   "b": 28,
+   "scoreA": 0,
+   "plies": 101,
+   "reason": "投了"
+  },
+  {
+   "a": 27,
+   "b": 28,
+   "scoreA": 1,
+   "plies": 83,
+   "reason": "投了"
+  },
+  {
+   "a": 27,
+   "b": 28,
+   "scoreA": 0,
+   "plies": 89,
+   "reason": "投了"
+  },
+  {
+   "a": 27,
+   "b": 28,
+   "scoreA": 0,
+   "plies": 125,
+   "reason": "投了"
+  },
+  {
+   "a": 27,
+   "b": 28,
+   "scoreA": 0,
+   "plies": 144,
+   "reason": "投了"
+  },
+  {
+   "a": 27,
+   "b": 28,
+   "scoreA": 0,
+   "plies": 128,
+   "reason": "投了"
+  },
+  {
+   "a": 27,
+   "b": 28,
+   "scoreA": 0,
+   "plies": 74,
+   "reason": "投了"
+  },
+  {
+   "a": 27,
+   "b": 28,
+   "scoreA": 0,
+   "plies": 105,
+   "reason": "投了"
+  },
+  {
+   "a": 27,
+   "b": 28,
+   "scoreA": 1,
+   "plies": 91,
+   "reason": "投了"
+  },
+  {
+   "a": 27,
+   "b": 28,
+   "scoreA": 0,
+   "plies": 129,
+   "reason": "投了"
+  },
+  {
+   "a": 27,
+   "b": 28,
+   "scoreA": 0,
+   "plies": 109,
+   "reason": "投了"
+  },
+  {
+   "a": 27,
+   "b": 29,
+   "scoreA": 1,
+   "plies": 79,
+   "reason": "投了"
+  },
+  {
+   "a": 27,
+   "b": 28,
+   "scoreA": 1,
+   "plies": 175,
+   "reason": "投了"
+  },
+  {
+   "a": 27,
+   "b": 28,
+   "scoreA": 1,
+   "plies": 120,
+   "reason": "投了"
+  },
+  {
+   "a": 27,
+   "b": 29,
+   "scoreA": 0,
+   "plies": 81,
+   "reason": "投了"
+  },
+  {
+   "a": 27,
+   "b": 29,
+   "scoreA": 0,
+   "plies": 78,
+   "reason": "投了"
+  },
+  {
+   "a": 27,
+   "b": 29,
+   "scoreA": 0,
+   "plies": 113,
+   "reason": "投了"
+  },
+  {
+   "a": 27,
+   "b": 29,
+   "scoreA": 0,
+   "plies": 168,
+   "reason": "投了"
+  },
+  {
+   "a": 27,
+   "b": 29,
+   "scoreA": 0,
+   "plies": 161,
+   "reason": "投了"
+  },
+  {
+   "a": 27,
+   "b": 29,
+   "scoreA": 1,
+   "plies": 115,
+   "reason": "投了"
+  },
+  {
+   "a": 27,
+   "b": 29,
+   "scoreA": 1,
+   "plies": 124,
+   "reason": "投了"
+  },
+  {
+   "a": 27,
+   "b": 29,
+   "scoreA": 1,
+   "plies": 89,
+   "reason": "投了"
+  },
+  {
+   "a": 27,
+   "b": 29,
+   "scoreA": 1,
+   "plies": 102,
+   "reason": "投了"
+  },
+  {
+   "a": 27,
+   "b": 29,
+   "scoreA": 1,
+   "plies": 84,
+   "reason": "投了"
+  },
+  {
+   "a": 27,
+   "b": 29,
+   "scoreA": 0,
+   "plies": 74,
+   "reason": "投了"
+  },
+  {
+   "a": 27,
+   "b": 29,
+   "scoreA": 0,
+   "plies": 126,
+   "reason": "投了"
+  },
+  {
+   "a": 28,
+   "b": 29,
+   "scoreA": 0,
+   "plies": 76,
+   "reason": "投了"
+  },
+  {
+   "a": 27,
+   "b": 29,
+   "scoreA": 1,
+   "plies": 92,
+   "reason": "投了"
+  },
+  {
+   "a": 27,
+   "b": 29,
+   "scoreA": 0.5,
+   "plies": 147,
+   "reason": "千日手"
+  },
+  {
+   "a": 27,
+   "b": 29,
+   "scoreA": 0,
+   "plies": 124,
+   "reason": "投了"
+  },
+  {
+   "a": 28,
+   "b": 29,
+   "scoreA": 1,
+   "plies": 59,
+   "reason": "投了"
+  },
+  {
+   "a": 28,
+   "b": 29,
+   "scoreA": 0,
+   "plies": 100,
+   "reason": "投了"
+  },
+  {
+   "a": 28,
+   "b": 29,
+   "scoreA": 0,
+   "plies": 105,
+   "reason": "投了"
+  },
+  {
+   "a": 28,
+   "b": 29,
+   "scoreA": 1,
+   "plies": 116,
+   "reason": "投了"
+  },
+  {
+   "a": 28,
+   "b": 29,
+   "scoreA": 1,
+   "plies": 84,
+   "reason": "投了"
+  },
+  {
+   "a": 28,
+   "b": 29,
+   "scoreA": 0,
+   "plies": 84,
+   "reason": "投了"
+  },
+  {
+   "a": 28,
+   "b": 29,
+   "scoreA": 1,
+   "plies": 114,
+   "reason": "投了"
+  },
+  {
+   "a": 28,
+   "b": 29,
+   "scoreA": 1,
+   "plies": 79,
+   "reason": "投了"
+  },
+  {
+   "a": 28,
+   "b": 29,
+   "scoreA": 1,
+   "plies": 149,
+   "reason": "投了"
+  },
+  {
+   "a": 28,
+   "b": 29,
+   "scoreA": 1,
+   "plies": 120,
+   "reason": "投了"
+  },
+  {
+   "a": 28,
+   "b": 29,
+   "scoreA": 0,
+   "plies": 76,
+   "reason": "投了"
+  },
+  {
+   "a": 28,
+   "b": 29,
+   "scoreA": 0,
+   "plies": 143,
+   "reason": "投了"
+  },
+  {
+   "a": 28,
+   "b": 29,
+   "scoreA": 0,
+   "plies": 137,
+   "reason": "投了"
+  },
+  {
+   "a": 28,
+   "b": 29,
+   "scoreA": 1,
+   "plies": 78,
+   "reason": "投了"
+  },
+  {
+   "a": 28,
+   "b": 29,
+   "scoreA": 1,
+   "plies": 135,
+   "reason": "投了"
+  },
+  {
+   "a": 28,
+   "b": 30,
+   "scoreA": 0,
+   "plies": 68,
+   "reason": "投了"
+  },
+  {
+   "a": 28,
+   "b": 30,
+   "scoreA": 0,
+   "plies": 51,
+   "reason": "投了"
+  },
+  {
+   "a": 28,
+   "b": 30,
+   "scoreA": 1,
+   "plies": 69,
+   "reason": "投了"
+  },
+  {
+   "a": 28,
+   "b": 30,
+   "scoreA": 0,
+   "plies": 89,
+   "reason": "投了"
+  },
+  {
+   "a": 28,
+   "b": 30,
+   "scoreA": 0,
+   "plies": 112,
+   "reason": "投了"
+  },
+  {
+   "a": 28,
+   "b": 30,
+   "scoreA": 0,
+   "plies": 99,
+   "reason": "投了"
+  },
+  {
+   "a": 28,
+   "b": 30,
+   "scoreA": 1,
+   "plies": 85,
+   "reason": "投了"
+  },
+  {
+   "a": 28,
+   "b": 30,
+   "scoreA": 1,
+   "plies": 90,
+   "reason": "投了"
+  },
+  {
+   "a": 28,
+   "b": 30,
+   "scoreA": 0,
+   "plies": 88,
+   "reason": "投了"
+  },
+  {
+   "a": 28,
+   "b": 30,
+   "scoreA": 0,
+   "plies": 105,
+   "reason": "投了"
+  },
+  {
+   "a": 28,
+   "b": 30,
+   "scoreA": 1,
+   "plies": 97,
+   "reason": "投了"
+  },
+  {
+   "a": 28,
+   "b": 30,
+   "scoreA": 1,
+   "plies": 96,
+   "reason": "投了"
+  },
+  {
+   "a": 28,
+   "b": 30,
+   "scoreA": 0,
+   "plies": 108,
+   "reason": "投了"
+  },
+  {
+   "a": 28,
+   "b": 30,
+   "scoreA": 0,
+   "plies": 73,
+   "reason": "投了"
+  },
+  {
+   "a": 28,
+   "b": 30,
+   "scoreA": 0,
+   "plies": 77,
+   "reason": "投了"
+  },
+  {
+   "a": 28,
+   "b": 30,
+   "scoreA": 0,
+   "plies": 138,
+   "reason": "投了"
+  },
+  {
+   "a": 29,
+   "b": 30,
+   "scoreA": 0,
+   "plies": 101,
+   "reason": "投了"
+  },
+  {
+   "a": 29,
+   "b": 30,
+   "scoreA": 1,
+   "plies": 133,
+   "reason": "投了"
+  },
+  {
+   "a": 29,
+   "b": 30,
+   "scoreA": 0,
+   "plies": 102,
+   "reason": "投了"
+  },
+  {
+   "a": 29,
+   "b": 30,
+   "scoreA": 0,
+   "plies": 52,
+   "reason": "投了"
+  },
+  {
+   "a": 29,
+   "b": 30,
+   "scoreA": 1,
+   "plies": 59,
+   "reason": "投了"
+  },
+  {
+   "a": 29,
+   "b": 30,
+   "scoreA": 0,
+   "plies": 127,
+   "reason": "投了"
+  },
+  {
+   "a": 29,
+   "b": 30,
+   "scoreA": 1,
+   "plies": 120,
+   "reason": "投了"
+  },
+  {
+   "a": 29,
+   "b": 30,
+   "scoreA": 1,
+   "plies": 128,
+   "reason": "投了"
+  },
+  {
+   "a": 29,
+   "b": 30,
+   "scoreA": 0,
+   "plies": 103,
+   "reason": "投了"
+  },
+  {
+   "a": 29,
+   "b": 30,
+   "scoreA": 1,
+   "plies": 87,
+   "reason": "投了"
+  },
+  {
+   "a": 29,
+   "b": 30,
+   "scoreA": 1,
+   "plies": 131,
+   "reason": "投了"
+  },
+  {
+   "a": 29,
+   "b": 30,
+   "scoreA": 0,
+   "plies": 65,
+   "reason": "投了"
+  },
+  {
+   "a": 29,
+   "b": 30,
+   "scoreA": 1,
+   "plies": 24,
+   "reason": "投了"
+  },
+  {
+   "a": 29,
+   "b": 30,
+   "scoreA": 0,
+   "plies": 84,
+   "reason": "投了"
+  },
+  {
+   "a": 29,
+   "b": 30,
+   "scoreA": 0,
+   "plies": 83,
+   "reason": "投了"
+  },
+  {
+   "a": 29,
+   "b": 30,
+   "scoreA": 0,
+   "plies": 118,
+   "reason": "投了"
+  }
+ ]
+}

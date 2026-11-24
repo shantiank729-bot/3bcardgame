@@ -1,0 +1,319 @@
+:root {
+  --bg: #f6f1e7;
+  --fg: #2a2118;
+  --muted: #7d6e5d;
+  --card: #fffaf0;
+  --line: #d9cbb4;
+  --accent: #b5542c;
+  --accent-fg: #fff;
+  --wood: #e9c27c;
+  --wood-dark: #c99a4f;
+  --grid: #5a3d1c;
+  --piece: #f3d79a;
+  --piece-edge: #a07636;
+  --last: rgba(255, 140, 0, 0.35);
+  --sel: rgba(40, 140, 255, 0.35);
+  --target: rgba(40, 140, 255, 0.55);
+  --check: rgba(230, 30, 30, 0.45);
+  --board: min(calc(100vw - 28px), 520px, calc((100dvh - 170px) / 1.36));
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #1d1915;
+    --fg: #f0e6d8;
+    --muted: #a89884;
+    --card: #2a241e;
+    --line: #4a3f33;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #1d1915;
+  --fg: #f0e6d8;
+  --muted: #a89884;
+  --card: #2a241e;
+  --line: #4a3f33;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: "Hiragino Sans", "Noto Sans JP", "Yu Gothic", system-ui, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+}
+#app { display: flex; flex-direction: column; min-height: 100dvh; }
+#main { flex: 1; padding-bottom: calc(60px + env(safe-area-inset-bottom)); }
+.screen { max-width: 640px; margin: 0 auto; padding: 12px 16px; }
+.screen.play { padding: 4px 8px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+h1 { font-size: 1.6rem; margin: 8px 0 12px; }
+h2 { font-size: 1.25rem; margin: 8px 0 12px; }
+.note { color: var(--muted); font-size: 0.9rem; }
+.hidden { display: none !important; }
+
+/* ---- タブバー ---- */
+.tabbar {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  display: flex; background: var(--card); border-top: 1px solid var(--line);
+  padding-bottom: env(safe-area-inset-bottom); z-index: 10;
+}
+.tabbar a {
+  flex: 1; text-align: center; padding: 14px 0; color: var(--muted); text-decoration: none; font-size: 0.85rem;
+}
+.tabbar a.active { color: var(--accent); font-weight: 700; }
+
+/* ---- ボタン ---- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: 44px; padding: 0 16px; border-radius: 10px; border: 1px solid var(--line);
+  background: var(--card); color: var(--fg); font-size: 1rem; text-decoration: none; cursor: pointer;
+}
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); font-weight: 700; }
+.btn.big { width: 100%; min-height: 56px; font-size: 1.15rem; margin: 8px 0; }
+.btn.small { min-height: 32px; padding: 0 10px; font-size: 0.85rem; }
+.btn.warn { background: #d4a017; color: #222; border-color: #d4a017; }
+.btn:disabled { opacity: 0.45; }
+.setup .btn { width: 100%; margin: 6px 0; }
+
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; margin: 10px 0; }
+.card .label { color: var(--muted); font-size: 0.85rem; }
+.card .rank { font-size: 2rem; font-weight: 700; }
+.field { display: flex; flex-direction: column; gap: 6px; margin: 12px 0; }
+select, textarea, input[type="text"] {
+  font-size: 1rem; padding: 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); color: var(--fg); width: 100%;
+}
+textarea { font-family: ui-monospace, monospace; font-size: 0.85rem; }
+
+/* ---- 盤 ---- */
+.board-view { display: flex; flex-direction: column; align-items: center; gap: 4px; user-select: none; -webkit-user-select: none; touch-action: none; }
+.board { position: relative; padding: 14px 16px 4px 4px; background: var(--wood-dark); border-radius: 6px; }
+.board-inner { position: relative; width: var(--board); }
+.grid {
+  display: grid; grid-template-columns: repeat(9, 1fr);
+  background: var(--wood); border: 2px solid var(--grid);
+}
+.cell {
+  aspect-ratio: 10 / 11; border-right: 1px solid var(--grid); border-bottom: 1px solid var(--grid);
+  display: flex; align-items: center; justify-content: center; position: relative;
+}
+.cell:nth-child(9n) { border-right: none; }
+.cell:nth-child(n + 73) { border-bottom: none; }
+.cell.last { background: var(--last); }
+.cell.last-from { background: rgba(255, 140, 0, 0.15); }
+.cell.selected { background: var(--sel); }
+.cell.target::after {
+  content: ""; width: 28%; height: 25%; border-radius: 50%; background: var(--target);
+}
+.cell.target-capture { box-shadow: inset 0 0 0 3px var(--target); }
+.cell.check { background: var(--check); }
+.cell.mark-bad { box-shadow: inset 0 0 0 3px #e03030; }
+.cell.mark-good { box-shadow: inset 0 0 0 3px #20a050; }
+.coords { position: absolute; color: #3b2710; font-size: 10px; display: flex; }
+.coords.files { top: 1px; left: 4px; width: var(--board); justify-content: space-around; }
+.coords.ranks { top: 14px; right: 2px; flex-direction: column; height: calc(100% - 18px); justify-content: space-around; }
+svg.arrows { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+
+.piece {
+  width: 88%; height: 92%;
+  background: linear-gradient(180deg, #f7e2b0, var(--piece));
+  clip-path: polygon(50% 0, 86% 15%, 100% 100%, 0 100%, 14% 15%);
+  display: flex; align-items: center; justify-content: center; padding-top: 12%;
+  color: #1a1209; font-weight: 700; font-size: calc(var(--board) / 9 * 0.52);
+  font-family: "Hiragino Mincho ProN", "Yu Mincho", "Noto Serif JP", serif;
+  filter: drop-shadow(0 1px 0 var(--piece-edge));
+  line-height: 1;
+}
+.piece.gote { transform: rotate(180deg); }
+.piece.promoted { color: #c0161a; }
+.piece.ghost { position: fixed; z-index: 100; pointer-events: none; transform: translate(-50%, -60%) scale(1.25); }
+.piece.ghost.gote { transform: translate(-50%, -60%) scale(1.25) rotate(180deg); }
+
+.hand {
+  width: calc(var(--board) + 20px); min-height: calc(var(--board) / 9 * 1.1 + 8px); flex-wrap: nowrap;
+  display: flex; align-items: center; gap: 2px; padding: 4px 6px;
+  background: var(--wood-dark); border-radius: 6px; opacity: 0.85;
+}
+.hand.to-move { opacity: 1; box-shadow: 0 0 0 2px var(--accent); }
+.hand-mark { font-size: 1.1rem; margin-right: 4px; color: #3b2710; }
+.hand-empty { color: #5a3d1c; font-size: 0.8rem; }
+.hand-piece {
+  position: relative; width: calc(var(--board) / 9 * 0.95); flex-shrink: 0; aspect-ratio: 10 / 11;
+  display: flex; align-items: center; justify-content: center; border-radius: 4px;
+}
+.hand-piece.selected { background: var(--sel); }
+.hand-piece .count {
+  position: absolute; right: -2px; bottom: -2px; background: var(--grid); color: #fff;
+  border-radius: 8px; font-size: 11px; padding: 0 5px; font-weight: 700;
+}
+
+.clock { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 1.05rem; min-width: 4em; text-align: right; }
+.clock.low { color: #d02020; }
+.status { font-size: 0.95rem; min-height: 1.4em; }
+.status.check { color: #d02020; font-weight: 700; }
+.status.end { color: var(--accent); font-weight: 700; }
+.movelist {
+  width: calc(var(--board) + 20px); display: flex; gap: 10px; overflow-x: auto; white-space: nowrap;
+  font-size: 0.85rem; color: var(--muted); padding: 2px 0; scrollbar-width: none;
+}
+.movelist .mv:last-child { color: var(--fg); font-weight: 700; }
+.actions { width: calc(var(--board) + 20px); display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.actions .btn { padding: 0 4px; }
+
+/* ---- ダイアログ ---- */
+.overlay {
+  position: fixed; inset: 0; background: rgba(0, 0, 0, 0.45); display: flex; align-items: center; justify-content: center;
+  z-index: 50; padding: 16px;
+}
+.dialog { background: var(--card); color: var(--fg); border-radius: 14px; padding: 16px; width: min(420px, 100%); max-height: 90dvh; overflow: auto; }
+.dialog h3 { margin: 0 0 8px; }
+.dialog .row { display: flex; gap: 10px; justify-content: center; }
+.dialog .row.end { justify-content: flex-end; margin-top: 12px; flex-wrap: wrap; }
+.dialog code.sfen { display: block; word-break: break-all; font-size: 0.8rem; background: var(--bg); padding: 6px; border-radius: 6px; }
+.dialog-body .btn { margin-top: 8px; }
+.promo-btn {
+  width: 96px; height: 120px; border-radius: 10px; border: 1px solid var(--line); background: var(--wood);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; font-size: 0.9rem; color: #222;
+  --board: 400px;
+}
+.promo-btn .piece { width: 56px; height: 62px; }
+.toast {
+  position: fixed; left: 50%; bottom: 90px; transform: translateX(-50%); background: rgba(30, 30, 30, 0.9); color: #fff;
+  padding: 10px 16px; border-radius: 10px; z-index: 60; font-size: 0.9rem;
+}
+
+@media (min-width: 900px) {
+  :root { --board: min(560px, calc((100dvh - 190px) / 1.36)); }
+}
+body.in-game .tabbar { display: none; }
+body.in-game #main { padding-bottom: env(safe-area-inset-bottom); }
+.pinfo { margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; line-height: 1.2; }
+.pinfo .pname { color: #3b2710; font-size: 0.85rem; }
+.pinfo .pname.active { font-weight: 700; }
+.pinfo .clock { color: #1a1209; }
+.pinfo .clock.low { color: #c01010; }
+.status-row { width: calc(var(--board) + 20px); display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+
+/* ---- フェーズ3: 記録・グラフ・演出 ---- */
+.card h3 { margin: 0 0 8px; font-size: 1rem; }
+.card .rank small { font-size: 0.9rem; font-weight: 400; color: var(--muted); }
+.card .rank.big { font-size: 2.4rem; }
+.screen.home .btn { width: 100%; margin: 6px 0; }
+.row-links { text-align: right; margin: 8px 0; }
+.row-links a { color: var(--accent); }
+.tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.tile { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 8px; text-align: center; }
+.tile-value { font-size: 1.35rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.tile-label { color: var(--muted); font-size: 0.8rem; margin-top: 2px; }
+.chart { position: relative; width: 100%; touch-action: pan-y; }
+.chart svg { display: block; }
+.chart .grid-line { stroke: var(--line); stroke-width: 1; }
+.chart .axis-label { fill: var(--muted); font-size: 11px; }
+.chart .series-line { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.chart .series-dot { fill: var(--accent); stroke: var(--card); stroke-width: 2; }
+.chart .crosshair { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 3; }
+.chart .hidden { display: none; }
+.chart-tip {
+  position: absolute; top: -6px; background: var(--fg); color: var(--bg); font-size: 0.8rem; padding: 4px 8px;
+  border-radius: 6px; pointer-events: none; white-space: nowrap; z-index: 2;
+}
+.rank-history { list-style: none; padding: 0; margin: 0; }
+.rank-history li { padding: 4px 0; border-bottom: 1px solid var(--line); }
+.rank-history .up { color: var(--accent); font-weight: 700; }
+.rank-history .down { color: var(--muted); }
+.game-row { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.game-row:last-child { border-bottom: none; }
+.game-main { flex: 1; min-width: 0; }
+.badge { display: inline-block; font-size: 0.72rem; padding: 1px 6px; border-radius: 6px; border: 1px solid var(--line); margin-right: 6px; color: var(--muted); }
+.badge.rated { border-color: var(--accent); color: var(--accent); }
+.result { font-weight: 700; }
+.result.win { color: var(--accent); }
+.rating-change { font-weight: 700; font-size: 1.05rem; }
+.switch-row { display: flex; align-items: center; gap: 10px; padding: 12px 0; font-size: 1rem; }
+.switch-row input { width: 22px; height: 22px; }
+.settings .card .btn { width: 100%; margin: 6px 0; }
+.celebrate { position: fixed; inset: 0; z-index: 80; background: rgba(0, 0, 0, 0.55); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.celebrate-card { background: var(--card); color: var(--fg); border-radius: 18px; padding: 28px 36px; text-align: center; animation: pop 0.5s cubic-bezier(.2, 1.6, .4, 1); }
+.celebrate-msg { font-size: 1.1rem; font-weight: 700; color: var(--accent); }
+.celebrate-rank { font-size: 3.4rem; font-weight: 800; margin: 6px 0 10px; font-family: "Hiragino Mincho ProN", "Yu Mincho", "Noto Serif JP", serif; }
+.confetti { position: absolute; top: -20px; width: 8px; height: 14px; border-radius: 2px; animation-name: fall; animation-timing-function: linear; animation-fill-mode: forwards; }
+@keyframes fall { to { top: 105%; transform: rotate(720deg); } }
+@keyframes pop { from { transform: scale(0.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .confetti { display: none; }
+  .celebrate-card { animation: none; }
+}
+
+/* ---- フェーズ4: 振り返り・練習対局 ---- */
+.actions.six { grid-template-columns: repeat(6, 1fr); gap: 4px; }
+.actions.six .btn { font-size: 0.9rem; padding: 0 2px; }
+.row-btns { display: flex; gap: 6px; }
+.screen.review { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 6px 8px 16px; }
+.review-title { width: calc(var(--board) + 20px); }
+.review-title h2 { margin: 2px 0; }
+.eval-graph { width: calc(var(--board) + 20px); background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 4px 4px 0; touch-action: none; }
+.eval-graph svg { display: block; width: 100%; }
+.graph-title { font-size: 0.8rem; color: var(--muted); padding: 0 4px; }
+.eval-graph .grid-line { stroke: var(--line); stroke-width: 1; }
+.eval-graph .mid-line { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 4 3; }
+.eval-graph .axis-label { fill: var(--muted); font-size: 10px; }
+.eval-graph .series-line { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; }
+.eval-graph .eval-area { fill: var(--accent); opacity: 0.12; }
+.eval-graph .cursor-line { stroke: var(--fg); stroke-width: 1.5; }
+.graph-mark { font-size: 13px; font-weight: 800; paint-order: stroke; stroke: var(--card); stroke-width: 3px; }
+.graph-mark.bad { fill: #d02020; }
+.graph-mark.dubious { fill: #c78a00; }
+.graph-mark.good { fill: #1f8a4c; }
+.review-nav { width: calc(var(--board) + 20px); display: flex; gap: 6px; flex-wrap: wrap; }
+.review-nav .btn { flex: 1; padding: 0 6px; }
+.review-info { width: calc(var(--board) + 20px); background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; }
+.review-info .btn { align-self: flex-start; margin-top: 4px; }
+.info-head { font-weight: 700; }
+.pv { font-size: 0.85rem; word-break: break-all; }
+.mark { font-weight: 800; }
+.mark.bad { color: #d02020; }
+.mark.dubious { color: #c78a00; }
+.mark.good { color: #1f8a4c; }
+.review-moves { width: calc(var(--board) + 20px); display: flex; flex-wrap: wrap; gap: 4px; max-height: 180px; overflow-y: auto; }
+.rv-move { border: 1px solid var(--line); background: var(--card); color: var(--muted); border-radius: 6px; padding: 4px 6px; font-size: 0.8rem; }
+.rv-move.mine { color: var(--fg); }
+.rv-move.current { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+
+/* ---- フェーズ5: 詰将棋 ---- */
+.link-card { display: block; color: inherit; text-decoration: none; }
+.tsume-item {
+  width: 100%; display: flex; align-items: center; gap: 8px; padding: 12px 10px; margin: 6px 0; border-radius: 10px;
+  border: 1px solid var(--line); background: var(--bg); color: var(--fg); font-size: 1rem; text-align: left;
+}
+.tsume-item.done { opacity: 0.75; }
+.tsume-no { font-weight: 700; }
+.tsume-state { margin-left: auto; color: var(--muted); font-size: 0.9rem; }
+.len-row { display: flex; justify-content: space-between; padding: 6px 2px; border-bottom: 1px solid var(--line); }
+.len-row.current { font-weight: 700; color: var(--accent); }
+.tsume .card .btn { width: 100%; margin-top: 6px; }
+.tsume .screen.play { padding: 0; }
+.tsume .actions .btn { padding: 0 4px; }
+
+/* ---- フェーズ6: 苦手分析・定跡練習 ---- */
+.bars { display: flex; flex-direction: column; gap: 8px; margin: 8px 0; }
+.bar-row { display: grid; grid-template-columns: 3em 1fr 3.5em; align-items: center; gap: 8px; }
+.bar-sub { grid-column: 2 / 4; margin-top: -6px; font-size: 0.75rem; }
+.bar-track { background: var(--bg); border-radius: 4px; height: 14px; overflow: hidden; }
+.bar { height: 100%; background: var(--accent); border-radius: 0 4px 4px 0; }
+.bar-value { text-align: right; font-variant-numeric: tabular-nums; font-weight: 700; }
+.op-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.op-table th, .op-table td { text-align: left; padding: 6px 4px; border-bottom: 1px solid var(--line); }
+.op-table th { color: var(--muted); font-weight: 400; }
+.advice { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.advice span { flex: 1; }
+.joseki-item { width: 100%; text-align: left; background: var(--card); color: var(--fg); border: 1px solid var(--line); border-radius: 12px; padding: 12px; margin: 8px 0; }
+.joseki-name { font-weight: 700; font-size: 1.05rem; display: flex; gap: 8px; align-items: center; }
+.joseki-title { font-weight: 700; }
+.joseki-explain { width: calc(var(--board) + 20px); min-height: 3.2em; font-size: 0.9rem; display: flex; flex-direction: column; gap: 2px; }
+.joseki-explain .ok { color: #1f8a4c; font-weight: 700; }
+.joseki-explain .ng { color: #d02020; font-weight: 700; }
+.joseki-explain .btn { align-self: flex-start; margin-top: 4px; }
+.joseki .actions { grid-template-columns: repeat(3, 1fr); }

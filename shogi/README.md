@@ -1,0 +1,38 @@
+# 将棋道場（shogi-dojo）
+
+ブラウザだけで動く将棋練習アプリ。AIとの対局でレーティングを測り、勝率5割前後の相手と指して強くなることを目指します。
+
+## 開発
+
+```sh
+npm install
+npm run dev     # 開発サーバー
+npm test        # Vitest（ルール・棋譜・時計のテスト）
+npm run build   # 本番ビルド（dist/）
+```
+
+## 進み具合
+
+- [x] フェーズ1: 盤面とルール（合法手、二歩・打ち歩詰め・行き所のない駒、千日手・連続王手の千日手、入玉宣言27点法、500手で持将棋）、人どうしの対局、KIF/SFEN 入出力、持ち時間
+- [x] フェーズ2: エンジン（やねうら王 wasm、Web Worker、簡易エンジンへの自動切り替え）と強さのレベル30段階（`npm run calibrate` で自己対局して確認）
+- [x] フェーズ3: レーティング（Glicko-2）・段級位・棋力判定（最初の5局）・成長記録・データの書き出し/読み込み
+- [x] フェーズ4: 振り返り（裏で解析・形勢グラフ・悪手/疑問手/好手・最善手の読み筋の再生）、練習対局のヒント/待った
+- [x] フェーズ5: 毎日の詰将棋（自動生成・詰み探索で正解1つを確認・難しさの自動調整・復習・連続日数）
+- [x] フェーズ6: 苦手分析（序盤/中盤/終盤の損・逆転負け・戦型別勝率・おすすめ）、定跡練習（5つの手順）、PWA（オフライン・ホーム画面に追加・Service Worker で COOP/COEP を付与）
+
+## 公開（GitHub Pages）
+
+`.github/workflows/shogi-pages.yml` がテスト・ビルドして公開します（`/shogi/` に配置）。
+初回は Settings → Pages → Source を「GitHub Actions」にしてください。デフォルトブランチへの push か、Actions 画面からの手動実行で公開されます。
+GitHub Pages はヘッダーを設定できないため、Service Worker（`public/sw.js`）が COOP/COEP ヘッダーを付け足して SharedArrayBuffer を有効にします（初回だけ自動で1回再読み込みします）。
+
+## 補助スクリプト
+
+- `npm run calibrate -- [組あたりの局数] [並列数] [レベル差]` … レベル同士の自己対局で強さを確かめる
+- `npm run blunders -- [局数]` … レベルごとの悪手率（参照エンジンで採点）
+- `npx vite-node scripts/ratings.ts -- calibration.json` … 較正結果からレベルのレーティング表を作る
+- `npx vite-node scripts/tsume-check.ts -- [問題数] [出力.json] [手数]` … 詰将棋を生成し、エンジンで確かめる
+
+## ライセンス
+
+GPL-3.0-or-later（組み込む予定の将棋エンジン「やねうら王」が GPLv3 のため）。全文は `LICENSE.md` を参照。
