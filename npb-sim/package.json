@@ -10,8 +10,12 @@
     "calibrate": "vitest run tests/calibration.test.ts"
   },
   "devDependencies": {
+    "fake-indexeddb": "^6.2.8",
     "typescript": "^5.9.3",
     "vite": "^5.4.21",
     "vitest": "^2.1.9"
+  },
+  "dependencies": {
+    "preact": "^10.29.8"
   }
 }

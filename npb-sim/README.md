@@ -4,6 +4,8 @@
 
 ```
 npm install
-npm test          # エンジンのテスト（キャリブレーション含む）
+npm run dev       # 開発サーバー（http://localhost:5173）
+npm run build     # dist/ に書き出し
+npm test          # テスト
 npx vite-node scripts/fit-tuning.ts   # リーグ平均への自動調整
 ```

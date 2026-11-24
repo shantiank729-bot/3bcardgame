@@ -186,7 +186,7 @@ export function resolvePA(ctx: PAContext, rng: Rng): PAOutcome {
   }
   if (type !== 'IFFB') x += Math.log(ctx.park.hitFactor);
   if (type === 'LD' && !isOutfield(fielder)) x -= 0.9; // 内野へのライナーはほぼアウト
-  const defAdj = -0.013 * (d.range - 50) * (type === 'IFFB' ? 0.2 : 1);
+  const defAdj = -0.008 * (d.range - 50) * (type === 'IFFB' ? 0.2 : 1);
   const pHitAvg = sigmoid(x);
   const pHit = sigmoid(x + defAdj);
   let hit: 0 | 1 | 2 | 3 = 0;

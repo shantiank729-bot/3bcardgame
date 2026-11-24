@@ -58,6 +58,8 @@ export interface SideState {
   errors: number;
   lineScore: number[];
   lob: number;
+  /** ボックススコア用: 出場順（打順・守備位置・途中出場か） */
+  appearances: { pid: number; slot: number; pos: Pos; sub: boolean }[];
 }
 
 export type GameEvent =
@@ -125,6 +127,8 @@ export interface GameResult {
   appeared: Map<number, number[]>;
   startersAway: number; startersHome: number;
   walkoff: boolean;
+  appearancesAway: SideState['appearances'];
+  appearancesHome: SideState['appearances'];
 }
 
 const basesMask = (b: Bases) => (b[0] ? 1 : 0) | (b[1] ? 2 : 0) | (b[2] ? 4 : 0);
@@ -181,6 +185,7 @@ export class GameSim {
       bench: [...L.bench], bullpen: L.bullpen.map((b) => ({ ...b })),
       used: new Set([...order.map((o) => o.playerId), L.startingPitcher]),
       needPitcher: false, phUsed: 0, runs: 0, hits: 0, errors: 0, lineScore: [], lob: 0,
+      appearances: order.map((o, i) => ({ pid: o.playerId, slot: i, pos: o.pos, sub: false })),
     };
     for (const id of side.used) this.batLine(id).g = 1;
     for (const s of order) this.batLine(s.playerId);
@@ -1016,6 +1021,7 @@ export class GameSim {
     side.bench = side.bench.filter((b) => b !== newId);
     side.used.add(newId);
     this.batLine(newId).g = 1;
+    side.appearances.push({ pid: newId, slot: slotIndex, pos: slot.pos, sub: true });
     if (this.opts.log) this.events.push({ t: 'sub', inning: this.inning, top: this.top, team: side.team.teamId, kind, out: outId, in: newId, pos: slot.pos });
   }
 
@@ -1071,6 +1077,7 @@ export class GameSim {
       bat: this.bat, pitch: this.pitch, field: this.field, pitchCounts,
       winningPitcher: win, losingPitcher: lose, savePitcher: save, events: this.events, appeared,
       startersAway: this.away.pitchers[0].id, startersHome: this.home.pitchers[0].id, walkoff: this.walkoff,
+      appearancesAway: this.away.appearances, appearancesHome: this.home.appearances,
     };
   }
 }
