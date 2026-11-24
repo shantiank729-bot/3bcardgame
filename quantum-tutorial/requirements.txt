@@ -1,0 +1,6 @@
+# 2026年11月時点の最新版で動作確認済み
+# (qiskit 2.6.2 / qiskit-aer 0.18.4 / matplotlib 3.11 / jupyterlab 4.6, Python 3.13)
+qiskit[visualization]>=2.6
+qiskit-aer>=0.18
+matplotlib>=3.9
+jupyterlab>=4.4
