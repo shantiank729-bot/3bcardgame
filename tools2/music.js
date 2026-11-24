@@ -7,7 +7,7 @@ const {chromium}=require('playwright'); const fs=require('fs');
   const res=await p.evaluate(async()=>{
     const out={};
     for(const name of Object.keys(SONGS)){
-      const sr=22050, secs=12, oc=new OfflineAudioContext(2,sr*secs,sr);
+      const sr=22050, secs=24, oc=new OfflineAudioContext(2,sr*secs,sr);
       Snd.ac=oc; Snd.bus=null; Snd.nb=null; Snd.master=oc.createGain(); Snd.master.connect(oc.destination);
       const s=SONGS[name], step=60/s.bpm/2, loopDur=s.len*step;
       for(let L=0;L*loopDur<secs;L++) for(const e of s.ev){const t=.05+L*loopDur+e.st*step; if(t<secs) INST[e.inst](e.f,t,e.len*step*.95,e.v);}
