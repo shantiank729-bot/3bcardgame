@@ -3,11 +3,18 @@ import { Rng } from '../engine/rng';
 import type { FieldPos, Player } from '../engine/types';
 import { allocPlayerId, generateBatter, generatePitcher, setNextPlayerId } from '../players/generate';
 import { buildSchedule, type SeasonCalendar } from './schedule';
-import { TEAMS, type LeagueId, type TeamInfo } from './teams';
+import { ALLSTAR_TEAMS, TEAMS, type LeagueId, type TeamInfo } from './teams';
 
-export const SAVE_VERSION = 1;
+export const SAVE_VERSION = 2;
 
 export type RosterStatus = 'active' | 'farm' | 'ikusei';
+
+/** プロ入り後、このゲームの開始前までの通算成績（記録達成の判定用） */
+export interface CareerBase {
+  g: number; pa: number; h: number; hr: number; rbi: number; sb: number;
+  pg: number; w: number; l: number; sv: number; hld: number; k: number; outs: number;
+}
+export const emptyCareer = (): CareerBase => ({ g: 0, pa: 0, h: 0, hr: 0, rbi: 0, sb: 0, pg: 0, w: 0, l: 0, sv: 0, hld: 0, k: 0, outs: 0 });
 
 export interface PlayerRecord extends Player {
   teamId: number | null;
@@ -16,6 +23,12 @@ export interface PlayerRecord extends Player {
   /** 登録ポジション（表示用） */
   primary: FieldPos;
   role?: 'SP' | 'RP';
+  /** ゲーム開始前の通算 */
+  pre?: CareerBase;
+  /** 新人王の資格がある */
+  rookie?: boolean;
+  /** プロ入り年 */
+  debutYear?: number;
 }
 
 export interface PlayerSeason {
@@ -26,12 +39,15 @@ export interface PlayerSeason {
   field: FieldLine | null;
 }
 
+/** L=リーグ戦 I=交流戦 CS1/CS2=クライマックス JS=日本シリーズ AS=オールスター */
+export type GameKind = 'L' | 'I' | 'CS1' | 'CS2' | 'JS' | 'AS';
+
 export interface GameSummary {
   id: number;
   date: string;
   away: number;
   home: number;
-  kind: 'L' | 'I';
+  kind: GameKind;
   awayRuns: number;
   homeRuns: number;
   innings: number;
@@ -49,6 +65,9 @@ export interface GameSummary {
   /** 簡易ボックススコア: 打者 [pid, tid, pos(+100=途中), slot, ab, r, h, rbi, bb, k, hr] / 投手 [pid, tid, outs, h, r, er, bb, k, pitches, hr] */
   boxBat: number[][];
   boxPitch: number[][];
+  /** シリーズ内の第何戦か・会場（ポストシーズン・球宴用） */
+  label?: string;
+  parkName?: string;
   /** 打順通りの出場（打順順）*/
   order: [number[], number[]];
 }
@@ -103,6 +122,18 @@ export interface World {
   runEnv: Record<LeagueId, RunEnvAcc>;
   park: Record<number, ParkAcc>;
   settings: Settings;
+  /** ポストシーズン（CS・日本シリーズ） */
+  post: import('./postseason').PostseasonState | null;
+  /** ポストシーズンの個人成績（今季） */
+  postStats: Record<string, PlayerSeason>;
+  /** オールスター（今季） */
+  allStar: import('./allstar').AllStarState | null;
+  /** 表彰（年ごと） */
+  awards: Record<number, import('./awards').SeasonAwards>;
+  /** スポーツ新聞（日付ごと） */
+  news: Record<string, import('../news/types').NewsIssue>;
+  /** 一度だけ記事にする出来事の記録（マジック点灯・記録達成など） */
+  flags: Record<string, true>;
   /** 過去シーズンの選手成績（年 → 一覧） */
   history: Record<number, {
     season: PlayerSeason[];
@@ -116,6 +147,44 @@ export const emptyPark = (): ParkAcc => ({ homeGames: 0, homeRuns: 0, homeHR: 0,
 
 function rec(p: Player, teamId: number, status: RosterStatus, primary: FieldPos, role?: 'SP' | 'RP'): PlayerRecord {
   return { ...p, teamId, status, number: 0, primary, role, form: 0 };
+}
+
+/** 年齢と能力から、ゲーム開始前の通算成績をそれらしく作る */
+export function seedCareer(rng: Rng, p: PlayerRecord, year: number) {
+  const entryAge = p.foreign ? 25 : rng.pick([18, 18, 22, 22, 23]);
+  const years = Math.max(0, p.age - entryAge - (p.foreign ? 0 : 1));
+  const c = emptyCareer();
+  // 若手・二軍は出場が少ない
+  const share = p.status === 'active' ? 1 : p.status === 'farm' ? 0.25 : 0;
+  for (let i = 0; i < years; i++) {
+    const ramp = Math.min(1, (i + 1) / 4) * share * (0.5 + rng.next() * 0.6);
+    if (p.isPitcher && p.pit) {
+      const sp = p.role === 'SP';
+      const ip = (sp ? 140 : 50) * ramp;
+      const q = (p.pit.control + p.pit.velocity - 147 + 50) / 100;
+      c.pg += Math.round((sp ? 22 : 45) * ramp);
+      c.outs += Math.round(ip * 3);
+      c.k += Math.round(ip * (0.6 + q * 0.4) * (0.8 + rng.next() * 0.4));
+      c.w += Math.round((sp ? 8 : 3) * ramp * (0.6 + q * 0.6));
+      c.l += Math.round((sp ? 7 : 3) * ramp);
+      if (!sp) {
+        c.sv += Math.round((p.pit.velocity > 150 ? 15 : 2) * ramp * rng.next());
+        c.hld += Math.round(12 * ramp * rng.next());
+      }
+    } else {
+      const pa = 480 * ramp;
+      const avg = 0.21 + p.bat.contact / 1000;
+      c.g += Math.round(pa / 4);
+      c.pa += Math.round(pa);
+      c.h += Math.round(pa * 0.88 * avg);
+      c.hr += Math.round(pa * (0.004 + p.bat.power / 2600));
+      c.rbi += Math.round(pa * (0.07 + p.bat.power / 1500));
+      c.sb += Math.round(pa * Math.max(0, p.bat.speed - 45) / 2500);
+    }
+  }
+  p.pre = c;
+  p.debutYear = year - years;
+  p.rookie = !p.foreign && (p.isPitcher ? c.outs < 90 : c.pa < 60) && years <= 5;
 }
 
 /** 1球団分の選手を作る（一軍31・二軍34・育成8） */
@@ -177,7 +246,10 @@ export function newWorld(seed: number, userTeamId: number, year = 2027): World {
   const teamState: Record<number, TeamState> = {};
   for (const t of TEAMS) {
     const roster = generateFranchise(rng, t);
-    for (const p of roster) players[p.id] = p;
+    for (const p of roster) {
+      seedCareer(rng, p, year);
+      players[p.id] = p;
+    }
     teamState[t.id] = {
       id: t.id,
       rotation: roster.filter((p) => p.status === 'active' && p.role === 'SP').map((p) => p.id),
@@ -192,9 +264,11 @@ export function newWorld(seed: number, userTeamId: number, year = 2027): World {
     version: SAVE_VERSION, seed, year, date: calendar.opening, phase: 'regular', userTeamId,
     teams: TEAMS.map((t) => ({ ...t, park: { ...t.park } })), teamState, players, nextPlayerId, calendar,
     results: {}, season: {}, runEnv: { C: emptyRunEnv(), P: emptyRunEnv() }, park, settings: defaultSettings(), history: {},
+    post: null, postStats: {}, allStar: null, awards: {}, news: {}, flags: {},
   };
 }
 
-export const teamById = (w: World, id: number) => w.teams.find((t) => t.id === id)!;
+export const teamById = (w: World, id: number): TeamInfo =>
+  w.teams.find((t) => t.id === id) ?? ALLSTAR_TEAMS.find((t) => t.id === id)!;
 export const rosterOf = (w: World, tid: number, status?: RosterStatus) =>
   Object.values(w.players).filter((p) => p.teamId === tid && (!status || p.status === status));

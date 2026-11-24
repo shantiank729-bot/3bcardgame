@@ -14,7 +14,7 @@ export function GamePage({ id }: { id: number }) {
   return (
     <div class="page">
       <section class="card">
-        <h2>{fmtDate(g.date, true)}　{teamById(w, g.home).park.name}{g.kind === 'I' ? '（交流戦）' : ''}</h2>
+        <h2>{fmtDate(g.date, true)}　{g.parkName ?? teamById(w, g.home).park.name}{g.kind === 'I' ? '（交流戦）' : g.kind === 'AS' ? `（オールスター${g.label}）` : g.kind === 'JS' ? `（日本シリーズ${g.label}）` : g.kind === 'CS1' || g.kind === 'CS2' ? `（クライマックスシリーズ${g.label}）` : ''}</h2>
         <div class="tablewrap"><LineScore w={w} g={g} /></div>
         <p class="decisions">
           {g.wp && <span>勝 {link(g.wp)}</span>}

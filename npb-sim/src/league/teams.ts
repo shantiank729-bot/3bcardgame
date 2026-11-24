@@ -56,3 +56,10 @@ export const TEAMS: TeamInfo[] = [
 ];
 
 export const teamName = (t: TeamInfo) => `${t.city}${t.nickname}`;
+
+/** オールスター用の仮想チーム */
+export const ALLSTAR_TEAMS: TeamInfo[] = [
+  { id: 1001, league: 'C', city: 'セ・リーグ', nickname: 'オールスターズ', short: 'セ', abbr: 'CEN', primary: '#0d47a1', secondary: '#ffffff', emblem: 'star', park: null as never, smallBall: 20, market: 1 },
+  { id: 1002, league: 'P', city: 'パ・リーグ', nickname: 'オールスターズ', short: 'パ', abbr: 'PAC', primary: '#00695c', secondary: '#ffffff', emblem: 'star', park: null as never, smallBall: 20, market: 1 },
+];
+

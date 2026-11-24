@@ -79,3 +79,31 @@ export function computeStandings(world: World, league?: LeagueId, filter?: (kind
   for (const r of list) r.gb = r === top ? null : (top.w - top.l - (r.w - r.l)) / 2;
   return list;
 }
+
+/** 直接対決の残り試合数 */
+function remainingBetween(world: World, a: number, b: number) {
+  return world.calendar.games.filter((g) => !world.results[g.id] && ((g.away === a && g.home === b) || (g.away === b && g.home === a))).length;
+}
+
+/**
+ * 優勝マジック: 首位球団が「他球団の結果に関係なく」自力で優勝を決めるのに必要な勝利数。
+ * 首位が x 勝（残りは全敗）し、ライバルが残りを全勝（直接対決は首位が勝った分を除く）しても勝率で上回る最小の x。
+ * 点灯しない（自力で決められない）場合は null。優勝決定なら 0。
+ */
+export function magicNumber(world: World, league: LeagueId): { tid: number; magic: number | null } {
+  const rows = computeStandings(world, league);
+  const top = rows[0];
+  let need = 0;
+  for (const r of rows.slice(1)) {
+    const h2h = remainingBetween(world, top.tid, r.tid);
+    let found: number | null = null;
+    for (let x = 0; x <= top.remaining; x++) {
+      const aW = top.w + x, aL = top.l + (top.remaining - x);
+      const bW = r.w + r.remaining - Math.min(x, h2h), bL = r.l + Math.min(x, h2h);
+      if (winPct(aW, aL) > winPct(bW, bL)) { found = x; break; }
+    }
+    if (found === null) return { tid: top.tid, magic: null };
+    need = Math.max(need, found);
+  }
+  return { tid: top.tid, magic: need };
+}

@@ -33,8 +33,8 @@ describe('1シーズン', () => {
   const w = newWorld(7, 1);
   simulateUntil(w, '2099-01-01');
   it('全858試合を消化してレギュラーシーズン終了', () => {
-    expect(Object.keys(w.results).length).toBe(858);
-    expect(w.phase).toBe('postseason');
+    expect(Object.keys(w.results).filter((id) => Number(id) < 90000).length).toBe(858);
+    expect(w.phase).toBe('offseason');
     for (const lg of ['C', 'P'] as const) for (const r of computeStandings(w, lg)) expect(r.g).toBe(143);
   });
   it('勝率は引き分けを除いて計算', () => {

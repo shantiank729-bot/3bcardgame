@@ -1,5 +1,5 @@
 import { addDays } from '../league/calendar';
-import { simulateDay } from '../league/sim';
+import { isInSeason, simulateDay } from '../league/sim';
 import { newWorld, type World } from '../league/world';
 import { AUTO_SLOT, saveWorld } from '../save/db';
 import { runInWorker } from '../worker/client';
@@ -23,7 +23,7 @@ export function startNewGame(teamId: number, seed = Math.floor(Math.random() * 1
 /** 1日だけ進める（メインスレッドで即時） */
 export function simOneDay() {
   const w = state.world;
-  if (!w || w.phase !== 'regular') return;
+  if (!w || !isInSeason(w)) return;
   clearLive();
   const r = simulateDay(w);
   notify();
@@ -36,7 +36,7 @@ export type SimSpan = 'week' | 'month' | 'season';
 /** 指定期間を Web Worker で一括計算 */
 export async function simSpan(span: SimSpan) {
   const w = state.world;
-  if (!w || w.phase !== 'regular' || state.busy) return;
+  if (!w || !isInSeason(w) || state.busy) return;
   clearLive();
   let until: string;
   if (span === 'week') until = addDays(w.date, 6);
@@ -44,8 +44,8 @@ export async function simSpan(span: SimSpan) {
     const [y, m] = w.date.split('-').map(Number);
     const next = m === 12 ? `${y + 1}-01-01` : `${y}-${String(m + 1).padStart(2, '0')}-01`;
     until = addDays(next, -1);
-  } else until = w.calendar.lastDay;
-  const label = span === 'week' ? '1週間' : span === 'month' ? '月末まで' : 'シーズン終了まで';
+  } else until = w.phase === 'regular' ? w.calendar.lastDay : '9999-12-31';
+  const label = span === 'week' ? '1週間' : span === 'month' ? '月末まで' : w.phase === 'regular' ? 'レギュラーシーズン終了まで' : '日本シリーズ終了まで';
   const h = runInWorker(w, until, (date) => setBusy({ label, date, cancel: h.cancel }));
   setBusy({ label, date: w.date, cancel: h.cancel });
   try {

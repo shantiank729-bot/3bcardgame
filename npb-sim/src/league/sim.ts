@@ -3,9 +3,14 @@ import { GameSim, simulateGame, type GameResult, type PAObserver } from '../engi
 import type { TeamGameInput } from '../engine/types';
 import { Rng } from '../engine/rng';
 import { dayDiff, addDays } from './calendar';
+import { applySeriesResult, postseasonDone, postseasonGamesOn, seriesStatus, setupPostseason, type Series } from './postseason';
+import { gameHero, playAllStarGame } from './allstar';
+import { regularSeasonAwards } from './awards';
+import { addStory, snapshot, writeDailyNews, type Played } from '../news/daily';
+import { LEAGUE_NAMES } from './teams';
 import { assignBullpen, autoLineup } from './roster';
 import type { LeagueId } from './teams';
-import { rosterOf, teamById, type GameSummary, type RunEnvAcc, type World } from './world';
+import { rosterOf, teamById, type GameKind, type GameSummary, type PlayerSeason, type RunEnvAcc, type World } from './world';
 
 export function dayIndex(w: World, date = w.date) {
   return dayDiff(w.calendar.opening, date);
@@ -89,38 +94,53 @@ export function runEnvObserver(acc: RunEnvAcc): PAObserver {
   };
 }
 
-function seasonEntry(w: World, pid: number, tid: number) {
+function seasonEntry(store: Record<string, PlayerSeason>, pid: number, tid: number) {
   const k = `${pid}-${tid}`;
-  let e = w.season[k];
-  if (!e) w.season[k] = e = { pid, tid, bat: null, pitch: null, field: null };
+  let e = store[k];
+  if (!e) store[k] = e = { pid, tid, bat: null, pitch: null, field: null };
   return e;
 }
 
 /** 試合結果を成績・順位に反映する */
-export function recordGame(w: World, g: { id: number; date: string; away: number; home: number; kind: 'L' | 'I' }, res: GameResult, today: number) {
+export interface RecordOpts {
+  /** 個人成績の記録先（ポストシーズンは別） */
+  store?: Record<string, PlayerSeason>;
+  /** 球場・得点環境（パークファクター）に含めるか */
+  park?: boolean;
+  /** 疲労・ローテの記録をするか（オールスターはしない） */
+  fatigue?: boolean;
+  label?: string;
+  parkName?: string;
+}
+
+export function recordGame(w: World, g: { id: number; date: string; away: number; home: number; kind: GameKind }, res: GameResult, today: number, opts: RecordOpts = {}) {
+  const store = opts.store ?? w.season;
   const homeIds = new Set(res.appeared.get(g.home) ?? []);
   const tidOf = (pid: number) => (homeIds.has(pid) ? g.home : g.away);
   for (const [pid, l] of res.bat) {
-    const e = seasonEntry(w, pid, tidOf(pid));
+    const e = seasonEntry(store, pid, tidOf(pid));
     e.bat = addLine(e.bat ?? emptyBat(), l);
   }
   for (const [pid, l] of res.pitch) {
-    const e = seasonEntry(w, pid, tidOf(pid));
+    const e = seasonEntry(store, pid, tidOf(pid));
     e.pitch = addLine(e.pitch ?? emptyPitch(), l);
   }
   for (const [pid, l] of res.field) {
-    const e = seasonEntry(w, pid, tidOf(pid));
+    const e = seasonEntry(store, pid, tidOf(pid));
     e.field = addField(e.field ?? emptyField(), l);
   }
-  for (const [pid, n] of res.pitchCounts) {
-    const ts = w.teamState[tidOf(pid)];
-    (ts.pitchLog[pid] ??= {})[today] = n;
-  }
-  for (const [tid, sp] of [[g.away, res.startersAway], [g.home, res.startersHome]] as const) {
-    const ts = w.teamState[tid];
-    ts.lastStart[sp] = today;
-    const i = ts.rotation.indexOf(sp);
-    if (i >= 0) ts.rotIdx = (i + 1) % ts.rotation.length;
+  if (opts.fatigue !== false) {
+    for (const [pid, n] of res.pitchCounts) {
+      const ts = w.teamState[w.players[pid]?.teamId ?? tidOf(pid)];
+      if (ts) (ts.pitchLog[pid] ??= {})[today] = n;
+    }
+    for (const [tid, sp] of [[g.away, res.startersAway], [g.home, res.startersHome]] as const) {
+      const ts = w.teamState[tid];
+      if (!ts) continue;
+      ts.lastStart[sp] = today;
+      const i = ts.rotation.indexOf(sp);
+      if (i >= 0) ts.rotIdx = (i + 1) % ts.rotation.length;
+    }
   }
   // 球場（パークファクター用）
   let hrAway = 0, hrHome = 0;
@@ -130,14 +150,16 @@ export function recordGame(w: World, g: { id: number; date: string; away: number
     if (tidOf(pid) === g.home) hrHome += l.hr;
     else hrAway += l.hr;
   }
-  const ph = w.park[g.home];
-  ph.homeGames++;
-  ph.homeRuns += res.awayRuns + res.homeRuns;
-  ph.homeHR += hrAway + hrHome;
-  const pa = w.park[g.away];
-  pa.awayGames++;
-  pa.awayRuns += res.awayRuns + res.homeRuns;
-  pa.awayHR += hrAway + hrHome;
+  if (opts.park !== false) {
+    const ph = w.park[g.home];
+    ph.homeGames++;
+    ph.homeRuns += res.awayRuns + res.homeRuns;
+    ph.homeHR += hrAway + hrHome;
+    const pa = w.park[g.away];
+    pa.awayGames++;
+    pa.awayRuns += res.awayRuns + res.homeRuns;
+    pa.awayHR += hrAway + hrHome;
+  }
 
   const POS_CODE: Record<string, number> = { P: 1, C: 2, '1B': 3, '2B': 4, '3B': 5, SS: 6, LF: 7, CF: 8, RF: 9, DH: 10 };
   const order: [number[], number[]] = [res.appearancesAway.map((a) => a.pid), res.appearancesHome.map((a) => a.pid)];
@@ -158,7 +180,7 @@ export function recordGame(w: World, g: { id: number; date: string; away: number
     innings: res.innings, tie: res.tie, lineAway: res.lineAway, lineHome: res.lineHome,
     hits: [res.hitsAway, res.hitsHome], errors: [res.errorsAway, res.errorsHome],
     wp: res.winningPitcher, lp: res.losingPitcher, sv: res.savePitcher, sp: [res.startersAway, res.startersHome],
-    hr: hrs, walkoff: res.walkoff, boxBat, boxPitch, order,
+    hr: hrs, walkoff: res.walkoff, boxBat, boxPitch, order, label: opts.label, parkName: opts.parkName,
   };
   w.results[g.id] = summary;
   return summary;
@@ -179,66 +201,214 @@ export interface DayReport {
   seasonOver: boolean;
 }
 
+export interface ScheduledGame {
+  id: number;
+  date: string;
+  away: number;
+  home: number;
+  kind: GameKind;
+  label?: string;
+  seriesId?: Series['id'];
+  maxInnings: number | null;
+}
+
+/** レギュラーシーズン・ポストシーズンを通して、その日に予定されている試合 */
+export function scheduledOn(w: World, date: string): ScheduledGame[] {
+  if (w.phase === 'regular') {
+    return w.calendar.games.filter((g) => g.date === date && !w.results[g.id]).map((g) => ({ ...g, maxInnings: 12 }));
+  }
+  if (w.phase === 'postseason') {
+    return postseasonGamesOn(w, date).map(({ s, g }) => ({
+      id: g.id, date: g.date, away: g.away, home: g.home, kind: s.kind, label: `第${g.no}戦`, seriesId: s.id,
+      maxInnings: s.kind === 'JS' && g.no >= 8 ? null : 12,
+    }));
+  }
+  return [];
+}
+
+export function findScheduled(w: World, id: number): ScheduledGame | null {
+  return scheduledOn(w, w.date).find((g) => g.id === id) ?? null;
+}
+
 /** その日の自チームの試合（未消化）*/
 export function userGameToday(w: World) {
-  if (w.phase !== 'regular') return null;
-  return w.calendar.games.find((g) => g.date === w.date && !w.results[g.id] && (g.away === w.userTeamId || g.home === w.userTeamId)) ?? null;
+  return scheduledOn(w, w.date).find((g) => g.away === w.userTeamId || g.home === w.userTeamId) ?? null;
 }
 
 /** 観戦用に試合を準備する（自チームは手動采配が可能） */
 export function prepareLiveGame(w: World, gameId: number): GameSim {
-  const g = w.calendar.games.find((x) => x.id === gameId)!;
-  const today = dayIndex(w);
-  const home = teamById(w, g.home);
-  const dh = w.settings.dh[home.league as LeagueId];
-  const awaySP = chooseStarter(w, g.away, today);
-  const homeSP = chooseStarter(w, g.home, today);
-  const ai = buildTeamInput(w, g.away, today, dh, w.players[homeSP].throws, awaySP);
-  const hi = buildTeamInput(w, g.home, today, dh, w.players[awaySP].throws, homeSP);
-  const sim = new GameSim(ai, hi, home.park, { dh, seed: hashSeed(w.seed, w.year, g.id, 991), log: true });
-  sim.observer = runEnvObserver(w.runEnv[home.league]);
+  const g = findScheduled(w, gameId)!;
+  const sim = new GameSim(...gameInputs(w, g), { dh: dhFor(w, g), seed: hashSeed(w.seed, w.year, g.id, 991), log: true, maxInnings: g.maxInnings });
+  if (g.kind === 'L' || g.kind === 'I') sim.observer = runEnvObserver(w.runEnv[teamById(w, g.home).league]);
   sim.manualTeam = w.userTeamId;
   return sim;
 }
 
+const dhFor = (w: World, g: ScheduledGame) => w.settings.dh[teamById(w, g.home).league as LeagueId];
+
+function gameInputs(w: World, g: ScheduledGame): [TeamGameInput, TeamGameInput, import('../engine/types').Park] {
+  const today = dayIndex(w, g.date);
+  const dh = dhFor(w, g);
+  const awaySP = chooseStarter(w, g.away, today);
+  const homeSP = chooseStarter(w, g.home, today);
+  const ai = buildTeamInput(w, g.away, today, dh, w.players[homeSP].throws, awaySP);
+  const hi = buildTeamInput(w, g.home, today, dh, w.players[awaySP].throws, homeSP);
+  return [ai, hi, teamById(w, g.home).park];
+}
+
+/** 試合結果を記録し、ポストシーズンならシリーズも進める */
+export function applyResult(w: World, g: ScheduledGame, res: GameResult): Played {
+  const today = dayIndex(w, g.date);
+  const post = g.kind === 'CS1' || g.kind === 'CS2' || g.kind === 'JS';
+  const summary = recordGame(w, g, res, today, post ? { store: w.postStats, park: false, label: g.label } : {});
+  if (!post) return { summary, res, kind: g.kind };
+  const s = w.post!.series.find((x) => x.id === g.seriesId)!;
+  applySeriesResult(w, s, g.id, res.homeRuns, res.awayRuns);
+  // 勝ったチームから見た対戦成績（アドバンテージ込み）
+  const winTid = res.homeRuns > res.awayRuns ? g.home : res.awayRuns > res.homeRuns ? g.away : s.high;
+  const [a, b] = winTid === s.high ? s.wins : [s.wins[1], s.wins[0]];
+  const view = `${a}勝${b}敗${s.ties ? s.ties + '分' : ''}${s.advantage && winTid === s.high ? '（アドバンテージ1勝含む）' : ''}`;
+  void seriesStatus;
+  const played: Played = { summary, res, kind: g.kind, seriesName: s.name, seriesStatus: view };
+  if (s.winner) seriesWonStory(w, s, g.date);
+  return played;
+}
+
+/** シリーズの最優秀選手（勝ったチームで貢献点が最大） */
+function seriesMvp(w: World, s: Series): number | null {
+  const pts = new Map<number, number>();
+  for (const sg of s.games) {
+    const sm = w.results[sg.id];
+    if (!sm) continue;
+    for (const r of sm.boxBat) if (r[1] === s.winner) pts.set(r[0], (pts.get(r[0]) ?? 0) + r[6] + r[10] * 3 + r[7] * 1.2 + r[8] * 0.3);
+    for (const r of sm.boxPitch) if (r[1] === s.winner) pts.set(r[0], (pts.get(r[0]) ?? 0) + (r[2] / 3) * 0.8 + r[7] * 0.3 - r[5] * 1.2);
+  }
+  return [...pts].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+}
+
+function seriesWonStory(w: World, s: Series, date: string) {
+  const t = teamById(w, s.winner!);
+  const loser = teamById(w, s.winner === s.high ? s.low : s.high);
+  const mvp = seriesMvp(w, s);
+  const aw = w.awards[w.year];
+  if (aw) {
+    if (s.kind === 'CS2') aw.csMvp[s.league!] = mvp;
+    if (s.kind === 'JS') { aw.jsMvp = mvp; aw.champion = s.winner; }
+  }
+  const mv = mvp ? `シリーズMVPは${w.players[mvp].name}。` : '';
+  const st = `${s.wins[0]}勝${s.wins[1]}敗${s.ties ? s.ties + '分' : ''}`;
+  if (s.kind === 'JS') {
+    addStory(w, date, {
+      id: `jswin-${w.year}`, score: 140 + (s.winner === w.userTeamId ? 10 : 0), kind: 'jsWin',
+      headline: [`${t.nickname} 日本一！`, `${t.nickname} ${w.year}年日本一 歓喜の胴上げ`, `頂点！${t.nickname}が日本一`][w.year % 3],
+      sub: `日本シリーズ ${t.nickname}が${loser.nickname}を下す`,
+      body: `日本シリーズは${t.city}${t.nickname}が${loser.city}${loser.nickname}を破り、${w.year}年の日本一に輝いた。対戦成績は${s.winner === s.high ? st : `${s.wins[1]}勝${s.wins[0]}敗${s.ties ? s.ties + '分' : ''}`}。${mv}`,
+      scene: 'doage', tids: [t.id, loser.id], pids: mvp ? [mvp] : [], big: '日本一',
+    });
+  } else if (s.kind === 'CS2') {
+    addStory(w, date, {
+      id: `cs2-${s.league}-${w.year}`, score: 115 + (s.winner === w.userTeamId ? 10 : 0), kind: 'csWin',
+      headline: [`${t.nickname} 日本シリーズ進出！`, `${t.nickname} CS突破 頂上決戦へ`][w.year % 2],
+      sub: `CSファイナルステージ ${t.nickname} ${st}`,
+      body: `${LEAGUE_NAMES[s.league!]}のクライマックスシリーズ・ファイナルステージは${t.city}${t.nickname}が${loser.nickname}を退け、日本シリーズ進出を決めた（アドバンテージ1勝を含む対戦成績は上位球団から見て${st}）。${mv}`,
+      scene: 'champion', tids: [t.id], pids: mvp ? [mvp] : [], big: 'CS突破',
+    });
+  } else {
+    addStory(w, date, {
+      id: `cs1-${s.league}-${w.year}`, score: 95 + (s.winner === w.userTeamId ? 10 : 0), kind: 'cs1Win',
+      headline: `${t.nickname} ファイナルステージへ`, sub: `CSファーストステージ ${LEAGUE_NAMES[s.league!]}`,
+      body: `${LEAGUE_NAMES[s.league!]}のクライマックスシリーズ・ファーストステージは${t.city}${t.nickname}が勝ち抜けた。`,
+      scene: 'crowd', tids: [t.id], pids: [],
+    });
+  }
+}
+
 /** 観戦した試合を記録する */
 export function recordLiveGame(w: World, gameId: number, sim: GameSim) {
-  const g = w.calendar.games.find((x) => x.id === gameId)!;
-  return recordGame(w, g, sim.result(), dayIndex(w));
+  const g = findScheduled(w, gameId)!;
+  const p = applyResult(w, g, sim.result());
+  (w as World & { _livePlayed?: Played[] })._livePlayed = [p];
+  return p.summary;
+}
+
+export const isInSeason = (w: World) => w.phase === 'regular' || w.phase === 'postseason';
+
+function playAllStarDay(w: World, date: string): Played[] {
+  const no = w.calendar.allStar.indexOf(date) + 1;
+  if (no <= 0) return [];
+  const { res, parkTeam, away, home } = playAllStarGame(w, no, date, hashSeed(w.seed, w.year, 90000 + no));
+  const id = 90000 + (w.year % 100) * 10 + no;
+  const summary = recordGame(w, { id, date, away, home, kind: 'AS' }, res, dayIndex(w, date), { store: {}, park: false, fatigue: false, label: `第${no}戦`, parkName: parkTeam.park.name });
+  w.allStar!.games.push(summary);
+  w.allStar!.mvp.push(gameHero(res));
+  return [{ summary, res, kind: 'AS' }];
+}
+
+function endRegularSeason(w: World, date: string) {
+  w.awards[w.year] = regularSeasonAwards(w);
+  w.post = setupPostseason(w);
+  w.phase = 'postseason';
+  const a = w.awards[w.year];
+  const titles = (['C', 'P'] as const).map((lg) => a.titles[lg].filter((t) => ['首位打者', '本塁打王', '最優秀防御率'].includes(t.title)).map((t) => `${t.title}は${w.players[t.pid].name}（${t.value}）`).join('、')).join('。');
+  addStory(w, date, {
+    id: `titles-${w.year}`, score: 40, kind: 'titles', headline: `${w.year}年 タイトル確定`, sub: 'レギュラーシーズン全日程終了',
+    body: `レギュラーシーズンの全日程が終了し、個人タイトルが確定した。${titles}。`, scene: 'award', tids: [], pids: [],
+  });
+}
+
+export interface DayReport {
+  date: string;
+  games: GameSummary[];
+  seasonOver: boolean;
 }
 
 /** 現在の日付の試合をすべて行い、日付を1日進める */
-export function simulateDay(w: World, opts: { keepEvents?: (gameId: number) => boolean } = {}): DayReport {
+export function simulateDay(w: World): DayReport {
   const date = w.date;
   const today = dayIndex(w);
+  if (!isInSeason(w)) return { date, games: [], seasonOver: true };
+  const before = snapshot(w);
   const rng = new Rng(hashSeed(w.seed, w.year, today, 77));
-  const games = w.calendar.games.filter((g) => g.date === date && !w.results[g.id]);
-  const out: GameSummary[] = [];
-  for (const g of games) {
-    const home = teamById(w, g.home);
-    const dh = w.settings.dh[home.league as LeagueId];
-    const awaySP = chooseStarter(w, g.away, today);
-    const homeSP = chooseStarter(w, g.home, today);
-    const ai = buildTeamInput(w, g.away, today, dh, w.players[homeSP].throws, awaySP);
-    const hi = buildTeamInput(w, g.home, today, dh, w.players[awaySP].throws, homeSP);
-    const res = simulateGame(ai, hi, home.park, { dh, seed: hashSeed(w.seed, w.year, g.id), log: true }, runEnvObserver(w.runEnv[home.league]));
-    out.push(recordGame(w, g, res, today));
-    void opts;
+  const live = (w as World & { _livePlayed?: Played[] })._livePlayed ?? [];
+  delete (w as World & { _livePlayed?: Played[] })._livePlayed;
+  const played: Played[] = [...live];
+  if (w.phase === 'regular') played.push(...playAllStarDay(w, date));
+  for (const g of scheduledOn(w, date)) {
+    const [ai, hi, park] = gameInputs(w, g);
+    const obs = g.kind === 'L' || g.kind === 'I' ? runEnvObserver(w.runEnv[teamById(w, g.home).league]) : undefined;
+    const res = simulateGame(ai, hi, park, { dh: dhFor(w, g), seed: hashSeed(w.seed, w.year, g.id), log: true, maxInnings: g.maxInnings }, obs);
+    played.push(applyResult(w, g, res));
   }
   updateForm(w, rng);
   // 古い登板記録を整理
   for (const ts of Object.values(w.teamState)) for (const pid in ts.pitchLog) {
     for (const d in ts.pitchLog[pid]) if (Number(d) < today - 7) delete ts.pitchLog[pid][d];
   }
-  const seasonOver = date >= w.calendar.lastDay;
-  if (seasonOver) w.phase = 'postseason';
-  else w.date = addDays(date, 1);
-  return { date, games: out, seasonOver };
+  writeDailyNews(w, date, played, before);
+  let seasonOver = false;
+  if (w.phase === 'regular' && date >= w.calendar.lastDay) {
+    endRegularSeason(w, date);
+  } else if (w.phase === 'postseason' && postseasonDone(w)) {
+    w.phase = 'offseason';
+    seasonOver = true;
+    const a = w.awards[w.year];
+    if (a) {
+      const nm = (id: number | null) => (id ? `${w.players[id].name}（${teamById(w, w.players[id].teamId!).nickname}）` : '該当者なし');
+      addStory(w, date, {
+        id: `mvp-${w.year}`, score: 70, kind: 'award', headline: `MVPは${a.mvp.C ? w.players[a.mvp.C].name.split(' ')[0].split('・').pop() : '-'}と${a.mvp.P ? w.players[a.mvp.P].name.split(' ')[0].split('・').pop() : '-'}`,
+        sub: `${w.year}年 最優秀選手・新人王`,
+        body: `${w.year}年の最優秀選手（MVP）はセ・リーグが${nm(a.mvp.C)}、パ・リーグが${nm(a.mvp.P)}に決まった。新人王はセ・リーグが${nm(a.roy.C)}、パ・リーグが${nm(a.roy.P)}。最優秀先発投手の金剛賞は${nm(a.ace)}。`,
+        scene: 'award', tids: [], pids: [a.mvp.C, a.mvp.P].filter((x): x is number => !!x),
+      });
+    }
+  }
+  if (!seasonOver) w.date = addDays(date, 1);
+  return { date, games: played.map((p) => p.summary), seasonOver };
 }
 
 /** 指定日まで（その日を含む）進める */
 export function simulateUntil(w: World, until: string, onDay?: (r: DayReport) => void) {
-  while (w.phase === 'regular' && w.date <= until) {
+  while (isInSeason(w) && w.date <= until) {
     const r = simulateDay(w);
     onDay?.(r);
     if (r.seasonOver) break;

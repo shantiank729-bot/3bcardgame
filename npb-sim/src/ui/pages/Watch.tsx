@@ -54,7 +54,7 @@ export function Watch() {
   if (!L) {
     return <div class="page"><section class="card"><p>観戦中の試合はありません。</p><button class="btn" onClick={() => go('home')}>ホームへ</button></section></div>;
   }
-  const g = w.calendar.games.find((x) => x.id === L.gameId)!;
+  const g = L.meta;
   const A = teamById(w, g.away), H = teamById(w, g.home);
   const v = L.view;
   const sim = L.sim;
@@ -87,7 +87,7 @@ export function Watch() {
     <div class={`page watch ${koshien ? 'koshien' : ''}`}>
       <section class="card sb-card">
         <div class="sb-head">
-          <span>{fmtDate(g.date)} {H.park.name}</span>
+          <span>{fmtDate(g.date)} {H.park.name}{g.label ? `　${g.kind === 'JS' ? '日本シリーズ' : 'CS'}${g.label}` : ''}</span>
           <span class="inn">{v.over ? '試合終了' : `${v.inning}回${v.top ? '表' : '裏'}`}</span>
         </div>
         <div class="tablewrap">

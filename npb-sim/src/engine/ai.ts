@@ -79,6 +79,7 @@ export function beginDefenseHalf(g: GameSim, side: SideState) {
   void p;
   let change = side.needPitcher;
   const lead = g.leadFor(side);
+  if (g.opts.exhibition) change = change || ps.outs >= 3 || ps.pitches > 30;
   if (!change) {
     if (ps.role === 'SP') {
       if (ps.pitches >= ps.limit * 0.92) change = true;
@@ -143,6 +144,14 @@ export function maybePinchHit(g: GameSim, side: SideState) {
     const chance = g.bases[1] || g.bases[2];
     if ((tired && g.inning >= 5 && (lead <= 2 || chance)) || (g.inning >= 7 && Math.abs(lead) <= 4)) {
       g.substitute(side, idx, best.id, 'PH');
+    }
+    return;
+  }
+  if (g.opts.exhibition) {
+    // 球宴: 5回以降は控え野手をどんどん起用
+    if (g.inning >= 5 && g.rng.chance(0.45)) {
+      const fresh = bench[g.rng.int(0, bench.length - 1)];
+      g.substitute(side, idx, fresh.id, 'PH');
     }
     return;
   }

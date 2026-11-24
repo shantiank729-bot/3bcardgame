@@ -1,6 +1,6 @@
 /** 観戦中の試合（画面遷移しても保持） */
 import type { GameSim } from '../engine/game';
-import { prepareLiveGame, recordLiveGame, simulateDay } from '../league/sim';
+import { findScheduled, prepareLiveGame, recordLiveGame, simulateDay, type ScheduledGame } from '../league/sim';
 import type { World } from '../league/world';
 import type { FieldAnim } from './components/Field';
 import { animFor, applyFrame, framesFrom, initialView, type Frame, type View } from './liveView';
@@ -10,6 +10,7 @@ export type StepMode = 'pitch' | 'pa' | 'inning' | 'game';
 
 export interface Live {
   gameId: number;
+  meta: ScheduledGame;
   sim: GameSim;
   view: View;
   queue: Frame[];
@@ -28,7 +29,7 @@ export function startLive(w: World, gameId: number): Live {
   if (live && live.gameId === gameId) return live;
   const sim = prepareLiveGame(w, gameId);
   live = {
-    gameId, sim, view: initialView(sim.away.pitcher.id, sim.home.pitcher.id), queue: [], consumed: 0, playing: false,
+    gameId, meta: findScheduled(w, gameId)!, sim, view: initialView(sim.away.pitcher.id, sim.home.pitcher.id), queue: [], consumed: 0, playing: false,
     mode: null, speed: 1, anim: null, t: 0, recorded: false,
   };
   return live;
@@ -60,7 +61,7 @@ async function playFrame(L: Live, w: World, f: Frame) {
     if (sp) await sleep(650 / sp);
     return;
   }
-  const park = w.teams.find((t) => t.id === w.calendar.games.find((g) => g.id === L.gameId)!.home)!.park;
+  const park = w.teams.find((t) => t.id === L.meta.home)!.park;
   const label = (id: number) => String(w.players[id]?.number ?? '');
   if (sp && (f.e.t === 'pa' || f.e.t === 'steal')) {
     // 最後の1球を見せる

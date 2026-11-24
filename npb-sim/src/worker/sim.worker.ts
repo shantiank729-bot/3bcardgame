@@ -1,5 +1,5 @@
 /// <reference lib="webworker" />
-import { simulateDay } from '../league/sim';
+import { isInSeason, simulateDay } from '../league/sim';
 import type { World } from '../league/world';
 import { deserializeWorld, serializeWorld } from '../save/serialize';
 
@@ -22,7 +22,7 @@ self.onmessage = (ev: MessageEvent<WorkerRequest>) => {
   const step = () => {
     // 数日ずつ計算して、その合間に中止メッセージを受け取れるようにする
     for (let k = 0; k < 3; k++) {
-      if (cancel || w.phase !== 'regular' || w.date > msg.until) {
+      if (cancel || !isInSeason(w) || w.date > msg.until) {
         (self as unknown as Worker).postMessage({ type: 'done', json: serializeWorld(w), cancelled: cancel } satisfies WorkerResponse);
         return;
       }

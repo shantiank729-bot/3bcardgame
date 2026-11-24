@@ -1,5 +1,6 @@
 import { fmtDate } from '../league/calendar';
 import { teamById } from '../league/world';
+import { isInSeason } from '../league/sim';
 import { simOneDay, simSpan } from './actions';
 import { Logo } from './components/Logo';
 import { GamePage } from './pages/Game';
@@ -13,23 +14,32 @@ import { Standings } from './pages/Standings';
 import { TeamPage } from './pages/Team';
 import { Title } from './pages/Title';
 import { Watch } from './pages/Watch';
+import { NewsPage } from './pages/News';
+import { PostPage } from './pages/Post';
+import { AwardsPage } from './pages/Awards';
+import { useState } from 'preact/hooks';
 import { live } from './live';
 import { useRoute, useStore } from './store';
 
-const NAV: [string, string, string][] = [
-  ['home', 'ホーム', '⌂'],
-  ['watch', '観戦', '◉'],
-  ['standings', '順位表', '☰'],
-  ['schedule', '日程', '▦'],
-  ['leaders', '成績', '★'],
-  ['saber', 'セイバー', '∑'],
-  ['team', 'チーム', '⚾'],
-  ['saves', 'セーブ', '⛁'],
+// [ルート, 表示名, アイコン, スマホの下部バーに常に出すか]
+const NAV: [string, string, string, boolean][] = [
+  ['home', 'ホーム', '⌂', true],
+  ['watch', '観戦', '◉', true],
+  ['news', '新聞', '▤', true],
+  ['standings', '順位表', '☰', true],
+  ['schedule', '日程', '▦', false],
+  ['leaders', '成績', '★', false],
+  ['saber', 'セイバー', '∑', false],
+  ['post', 'ポストシーズン', '♛', false],
+  ['awards', '表彰', '✪', false],
+  ['team', 'チーム', '⚾', true],
+  ['saves', 'セーブ', '⛁', false],
 ];
 
 export function App() {
   const s = useStore();
   const route = useRoute();
+  const [more, setMore] = useState(false);
   const w = s.world;
   if (!w) return <><Title />{s.toast && <div class="toast">{s.toast}</div>}</>;
   const me = teamById(w, w.userTeamId);
@@ -45,10 +55,13 @@ export function App() {
     case 'game': body = <GamePage id={Number(arg)} />; break;
     case 'saves': body = <Saves />; break;
     case 'watch': body = <Watch />; break;
+    case 'news': body = <NewsPage date={arg} key={arg} />; break;
+    case 'post': body = <PostPage />; break;
+    case 'awards': body = <AwardsPage />; break;
     default: body = <Home />;
   }
   const active = page ?? 'home';
-  const regular = w.phase === 'regular';
+  const regular = isInSeason(w);
   return (
     <div class="app" style={{ '--tc': me.primary, '--tc2': me.secondary } as never}>
       <header class="topbar">
@@ -61,10 +74,11 @@ export function App() {
           <button class="btn" disabled={!regular || !!s.busy} onClick={() => simSpan('season')}>全日程</button>
         </div>
       </header>
-      <nav class="nav">
-        {NAV.filter(([k]) => k !== 'watch' || live).map(([k, label, icon]) => (
-          <a key={k} href={'#/' + k} class={active === k ? 'on' : ''}><span class="ic">{icon}</span><span>{label}</span></a>
+      <nav class={`nav ${more ? 'open' : ''}`} onClick={() => setMore(false)}>
+        {NAV.filter(([k]) => k !== 'watch' || live).map(([k, label, icon, main]) => (
+          <a key={k} href={'#/' + k} class={`${active === k ? 'on' : ''} ${main ? '' : 'sec'}`}><span class="ic">{icon}</span><span>{label}</span></a>
         ))}
+        <button class="morebtn" onClick={(e) => { e.stopPropagation(); setMore(!more); }}><span class="ic">≡</span><span>その他</span></button>
       </nav>
       <main>{body}</main>
       {s.busy && (

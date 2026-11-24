@@ -99,6 +99,8 @@ export interface GameOptions {
   log?: boolean;
   /** アマチュア用の打撃環境補正 */
   offenseShift?: number;
+  /** オールスターなどの興行試合（投手は1イニングずつ、代打を多く使う） */
+  exhibition?: boolean;
 }
 
 /** 打席前の作戦（ユーザーやAIが指定） */
@@ -211,7 +213,7 @@ export class GameSim {
     const baseFatigue = role === 'SP' ? 0 : Math.min(0.6, yesterday / 60 + dayBefore / 150);
     const limit =
       role === 'SP'
-        ? 48 + st * 0.78 + this.rng.normal(0, 7) + (p.form ?? 0) * 6
+        ? 50 + st * 0.82 + this.rng.normal(0, 7) + (p.form ?? 0) * 6
         : 14 + st * 0.35 + (role === 'LONG' ? 25 : 0) + this.rng.normal(0, 4);
     return {
       id: p.id, role, pitches: 0, outs: 0, bf: 0, limit, entryInning: inning, entryLead: lead, saveSituation: false, tyingClose: false, exitLead: null,

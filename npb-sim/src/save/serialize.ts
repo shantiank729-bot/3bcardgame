@@ -24,8 +24,15 @@ export function deserializeWorld(json: string): World {
 }
 
 function migrate(w: World): World {
-  // version 1 が最初の形式
+  // version 1 → 2: ポストシーズン・表彰・新聞
   w.history ??= {};
+  w.post ??= null;
+  w.postStats ??= {};
+  w.allStar ??= null;
+  w.awards ??= {};
+  w.news ??= {};
+  w.flags ??= {};
+  w.version = 2;
   return w;
 }
 

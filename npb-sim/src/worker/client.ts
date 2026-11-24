@@ -1,4 +1,4 @@
-import { simulateDay } from '../league/sim';
+import { isInSeason, simulateDay } from '../league/sim';
 import type { World } from '../league/world';
 import { deserializeWorld, serializeWorld } from '../save/serialize';
 import type { WorkerRequest, WorkerResponse } from './sim.worker';
@@ -22,7 +22,7 @@ export function runInWorker(w: World, until: string, onProgress?: (date: string,
     // Worker が使えない環境ではメインスレッドで実行
     let cancelled = false;
     const promise = (async () => {
-      while (!cancelled && w.phase === 'regular' && w.date <= until) {
+      while (!cancelled && isInSeason(w) && w.date <= until) {
         simulateDay(w);
         onProgress?.(w.date, 0);
         await new Promise((r) => setTimeout(r, 0));
