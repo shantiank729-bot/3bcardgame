@@ -79,3 +79,23 @@ describe("入玉宣言（27点法）", () => {
     expect(canDeclareWin(Position.fromSfen(sfen), 0)).toBe(false);
   });
 });
+
+describe("手数の上限", () => {
+  it("500手に達したら持将棋で引き分け（千日手にならない手順で確認するため上限を小さくする）", () => {
+    const g = new Game();
+    g.maxPly = 6;
+    play(g, "7g7f 3c3d 2g2f 8c8d 2f2e");
+    expect(g.result).toBeNull();
+    play(g, "8d8e");
+    expect(g.result).toEqual({ winner: null, reason: "持将棋" });
+  });
+  it("上限の手で詰んだら詰みが優先", () => {
+    const g = new Game("4k4/9/4P4/9/9/9/9/9/4K4 b G 1");
+    g.maxPly = 1;
+    play(g, "G*5b");
+    expect(g.result?.reason).toBe("詰み");
+  });
+  it("既定値は500手", () => {
+    expect(new Game().maxPly).toBe(500);
+  });
+});

@@ -2,11 +2,13 @@ import { Game, canDeclareWin } from "../../core/game";
 import { exportKif, importKif, moveToDisplay } from "../../core/kif";
 import { Position } from "../../core/position";
 import { BLACK, Color, Move, WHITE } from "../../core/types";
-import { parseUsiPosition, toUsiPosition } from "../../core/usi";
+import { parseUsiPosition, toUsiPosition, usiToMove } from "../../core/usi";
 import { Clock, TIME_PRESETS, fmtClock } from "../../game/clock";
 import { settings } from "../../settings";
 import { BoardView } from "../board";
 import { download, el, modal, pickFile, toast } from "../dom";
+import { playEngine } from "../../engine/client";
+import { MAX_LEVEL, chooseMove, levelParams, mulberry32, shouldResign } from "../../engine/levels";
 import { playBeep, playPieceSound } from "../sound";
 
 const COLOR_NAME = ["先手", "後手"];
@@ -18,6 +20,8 @@ export interface PlayOptions {
   humans: Color[];
   timePreset: string;
   names?: [string, string];
+  /** AI の設定（人どうしなら省略） */
+  ai?: { color: Color; level: number };
 }
 
 export function mountPlay(root: HTMLElement): () => void {
@@ -38,23 +42,51 @@ function setupView(onStart: (o: PlayOptions) => void): HTMLElement {
     if (p.id === s.timePreset) o.selected = true;
     return o;
   }));
-  const startBtn = el("button", { class: "btn primary big" }, "対局開始");
-  startBtn.onclick = () => {
-    settings.set({ timePreset: timeSel.value });
-    onStart({ humans: [BLACK, WHITE], timePreset: timeSel.value, names: ["先手", "後手"] });
+  const oppSel = el("select", { id: "opponent" },
+    el("option", { value: "ai" }, "AI"), el("option", { value: "human" }, "人どうし（1台で交互に指す）"));
+  oppSel.value = s.opponent;
+  const levelSel = el("select", { id: "level" }, ...Array.from({ length: MAX_LEVEL }, (_, i) => el("option", { value: String(i + 1) }, `レベル ${i + 1}`)));
+  levelSel.value = String(s.aiLevel);
+  const sideSel = el("select", { id: "side" }, el("option", { value: "0" }, "先手（自分が先に指す）"), el("option", { value: "1" }, "後手"), el("option", { value: "2" }, "ランダム"));
+  sideSel.value = String(s.side);
+  const aiFields = el("div", {}, el("label", { class: "field" }, el("span", {}, "AIのレベル"), levelSel), el("label", { class: "field" }, el("span", {}, "手番"), sideSel));
+  const engineNote = el("p", { class: "note" }, "エンジンを準備中…");
+  const syncAi = () => aiFields.classList.toggle("hidden", oppSel.value !== "ai");
+  oppSel.onchange = syncAi;
+  syncAi();
+  playEngine().ready.then((r) => {
+    engineNote.textContent = r.kind === "yaneuraou"
+      ? "エンジン: やねうら王（WebAssembly）"
+      : "エンジン: 簡易エンジン（この環境ではやねうら王を動かせません。強いレベルは本来より弱くなります）";
+  });
+  const start = (startSfen?: string, moves?: Move[]) => {
+    settings.set({ timePreset: timeSel.value, opponent: oppSel.value as "ai" | "human", aiLevel: Number(levelSel.value), side: Number(sideSel.value) as 0 | 1 | 2 });
+    if (oppSel.value === "human") {
+      onStart({ humans: [BLACK, WHITE], timePreset: timeSel.value, names: ["先手", "後手"], startSfen, moves });
+      return;
+    }
+    const side = sideSel.value === "2" ? (Math.random() < 0.5 ? 0 : 1) : Number(sideSel.value);
+    const human = side as Color;
+    const ai = (human ^ 1) as Color;
+    const level = Number(levelSel.value);
+    const names: [string, string] = human === BLACK ? ["あなた", `AI Lv${level}`] : [`AI Lv${level}`, "あなた"];
+    onStart({ humans: [human], timePreset: timeSel.value, names, ai: { color: ai, level }, startSfen, moves });
   };
+  const startBtn = el("button", { class: "btn primary big" }, "対局開始");
+  startBtn.onclick = () => start();
   const importBtn = el("button", { class: "btn" }, "棋譜・局面を読み込んで続きから指す");
   importBtn.onclick = async () => {
     const d = await importDialog();
-    if (!d) return;
-    onStart({ humans: [BLACK, WHITE], timePreset: "none", startSfen: d.sfen, moves: d.moves, names: ["先手", "後手"] });
+    if (d) start(d.sfen, d.moves);
   };
   return el("div", { class: "screen setup" },
-    el("h2", {}, "対局（人どうし）"),
-    el("p", { class: "note" }, "AIとの対局はフェーズ2で追加します。今は1台の端末で交互に指せます。"),
+    el("h2", {}, "対局"),
+    el("label", { class: "field" }, el("span", {}, "相手"), oppSel),
+    aiFields,
     el("label", { class: "field" }, el("span", {}, "持ち時間"), timeSel),
     startBtn,
     importBtn,
+    engineNote,
   );
 }
 
@@ -128,7 +160,8 @@ function startGame(root: HTMLElement, opts: PlayOptions, onExit: () => void): ()
       status.textContent = r.winner === null ? `${r.reason}で引き分け` : `${r.reason} — ${COLOR_NAME[r.winner]}（${names[r.winner]}）の勝ち`;
       status.className = "status end";
     } else {
-      status.textContent = `${game.ply + 1}手目 ${COLOR_NAME[game.turn]}の番` + (game.pos.inCheck() ? " — 王手！" : "");
+      const who = ai && game.turn === ai.color ? "AIが考えています…" : `${COLOR_NAME[game.turn]}の番`;
+      status.textContent = `${game.ply + 1}手目 ${who}` + (game.pos.inCheck() ? " — 王手！" : "");
       status.className = "status" + (game.pos.inCheck() ? " check" : "");
     }
     renderMoveList();
@@ -176,6 +209,40 @@ function startGame(root: HTMLElement, opts: PlayOptions, onExit: () => void): ()
     void modal("対局終了", el("p", {}, msg), [{ label: "閉じる", primary: true }]);
   }
 
+  const ai = opts.ai;
+  const rng = mulberry32((Date.now() ^ (Math.random() * 1e9)) >>> 0);
+  const aiEvals: number[] = [];
+  let thinking = false;
+  let disposed = false;
+
+  async function aiThink() {
+    if (!ai || game.result || game.turn !== ai.color || thinking) return;
+    thinking = true;
+    const ply = game.ply;
+    const t0 = performance.now();
+    try {
+      const p = levelParams(ai.level);
+      const position = toUsiPosition(game.startSfen, game.moves).replace(/^position /, "");
+      const r = await playEngine().analyze({ position, multipv: p.multipv, nodes: p.nodes });
+      if (disposed || game.result || game.ply !== ply) return;
+      if (r.bestmove === "win") { game.declare(); onEnd(); return; }
+      if (!r.candidates.length || r.bestmove === "resign") { game.resign(ai.color); onEnd(); return; }
+      aiEvals.push(r.candidates[0].score);
+      if (shouldResign(aiEvals)) { game.resign(ai.color); onEnd(); return; }
+      const choice = chooseMove(game.pos, r.candidates, p, rng);
+      // すぐ指すと不自然なので、少し考えたように見せる
+      const wait = Math.max(0, 350 + rng() * 700 - (performance.now() - t0));
+      await new Promise((res) => setTimeout(res, wait));
+      if (disposed || game.result || game.ply !== ply) return;
+      thinking = false;
+      doMove(usiToMove(choice.move));
+    } catch (e) {
+      toast(`エンジンのエラー: ${(e as Error).message}`, 4000);
+    } finally {
+      thinking = false;
+    }
+  }
+
   function doMove(m: Move) {
     const captured = game.pos.board[m.to] !== 0;
     if (!game.play(m)) return;
@@ -184,7 +251,7 @@ function startGame(root: HTMLElement, opts: PlayOptions, onExit: () => void): ()
     lastBeep = -1;
     playPieceSound(captured);
     if (game.result) onEnd();
-    else render();
+    else { render(); void aiThink(); }
   }
   board.onMove = doMove;
 
@@ -194,8 +261,9 @@ function startGame(root: HTMLElement, opts: PlayOptions, onExit: () => void): ()
   };
   resignBtn.onclick = async () => {
     if (game.result) return;
-    const i = await modal("投了", el("p", {}, `${COLOR_NAME[game.turn]}が投了しますか？`), [{ label: "やめる" }, { label: "投了する", primary: true }]);
-    if (i === 1) { game.resign(); onEnd(); }
+    const loser: Color = ai ? opts.humans[0] : game.turn;
+    const i = await modal("投了", el("p", {}, `${ai ? "" : COLOR_NAME[loser] + "が"}投了しますか？`), [{ label: "やめる" }, { label: "投了する", primary: true }]);
+    if (i === 1 && !game.result) { game.resign(loser); onEnd(); }
   };
   flipBtn.onclick = () => { flipped = !flipped; render(); };
   recordBtn.onclick = () => recordMenu();
@@ -231,5 +299,6 @@ function startGame(root: HTMLElement, opts: PlayOptions, onExit: () => void): ()
   if (clock && !game.result) clock.start(game.turn, performance.now());
   const timer = clock ? window.setInterval(renderClocks, 200) : 0;
   render();
-  return () => { clearInterval(timer); document.body.classList.remove("in-game"); };
+  void aiThink();
+  return () => { disposed = true; clearInterval(timer); document.body.classList.remove("in-game"); playEngine().stop(); };
 }

@@ -231,6 +231,38 @@ export class Position {
     return false;
   }
 
+  /** sq に利いている by 側の駒のマス一覧 */
+  attackers(sq: number, by: Color): number[] {
+    const out: number[] = [];
+    const x0 = xOf(sq), y0 = yOf(sq);
+    for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) {
+      if (!dx && !dy) continue;
+      let x = x0 + dx, y = y0 + dy, dist = 1;
+      while (x >= 0 && x < 9 && y >= 0 && y < 9) {
+        const s2 = y * 9 + x;
+        const pc = this.board[s2];
+        if (pc) {
+          if (pieceColor(pc) === by) {
+            const t = pieceType(pc);
+            const v = dirFor(by, [-dx, -dy]);
+            if ((dist === 1 && STEP_DIRS[t].some((d) => d[0] === v[0] && d[1] === v[1])) ||
+                SLIDE_DIRS[t].some((d) => d[0] === v[0] && d[1] === v[1])) out.push(s2);
+          }
+          break;
+        }
+        x += dx; y += dy; dist++;
+      }
+    }
+    const fy = by === BLACK ? 2 : -2;
+    for (const dx of [-1, 1]) {
+      const x = x0 + dx, y = y0 + fy;
+      if (x < 0 || x > 8 || y < 0 || y > 8) continue;
+      const pc = this.board[y * 9 + x];
+      if (pc && pieceColor(pc) === by && pieceType(pc) === KE) out.push(y * 9 + x);
+    }
+    return out;
+  }
+
   inCheck(c: Color = this.turn): boolean {
     const k = this.kingSq[c];
     return k >= 0 && this.isAttacked(k, opponent(c));

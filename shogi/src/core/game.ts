@@ -62,6 +62,9 @@ export class Game {
   checks: boolean[] = [];
   result: GameResult | null = null;
 
+  /** この手数に達したら持将棋（引き分け）。0 なら上限なし */
+  maxPly = 500;
+
   constructor(sfen?: string) {
     this.pos = sfen ? Position.fromSfen(sfen) : Position.startpos();
     this.startSfen = this.pos.sfen();
@@ -85,6 +88,7 @@ export class Game {
     this.keys.push(this.pos.key());
     this.checkRepetition();
     if (!this.result) this.checkNoMoves();
+    if (!this.result && this.maxPly > 0 && this.ply >= this.maxPly) this.result = { winner: null, reason: "持将棋" };
     return true;
   }
 
