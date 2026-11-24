@@ -1,6 +1,7 @@
 // 対局記録とプロフィール（レーティング）
 import type { GameResult } from "../core/game";
 import type { Color } from "../core/types";
+import type { PosEval } from "../analysis/classify";
 import { Glicko, glicko2Update } from "../rating/glicko2";
 import { AI_RD, INITIAL, MIN_RD, PLACEMENT_GAMES, PLACEMENT_MIN_RD, levelRating } from "../rating/rank";
 import { get, getAll, put } from "./db";
@@ -25,6 +26,8 @@ export interface GameRecord {
   timePreset: string;
   /** レーティング対局のみ */
   rating?: { before: Glicko; after: Glicko; aiRating: number; placement: boolean };
+  /** 対局後の解析。evals[k] は k 手指した後の局面の評価 */
+  analysis?: { nodes: number; evals: (PosEval | null)[]; done: boolean };
 }
 
 export interface Profile {

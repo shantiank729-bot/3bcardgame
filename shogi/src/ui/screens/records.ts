@@ -75,6 +75,7 @@ export function mountRecords(root: HTMLElement) {
         startSfen: g.startSfen, moves: g.moves.map(usiToMove), times: g.times, black: g.names[0], white: g.names[1],
         startedAt: new Date(g.date), endReason: g.result.reason === "連続王手の千日手" ? "反則負け" : g.result.reason, winner: g.result.winner,
       }));
+      const reviewBtn = el("a", { class: "btn small", href: `#/review/${g.id}` }, "振り返り");
       const delta = g.rating ? Math.round(g.rating.after.rating - g.rating.before.rating) : null;
       const res = resultText(g);
       return el("div", { class: "game-row" },
@@ -83,9 +84,9 @@ export function mountRecords(root: HTMLElement) {
           el("span", { class: `result ${res === "勝ち" ? "win" : res === "負け" ? "loss" : ""}` }, res),
           el("span", {}, g.aiLevel ? ` 対 AI Lv${g.aiLevel}` : ""),
           el("div", { class: "note" }, `${fmtDate(g.date)}・${g.moves.length}手・${g.result.reason}${delta !== null ? `・${delta >= 0 ? "+" : ""}${delta}` : ""}`)),
-        kifBtn);
+        el("div", { class: "row-btns" }, reviewBtn, kifBtn));
     }
     body.replaceChildren(el("h2", {}, "成長記録"), tiles, chartBox, hist, list,
-      el("p", { class: "note" }, "対局の振り返り（解析・形勢グラフ）はフェーズ4で追加します。"));
+);
   })();
 }

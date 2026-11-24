@@ -3,6 +3,7 @@ import { el } from "./ui/dom";
 import { mountHome } from "./ui/screens/home";
 import { mountPlay } from "./ui/screens/play";
 import { mountRecords } from "./ui/screens/records";
+import { mountReview } from "./ui/screens/review";
 import { mountSettings } from "./ui/screens/settings";
 
 type Mount = (root: HTMLElement, arg?: string) => (() => void) | void;
@@ -16,6 +17,7 @@ const ROUTES: Record<string, { title: string; mount: Mount; tab?: string }> = {
   play: { title: "対局", mount: mountPlay, tab: "対局" },
   tsume: { title: "詰将棋", mount: placeholder("詰将棋", 5), tab: "詰将棋" },
   records: { title: "記録", mount: mountRecords, tab: "記録" },
+  review: { title: "振り返り", mount: mountReview },
   joseki: { title: "定跡練習", mount: placeholder("定跡練習", 6) },
   settings: { title: "設定", mount: mountSettings, tab: "設定" },
 };

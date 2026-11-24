@@ -246,3 +246,38 @@ body.in-game #main { padding-bottom: env(safe-area-inset-bottom); }
   .confetti { display: none; }
   .celebrate-card { animation: none; }
 }
+
+/* ---- フェーズ4: 振り返り・練習対局 ---- */
+.actions.six { grid-template-columns: repeat(6, 1fr); gap: 4px; }
+.actions.six .btn { font-size: 0.9rem; padding: 0 2px; }
+.row-btns { display: flex; gap: 6px; }
+.screen.review { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 6px 8px 16px; }
+.review-title { width: calc(var(--board) + 20px); }
+.review-title h2 { margin: 2px 0; }
+.eval-graph { width: calc(var(--board) + 20px); background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 4px 4px 0; touch-action: none; }
+.eval-graph svg { display: block; width: 100%; }
+.graph-title { font-size: 0.8rem; color: var(--muted); padding: 0 4px; }
+.eval-graph .grid-line { stroke: var(--line); stroke-width: 1; }
+.eval-graph .mid-line { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 4 3; }
+.eval-graph .axis-label { fill: var(--muted); font-size: 10px; }
+.eval-graph .series-line { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; }
+.eval-graph .eval-area { fill: var(--accent); opacity: 0.12; }
+.eval-graph .cursor-line { stroke: var(--fg); stroke-width: 1.5; }
+.graph-mark { font-size: 13px; font-weight: 800; paint-order: stroke; stroke: var(--card); stroke-width: 3px; }
+.graph-mark.bad { fill: #d02020; }
+.graph-mark.dubious { fill: #c78a00; }
+.graph-mark.good { fill: #1f8a4c; }
+.review-nav { width: calc(var(--board) + 20px); display: flex; gap: 6px; flex-wrap: wrap; }
+.review-nav .btn { flex: 1; padding: 0 6px; }
+.review-info { width: calc(var(--board) + 20px); background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; }
+.review-info .btn { align-self: flex-start; margin-top: 4px; }
+.info-head { font-weight: 700; }
+.pv { font-size: 0.85rem; word-break: break-all; }
+.mark { font-weight: 800; }
+.mark.bad { color: #d02020; }
+.mark.dubious { color: #c78a00; }
+.mark.good { color: #1f8a4c; }
+.review-moves { width: calc(var(--board) + 20px); display: flex; flex-wrap: wrap; gap: 4px; max-height: 180px; overflow-y: auto; }
+.rv-move { border: 1px solid var(--line); background: var(--card); color: var(--muted); border-radius: 6px; padding: 4px 6px; font-size: 0.8rem; }
+.rv-move.mine { color: var(--fg); }
+.rv-move.current { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }

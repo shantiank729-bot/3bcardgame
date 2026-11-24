@@ -13,6 +13,7 @@ import { playBeep, playPieceSound } from "../sound";
 import { GameMode, applyRatedGame, humanScore, isPlacement, loadProfile, saveGame, saveProfile } from "../../db/records";
 import { PLACEMENT_GAMES, chooseLevel, levelRating, rankOf, rankValue } from "../../rating/rank";
 import { celebrate } from "../celebrate";
+import { analysis, analysisEngine } from "../../analysis/manager";
 
 const COLOR_NAME = ["先手", "後手"];
 
@@ -178,7 +179,11 @@ function startGame(root: HTMLElement, opts: PlayOptions, onExit: () => void): ()
   const flipBtn = el("button", { class: "btn" }, "反転");
   const recordBtn = el("button", { class: "btn" }, "棋譜");
   const exitBtn = el("button", { class: "btn" }, "終了");
-  const actions = el("div", { class: "actions" }, resignBtn, flipBtn, recordBtn, exitBtn);
+  const practice = opts.mode === "practice";
+  const hintBtn = el("button", { class: "btn" }, "ヒント");
+  const undoBtn = el("button", { class: "btn" }, "待った");
+  const actions = el("div", { class: "actions" + (practice ? " six" : "") }, ...(practice ? [hintBtn, undoBtn] : []), resignBtn, flipBtn, recordBtn, exitBtn);
+  let hintArrow: { from: number; to: number; drop: number } | null = null;
 
   const statusRow = el("div", { class: "status-row" }, status, declareBtn);
   const screen = el("div", { class: "screen play" }, board.root, statusRow, moveList, actions);
@@ -191,7 +196,7 @@ function startGame(root: HTMLElement, opts: PlayOptions, onExit: () => void): ()
   function render() {
     nameEls[0].classList.toggle("active", !game.result && game.turn === BLACK);
     nameEls[1].classList.toggle("active", !game.result && game.turn === WHITE);
-    board.set({ pos: game.pos, lastMove: game.pos.lastMove(), flipped, movable: humanTurn() ? game.turn : null });
+    board.set({ pos: game.pos, lastMove: game.pos.lastMove(), flipped, movable: humanTurn() ? game.turn : null, arrows: hintArrow ? [hintArrow] : [] });
     declareBtn.classList.toggle("hidden", !(humanTurn() && canDeclareWin(game.pos)));
     if (game.result) {
       const r = game.result;
@@ -240,6 +245,7 @@ function startGame(root: HTMLElement, opts: PlayOptions, onExit: () => void): ()
   }
 
   let saved = false;
+  let savedId: number | null = null;
   /** 対局を記録し、レーティング対局ならレーティングを更新する */
   async function finishAndSave(): Promise<HTMLElement[]> {
     if (saved || !game.result) return [];
@@ -262,7 +268,10 @@ function startGame(root: HTMLElement, opts: PlayOptions, onExit: () => void): ()
       if (rankValue(ra) > rankValue(rb)) celebrate(ra.label, ra.kind === "dan" && rb.kind === "kyu" ? "初段に昇段！" : ra.kind === "dan" ? "昇段しました！" : "昇級しました！");
       else if (rankValue(ra) < rankValue(rb) && !upd.placement) lines.push(el("p", { class: "note" }, `${ra.label}に下がりました。次で取り戻しましょう。`));
     }
-    try { await saveGame(rec); } catch (e) { toast(`記録を保存できませんでした: ${(e as Error).message}`, 4000); }
+    try {
+      savedId = await saveGame(rec);
+      if (game.ply > 0) analysis.enqueue(savedId);
+    } catch (e) { toast(`記録を保存できませんでした: ${(e as Error).message}`, 4000); }
     return lines;
   }
 
@@ -275,7 +284,11 @@ function startGame(root: HTMLElement, opts: PlayOptions, onExit: () => void): ()
       ? (r.winner === null ? `${r.reason}で引き分けです。` : `${r.reason}で${COLOR_NAME[r.winner]}の勝ちです。`)
       : (r.winner === null ? `${r.reason}で引き分けです。` : r.winner === human ? `${r.reason}であなたの勝ちです！` : `${r.reason}であなたの負けです。`);
     const lines = await finishAndSave();
-    void modal("対局終了", [el("p", {}, msg), ...lines], [{ label: "閉じる", primary: true }]);
+    analysis.setPaused(false);
+    const i = await modal("対局終了", [el("p", {}, msg), ...lines], savedId !== null && game.ply > 0
+      ? [{ label: "閉じる" }, { label: "振り返る", primary: true }]
+      : [{ label: "閉じる", primary: true }]);
+    if (i === 1 && savedId !== null) location.hash = `#/review/${savedId}`;
   }
 
   const ai = opts.ai;
@@ -313,6 +326,7 @@ function startGame(root: HTMLElement, opts: PlayOptions, onExit: () => void): ()
   }
 
   function doMove(m: Move) {
+    hintArrow = null;
     const captured = game.pos.board[m.to] !== 0;
     if (!game.play(m)) return;
     const used = clock ? clock.press(performance.now()) : 0;
@@ -335,6 +349,42 @@ function startGame(root: HTMLElement, opts: PlayOptions, onExit: () => void): ()
     if (i === 1 && !game.result) { game.resign(loser); onEnd(); }
   };
   flipBtn.onclick = () => { flipped = !flipped; render(); };
+  // 練習対局だけ: ヒント（最善手を矢印で表示）と待った（自分の手番まで戻す）
+  hintBtn.onclick = async () => {
+    if (!humanTurn()) return;
+    const ply = game.ply;
+    hintBtn.disabled = true;
+    hintBtn.textContent = "考え中…";
+    try {
+      const position = toUsiPosition(game.startSfen, game.moves).replace(/^position /, "");
+      const r = await analysisEngine().analyze({ position, multipv: 1, nodes: 300_000 });
+      if (game.ply === ply && r.candidates[0]) {
+        const m = usiToMove(r.candidates[0].move);
+        hintArrow = { from: m.from, to: m.to, drop: m.drop };
+        render();
+      }
+    } finally {
+      hintBtn.disabled = false;
+      hintBtn.textContent = "ヒント";
+    }
+  };
+  undoBtn.onclick = () => {
+    if (game.result || !ai) return;
+    const human = opts.humans[0];
+    // AI が考え中なら止める（考え終わっても手数が変わっているので指さない）
+    playEngine().stop();
+    let undone = 0;
+    while (game.ply > 0 && (undone === 0 || game.turn !== human)) {
+      game.undo();
+      times.pop();
+      undone++;
+    }
+    aiEvals.length = Math.max(0, aiEvals.length - 1);
+    hintArrow = null;
+    thinking = false;
+    render();
+    void aiThink();
+  };
   recordBtn.onclick = () => recordMenu();
   exitBtn.onclick = async () => {
     if (!game.result && game.ply > 0) {
@@ -368,6 +418,7 @@ function startGame(root: HTMLElement, opts: PlayOptions, onExit: () => void): ()
     }
   }
 
+  analysis.setPaused(true);
   if (clock && !game.result) clock.start(game.turn, performance.now());
   const timer = clock ? window.setInterval(renderClocks, 200) : 0;
   render();
@@ -377,6 +428,7 @@ function startGame(root: HTMLElement, opts: PlayOptions, onExit: () => void): ()
     clearInterval(timer);
     document.body.classList.remove("in-game");
     playEngine().stop();
+    analysis.setPaused(false);
     // 対局中に別の画面へ移ったら、レーティング対局は投了扱い・それ以外は中断として記録
     if (!game.result && game.ply > 0) {
       if (opts.mode === "rated") game.resign(opts.humans[0]);
