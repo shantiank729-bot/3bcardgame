@@ -173,6 +173,7 @@ async function gotoMap(id,x,y,dir){
   loadNPCs(); playBgm(mapBgm());
   if(curMap().town){S.visited=S.visited||[]; if(!S.visited.includes(id)) S.visited.push(id); S.lastTown=id;}
   await fadeIn(); if(!curMap().interior) toast(curMap().name);
+  autoSave();
   const m=curMap(); if(m.onEnter) await m.onEnter();
 }
 async function enterMap(id){const m=MAPS[id]; await gotoMap(id,m.entry[0],m.entry[1],m.entry[2]);}

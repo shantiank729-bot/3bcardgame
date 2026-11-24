@@ -101,6 +101,7 @@ async function battle(ids,opt={}){
   clearBuffs();
   if(res==='lose'&&!opt.noDefeat){await defeat(); return 'lose';}
   await fadeOut(220); hideStatus(); msgClose(); B=null; mode='field'; playBgm(mapBgm()); await fadeIn(220);
+  if(res==='win') autoSave();
   return res;
 }
 async function partyCommands(){

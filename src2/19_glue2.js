@@ -28,8 +28,15 @@ const aliveP=()=>S.party.filter(m=>m.hp>0);
 const has=id=>(S.items[id]||0)>0;
 function addItem(id,n=1){S.items[id]=(S.items[id]||0)+n;}
 function delItem(id,n=1){S.items[id]=(S.items[id]||0)-n; if(S.items[id]<=0) delete S.items[id];}
-function saveGame(){S.x=P.x; S.y=P.y; S.dir=P.dir; return store.set(SAVE_KEY,JSON.stringify(S));}
-function loadSave(){try{const t=store.get(SAVE_KEY); return t?JSON.parse(t):null;}catch(e){return null}}
+function saveGame(){S.x=P.x; S.y=P.y; S.dir=P.dir; S.at=Date.now(); return store.set(SAVE_KEY,JSON.stringify(S));}
+// じどう セーブ：まちや ダンジョンに でいりした とき・せんとうの あと・ページを とじる とき（かこへんの さいちゅうは しない）
+const AUTO_KEY='hoshikage2-auto-v1';
+function autoSave(){if(!S||mode==='title'||mode==='ending'||S.saved) return; try{store.set(AUTO_KEY,JSON.stringify(Object.assign({},S,{x:P.x,y:P.y,dir:P.dir,at:Date.now()})));}catch(e){}}
+addEventListener('pagehide',autoSave);
+document.addEventListener('visibilitychange',()=>{if(document.hidden) autoSave();});
+// てどうセーブと じどうセーブの あたらしい ほうを よむ
+function loadSave(){const rd=k=>{try{const t=store.get(k); return t?JSON.parse(t):null;}catch(e){return null}}; const a=rd(SAVE_KEY), b=rd(AUTO_KEY);
+  if(!a) return b; if(!b) return a; return (b.at||0)>(a.at||0)?b:a;}
 function goal(){const g=GOALS[S.ch||1]; if(g) return g();
   if((S.ch||1)>24) return S.flags.boss_ruins7?'すべての しれんを のりこえた！ のこりの クエストや ほしのかけらを さがして みよう。':'きたひがしの はての しまの『ほしかげの いせき』で、 さいごの しれんに いどもう。（めやす Lv70・そらとぶ ふねで）';
   return 'すすもう。';}
@@ -203,14 +210,16 @@ async function titleScreen(){
   if(c===1){
     titleUI.remove(); titleUI=null;
     await fadeOut(300);
-    S=sv; if(!MAPS[S.map]) S.map='akari';
-    P.x=S.x; P.y=S.y; P.dir=S.dir||'down'; P.moving=false; trail=[]; mode='field'; loadNPCs(); playBgm(mapBgm());
-    await fadeIn(300); toast(curMap().name||'フィールド');
-    return;
+    await resumeSave(sv); return;
   }
   const name=await askName();
   titleUI.remove(); titleUI=null;
   await beginStory(name);
+}
+async function resumeSave(sv){
+  S=sv; if(!MAPS[S.map]) S.map='akari';
+  P.x=S.x; P.y=S.y; P.dir=S.dir||'down'; P.moving=false; trail=[]; mode='field'; loadNPCs(); playBgm(mapBgm());
+  await fadeIn(300); toast(curMap().name||'フィールド');
 }
 async function beginStory(name){
   newGame(name); await fadeOut(400);
@@ -265,10 +274,14 @@ function initWorld(){
 }
 initWorld();
 requestAnimationFrame(frame);
-function start(){titleScreen();}
+// ゲームが こうしんされても、 あそんでいた ばしょから つづける
+function start(data){
+  const sv=data&&data.save?(()=>{try{return JSON.parse(data.save);}catch(e){return null}})():null;
+  if(sv) resumeSave(sv); else titleScreen();
+}
 const hot=window.claude&&window.claude.hot;
-if(hot&&hot.snapshot) try{hot.snapshot(()=>({}));}catch(e){}
-if(hot&&hot.ready) hot.ready(start); else start();
+if(hot&&hot.snapshot) try{hot.snapshot(()=>({save:S&&mode!=='title'&&mode!=='ending'&&!S.saved?JSON.stringify(Object.assign({},S,{x:P.x,y:P.y,dir:P.dir})):null}));}catch(e){}
+if(hot&&hot.ready) hot.ready(start); else start(hot&&hot.data||{});
 // テストプレイ・バランス ちょうせい よう
 window.__rpg={get busy(){return scripting||handlers.length>0}, get S(){return S}, set S(v){S=v;}, get B(){return B}, P, MAPS, MON, MSPR, IT, SP, ENC, DUNGEONS, QUESTS, WORLD_ICONS, ICON_GATE, LINK_GATE, ZONE_ML,
   battle, gotoMap, enterMap, press, get mode(){return mode}, expFor, mkMember, joinParty, startChapter, dockFor, fstat, bstat, expectParty, loadNPCs, tileAt, blocked, SOLID, AFTER, GOALS, LV_OF_CH,
