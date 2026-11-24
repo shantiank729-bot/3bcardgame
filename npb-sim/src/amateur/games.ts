@@ -14,8 +14,22 @@ const JINGU: Park = { id: 901, name: '神宮球場', lf: 97, cf: 120, rf: 97, hr
 const LOCAL: Park = { ...NEUTRAL_PARK, id: 902, name: '県営球場', turf: false };
 export const AM_PARKS = { KOSHIEN, JINGU, LOCAL };
 
-export const clubMembers = (am: AmateurWorld, sid: number) =>
-  Object.values(am.players).filter((p) => p.schoolId === sid && !p.retiredFromClub);
+let clubCache: { ref: object; count: number; tick: string; map: Map<number, Amateur[]> } | null = null;
+let clubVersion = 0;
+/** 入学・進学で所属が変わったときに呼ぶ */
+export function invalidateClubs() {
+  clubVersion++;
+}
+/** 部員（引退した3年生を除く）。学校ごとの索引をキャッシュ */
+export const clubMembers = (am: AmateurWorld, sid: number) => {
+  const count = clubVersion;
+  if (!clubCache || clubCache.ref !== am.players || clubCache.count !== count || clubCache.tick !== am.lastTick) {
+    const map = new Map<number, Amateur[]>();
+    for (const p of Object.values(am.players)) (map.get(p.schoolId) ?? map.set(p.schoolId, []).get(p.schoolId)!).push(p);
+    clubCache = { ref: am.players, count, tick: am.lastTick, map };
+  }
+  return (clubCache.map.get(sid) ?? []).filter((p) => p.schoolId === sid && !p.retiredFromClub && am.players[p.id]);
+};
 
 /** アマチュアの能力基準（エンジンは能力の平均との差で計算する） */
 export function amateurNorm(am: AmateurWorld, stage: 'HS' | 'UNI' | 'SHA'): RatingNorm {

@@ -4,6 +4,7 @@ import { rollPotential } from '../players/development';
 import { initContract, SEASON_DAYS } from '../league/contracts';
 import { createAmateurWorld } from '../amateur/world';
 import { addDays } from '../league/calendar';
+import { initFinance } from '../league/finance';
 
 export interface SaveMeta {
   slot: number;
@@ -67,6 +68,8 @@ function migrate(w: World): World {
     w.amateur.lastTick = addDays(w.date, -1);
     w.nextPlayerId = amw.nextId;
   }
+  // version 4 → 5: 財政・二軍
+  if (!w.finance) w.finance = initFinance(w.teams, w.year);
   w.version = SAVE_VERSION;
   return w;
 }

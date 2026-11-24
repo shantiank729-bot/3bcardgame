@@ -10,6 +10,7 @@ import type { LeagueId } from '../league/teams';
 import { LEAGUE_NAMES } from '../league/teams';
 import { teamById, type GameKind, type GameSummary, type World } from '../league/world';
 import { pick, shortName } from './text';
+import { historySeason } from '../league/pack';
 import type { NewsIssue, Scene, Story } from './types';
 
 export interface Played {
@@ -46,6 +47,38 @@ export function addStory(w: World, date: string, story: Story) {
   issue.stories.sort((a, b) => b.score - a.score);
 }
 
+let seasonIdx: { ref: object; size: number; date: string; map: Map<number, import('../league/world').PlayerSeason[]> } | null = null;
+/** 今季の成績を選手ごとに引けるようにする（同じ日の間はキャッシュ） */
+function seasonOf(w: World, pid: number) {
+  const size = Object.keys(w.season).length;
+  if (!seasonIdx || seasonIdx.ref !== w.season || seasonIdx.size !== size || seasonIdx.date !== w.date) {
+    const map = new Map<number, import('../league/world').PlayerSeason[]>();
+    for (const e of Object.values(w.season)) (map.get(e.pid) ?? map.set(e.pid, []).get(e.pid)!).push(e);
+    seasonIdx = { ref: w.season, size, date: w.date, map };
+  }
+  return seasonIdx.map.get(pid) ?? [];
+}
+
+type Tot = { g: number; pa: number; h: number; hr: number; rbi: number; sb: number; pg: number; w: number; l: number; sv: number; hld: number; k: number; outs: number };
+let pastCache: { key: string; map: Map<number, Tot> } | null = null;
+
+/** 過去シーズンの通算（シーズン中は変わらないので1回だけ集計） */
+function pastTotals(w: World): Map<number, Tot> {
+  const key = `${w.seed}-${Object.keys(w.history).join(',')}`;
+  if (pastCache && pastCache.key === key) return pastCache.map;
+  const map = new Map<number, Tot>();
+  for (const h of Object.values(w.history)) {
+    for (const e of historySeason(h)) {
+      let c = map.get(e.pid);
+      if (!c) map.set(e.pid, (c = { g: 0, pa: 0, h: 0, hr: 0, rbi: 0, sb: 0, pg: 0, w: 0, l: 0, sv: 0, hld: 0, k: 0, outs: 0 }));
+      if (e.bat) { c.g += e.bat.g; c.pa += e.bat.pa; c.h += e.bat.h; c.hr += e.bat.hr; c.rbi += e.bat.rbi; c.sb += e.bat.sb; }
+      if (e.pitch) { c.pg += e.pitch.g; c.w += e.pitch.w; c.l += e.pitch.l; c.sv += e.pitch.sv; c.hld += e.pitch.hld; c.k += e.pitch.k; c.outs += e.pitch.outs; }
+    }
+  }
+  pastCache = { key, map };
+  return map;
+}
+
 /** 通算成績（ゲーム開始前の通算＋過去シーズン＋今季） */
 export function careerTotals(w: World, pid: number) {
   const p = w.players[pid];
@@ -54,14 +87,18 @@ export function careerTotals(w: World, pid: number) {
     if (e.bat) { c.g += e.bat.g; c.pa += e.bat.pa; c.h += e.bat.h; c.hr += e.bat.hr; c.rbi += e.bat.rbi; c.sb += e.bat.sb; }
     if (e.pitch) { c.pg += e.pitch.g; c.w += e.pitch.w; c.l += e.pitch.l; c.sv += e.pitch.sv; c.hld += e.pitch.hld; c.k += e.pitch.k; c.outs += e.pitch.outs; }
   };
-  for (const h of Object.values(w.history)) for (const e of h.season) if (e.pid === pid) add(e);
-  for (const e of Object.values(w.season)) if (e.pid === pid) add(e);
+  const past = pastTotals(w).get(pid);
+  if (past) {
+    c.g += past.g; c.pa += past.pa; c.h += past.h; c.hr += past.hr; c.rbi += past.rbi; c.sb += past.sb;
+    c.pg += past.pg; c.w += past.w; c.l += past.l; c.sv += past.sv; c.hld += past.hld; c.k += past.k; c.outs += past.outs;
+  }
+  for (const e of seasonOf(w, pid)) add(e);
   return c;
 }
 
 function seasonTotals(w: World, pid: number) {
   let hr = 0, wins = 0, sb = 0, h = 0;
-  for (const e of Object.values(w.season)) if (e.pid === pid) {
+  for (const e of seasonOf(w, pid)) {
     if (e.bat) { hr += e.bat.hr; sb += e.bat.sb; h += e.bat.h; }
     if (e.pitch) wins += e.pitch.w;
   }

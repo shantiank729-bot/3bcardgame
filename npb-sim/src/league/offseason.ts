@@ -20,6 +20,9 @@ import { assignNumber } from './draft';
 import { buildSchedule } from './schedule';
 import { computeNorm } from './norm';
 import { amateurTick } from '../amateur/season';
+import { emptyFarm } from './farm';
+import { packHistory } from './pack';
+import { rollFinance } from './finance';
 import { computeStandings } from './standings';
 import { inbox, rebuildActive, shihaika, SHIHAIKA_MAX } from './rosterOps';
 import { aiTrades, playerValue } from './trade';
@@ -451,6 +454,7 @@ export function startNewSeason(w: World) {
     season: Object.values(w.season),
     standings: [...computeStandings(w, 'C'), ...computeStandings(w, 'P')].map((r) => ({ tid: r.tid, w: r.w, l: r.l, t: r.t })),
     ctx,
+    farm: Object.values(w.farm?.stats ?? {}),
   };
   const rng = new Rng(hashSeed(w.seed, w.year, 13579));
   // 出場機会（一軍でよく出た若手は伸びやすい）
@@ -466,7 +470,10 @@ export function startNewSeason(w: World) {
       continue;
     }
     p.age++;
-    const bonus = p.age <= 26 ? Math.min(1.5, (played[p.id] ?? 0) / 300) : 0;
+    // 一軍・二軍での出場機会と、球団の育成投資
+    const farmPlayed = Object.values(w.farm?.stats ?? {}).filter((e) => e.pid === p.id).reduce((s, e) => s + (e.bat?.pa ?? 0) + (e.pitch?.outs ?? 0) * 1.3, 0);
+    const inv = p.teamId ? w.finance[p.teamId]?.invest ?? 0 : 0;
+    const bonus = p.age <= 26 ? Math.min(1.5, (played[p.id] ?? 0) / 300 + farmPlayed / 900) + (p.age <= 25 ? inv * 0.3 : 0) : 0;
     const d = developPlayer(rng, p, bonus);
     if (p.teamId === w.userTeamId) report.push({ pid: p.id, before: d.before, after: d.after });
     p.contract.years = Math.max(0, p.contract.years - 1);
@@ -486,6 +493,8 @@ export function startNewSeason(w: World) {
   }
   if (st) st.devReport = report;
   w.devReport = report;
+  // 財政を締めて来季の予算を決める（年またぎの前に）
+  rollFinance(w);
   // 年をまたぐ
   w.year++;
   w.calendar = buildSchedule(w.teams, w.year, w.seed + w.year);
@@ -515,10 +524,14 @@ export function startNewSeason(w: World) {
     }
     ensureCatchers(w, t.id, rng);
     rebuildActive(w, t.id, 0);
-    // 予算: 前年の年俸総額に人気（市場）を反映
-    w.budget[t.id] = Math.round(Math.max(payroll(w, t.id) * 1.02, 150000 * t.market + 30000) / 1000) * 1000;
   }
   w.teamState[w.userTeamId].manualOrder = null;
+  w.farm = emptyFarm(w.year);
+  // 保存容量の節約: 過去の成績を詰め、2年以上前の新聞は1面だけ残す
+  packHistory(w);
+  for (const [d, issue] of Object.entries(w.news)) {
+    if (Number(d.slice(0, 4)) <= w.year - 3 && issue.stories.length > 1) issue.stories = issue.stories.slice(0, 1);
+  }
   w.norm = computeNorm(w);
   if (st) st.stage = 'done';
   w.off = null;

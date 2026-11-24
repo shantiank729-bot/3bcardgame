@@ -61,9 +61,33 @@ function PitcherRowView({ p, role }: { p: PlayerRecord; role?: string }) {
   );
 }
 
+function FarmStats({ tid }: { tid: number }) {
+  const w = useWorld();
+  const es = Object.values(w.farm?.stats ?? {}).filter((e) => e.tid === tid);
+  const bats = es.filter((e) => e.bat && e.bat.pa > 0).sort((a, b) => b.bat!.pa - a.bat!.pa);
+  const pits = es.filter((e) => e.pitch && e.pitch.outs > 0).sort((a, b) => b.pitch!.outs - a.pitch!.outs);
+  const name = (pid: number) => <a href={'#/player/' + pid}>{w.players[pid]?.name ?? '?'}</a>;
+  const st = (pid: number) => ({ active: '一軍', farm: '二軍', ikusei: '育成' } as Record<string, string>)[w.players[pid]?.status] ?? '';
+  return (
+    <section class="card">
+      <p class="muted small">二軍の試合は一軍の試合がある日に東西2地区で行われます。育成選手は1試合5人まで出場できます。</p>
+      <div class="tablewrap"><table class="data">
+        <thead><tr><th class="l">打者</th><th>今</th><th>試合</th><th>打席</th><th>打率</th><th>本</th><th>打点</th><th>盗塁</th><th>OPS</th></tr></thead>
+        <tbody>{bats.map((e) => { const b = e.bat!; const obp = (b.h + b.bb + b.hbp) / Math.max(1, b.ab + b.bb + b.hbp + b.sf); const slg = (b.h + b.d + 2 * b.t + 3 * b.hr) / Math.max(1, b.ab);
+          return <tr key={e.pid}><td class="l">{name(e.pid)}</td><td>{st(e.pid)}</td><td>{b.g}</td><td>{b.pa}</td><td>{(b.h / Math.max(1, b.ab)).toFixed(3).replace(/^0/, '')}</td><td>{b.hr}</td><td>{b.rbi}</td><td>{b.sb}</td><td>{(obp + slg).toFixed(3).replace(/^0/, '')}</td></tr>; })}</tbody>
+      </table></div>
+      <div class="tablewrap"><table class="data">
+        <thead><tr><th class="l">投手</th><th>今</th><th>登板</th><th>勝</th><th>敗</th><th>S</th><th>投球回</th><th>奪三振</th><th>防御率</th></tr></thead>
+        <tbody>{pits.map((e) => { const p = e.pitch!;
+          return <tr key={e.pid}><td class="l">{name(e.pid)}</td><td>{st(e.pid)}</td><td>{p.g}</td><td>{p.w}</td><td>{p.l}</td><td>{p.sv}</td><td>{Math.floor(p.outs / 3)}{p.outs % 3 ? '.' + (p.outs % 3) : ''}</td><td>{p.k}</td><td>{((p.er * 27) / p.outs).toFixed(2)}</td></tr>; })}</tbody>
+      </table></div>
+    </section>
+  );
+}
+
 export function TeamPage({ id }: { id: number }) {
   const w = useWorld();
-  const [tab, setTab] = useState<'one' | 'two' | 'order' | 'rot'>('one');
+  const [tab, setTab] = useState<'one' | 'two' | 'order' | 'rot' | 'farmstats'>('one');
   const t = teamById(w, id);
   const active = rosterOf(w, id, 'active');
   const farm = rosterOf(w, id, 'farm');
@@ -106,12 +130,13 @@ export function TeamPage({ id }: { id: number }) {
           {w.teams.map((x) => <option key={x.id} value={x.id}>{x.city}{x.nickname}</option>)}
         </select>
         <div class="seg">
-          {([['one', '一軍'], ['two', '二軍・育成'], ['order', '打順'], ['rot', 'ローテ・ブルペン']] as const).map(([k, l]) => (
+          {([['one', '一軍'], ['two', '二軍・育成'], ['farmstats', '二軍成績'], ['order', '打順'], ['rot', 'ローテ・ブルペン']] as const).map(([k, l]) => (
             <button key={k} class={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{l}</button>
           ))}
         </div>
       </div>
       {tab === 'one' && <section class="card">{pTable(pitchers(active), roles)}{hTable(hitters(active))}</section>}
+      {tab === 'farmstats' && <FarmStats tid={id} />}
       {tab === 'two' && (
         <section class="card">
           <h3>二軍</h3>{pTable(pitchers(farm))}{hTable(hitters(farm))}

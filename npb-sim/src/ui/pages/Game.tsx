@@ -22,6 +22,7 @@ export function GamePage({ id }: { id: number }) {
           {g.sv && <span>S {link(g.sv)}</span>}
           {g.tie && <span>12回引き分け</span>}
           {g.walkoff && <span class="tag">サヨナラ</span>}
+          {(g as { attendance?: number }).attendance ? <span class="muted">観衆 {(g as { attendance?: number }).attendance!.toLocaleString('ja-JP')}人</span> : null}
         </p>
         {g.hr.length > 0 && (
           <p>本塁打: {g.hr.map((h) => <span key={h.pid}>{link(h.pid)}（{teamById(w, h.tid).short}）{h.n > 1 ? ` ${h.n}本` : ''}　</span>)}</p>

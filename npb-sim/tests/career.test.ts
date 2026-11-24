@@ -10,7 +10,7 @@ import { cannotActivate, demote, foreignOk } from '../src/league/rosterOps';
 import { domesticFA, MIN_SALARY } from '../src/league/contracts';
 import { advanceOffseason } from '../src/league/offseason';
 import { deserializeWorld, serializeWorld } from '../src/save/serialize';
-import { teamById } from '../src/league/world';
+import { teamById, SAVE_VERSION } from '../src/league/world';
 import { generateBatter } from '../src/players/generate';
 
 describe('成長と衰え', () => {
@@ -164,7 +164,7 @@ describe('複数シーズン', () => {
     for (const p of Object.values(old.players) as Record<string, unknown>[]) { delete p.pot; delete p.contract; delete p.service; delete p.events; delete p.injury; }
     delete old.budget; delete old.trades; delete old.inbox;
     const m = deserializeWorld(JSON.stringify(old));
-    expect(m.version).toBe(4);
+    expect(m.version).toBe(SAVE_VERSION);
     expect(Object.values(m.players).every((p) => p.contract && p.pot > 0 && Array.isArray(p.events))).toBe(true);
   });
 });

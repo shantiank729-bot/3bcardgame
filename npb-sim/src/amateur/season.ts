@@ -286,7 +286,16 @@ function amateurDay(w: World, date: string) {
     for (const p of Object.values(am.players)) p.hype = Math.round(Math.max(baseHype(p), p.hype * 0.6));
     am.norm = undefined;
     // 古い都道府県大会は削除（容量節約）
-    for (const id of Object.keys(am.tourneys)) if (am.tourneys[id].year <= y - 2 && am.tourneys[id].level === 'pref') delete am.tourneys[id];
+    for (const id of Object.keys(am.tourneys)) {
+      const t = am.tourneys[id];
+      if (t.year <= y - 1 && t.level !== 'national') delete am.tourneys[id];
+      else if (t.year <= y - 1 && t.leaders) {
+        // 全国大会の個人成績は上位だけ残す
+        const keep = new Set([...Object.entries(t.leaders).sort((a, b) => b[1][2] - a[1][2]).slice(0, 10), ...Object.entries(t.leaders).sort((a, b) => b[1][4] - a[1][4]).slice(0, 10), ...Object.entries(t.leaders).sort((a, b) => b[1][0] - a[1][0]).slice(0, 10), ...Object.entries(t.leaders).sort((a, b) => b[1][3] - a[1][3]).slice(0, 10)].map((x) => x[0]));
+        for (const k of Object.keys(t.leaders)) if (!keep.has(k)) delete t.leaders[Number(k)];
+        delete t.bracket;
+      }
+    }
   }
   if (md === '04-08') startUniLeagues(w, y, 'spring');
   if (md === '06-01') startUniChamp(w, y, rng);

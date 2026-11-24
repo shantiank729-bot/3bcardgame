@@ -430,3 +430,9 @@ tr.injured td { color: #e8a0a0; }
 details summary { cursor: pointer; color: var(--muted); margin: 6px 0; }
 .field .ivy { fill: none; stroke: #1f5c25; stroke-width: 3.5; stroke-dasharray: 2 1; }
 .field.koshien .fence { stroke: #355f2a; }
+.fbar { display: grid; grid-template-columns: 11em 1fr 6.5em; gap: 8px; align-items: center; padding: 3px 0; font-size: 0.86rem; }
+.fbar i { height: 10px; border-radius: 5px; display: block; }
+.fbar i.in { background: #4cd964; } .fbar i.out { background: #ff8f7a; }
+.fbar b { text-align: right; font-variant-numeric: tabular-nums; }
+@media (max-width: 500px) { .fbar { grid-template-columns: 7em 1fr 5.5em; font-size: 0.78rem; } }
+.activeP a { font-weight: 800; }

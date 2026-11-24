@@ -18,6 +18,8 @@ import { NewsPage } from './pages/News';
 import { PostPage } from './pages/Post';
 import { AwardsPage } from './pages/Awards';
 import { DraftPage } from './pages/Draft';
+import { RecordsPage } from './pages/Records';
+import { FinancePage } from './pages/Finance';
 import { AmateurPage, AmPlayerPage, SchoolPage } from './pages/Amateur';
 import { OffPage } from './pages/Off';
 import { TradePage } from './pages/Trade';
@@ -42,6 +44,8 @@ const NAV: [string, string, string, boolean][] = [
   ['draft', 'ドラフト', '✎', false],
   ['trade', 'トレード', '⇄', false],
   ['off', 'オフ', '❄', false],
+  ['finance', '財政', '¥', false],
+  ['records', '歴代記録', '♜', false],
   ['team', 'チーム', '⚾', true],
   ['saves', 'セーブ', '⛁', false],
 ];
@@ -69,6 +73,8 @@ export function App() {
     case 'post': body = <PostPage />; break;
     case 'awards': body = <AwardsPage />; break;
     case 'draft': body = <DraftPage />; break;
+    case 'records': body = <RecordsPage />; break;
+    case 'finance': body = <FinancePage />; break;
     case 'amateur': body = <AmateurPage tab={arg} />; break;
     case 'school': body = <SchoolPage id={Number(arg)} key={arg} />; break;
     case 'am': body = <AmPlayerPage id={Number(arg)} key={arg} />; break;

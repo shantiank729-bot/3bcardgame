@@ -8,6 +8,7 @@ import { domesticFA, overseasFA, SEASON_DAYS, yen } from '../../league/contracts
 import { overall } from '../../players/development';
 import { careerTotals } from '../../news/daily';
 import { bline, pline } from './Amateur';
+import { historyFarm, historySeason } from '../../league/pack';
 import { scoutedRatings, uncertainty } from '../../amateur/scout';
 import { Logo } from '../components/Logo';
 import { f0, f1, f2, f3, grade, handStr, ipStr, pct1, POS_1, POS_JP } from '../format';
@@ -24,7 +25,7 @@ function yearRows(w: World, pid: number): YearRow[] {
   const out: YearRow[] = [];
   const lgOf = (tid: number) => teamById(w, tid).league;
   for (const [y, h] of Object.entries(w.history)) {
-    for (const e of h.season) {
+    for (const e of historySeason(h)) {
       if (e.pid !== pid) continue;
       const ctx: LeagueContext | undefined = h.ctx?.[lgOf(e.tid)];
       out.push({
@@ -128,6 +129,21 @@ export function PlayerPage({ id }: { id: number }) {
           )}
         </section>
       </div>
+      {(() => {
+        const farmRows: { year: number; e: import('../../league/world').PlayerSeason }[] = [];
+        for (const [y, h] of Object.entries(w.history)) for (const e of historyFarm(h)) if (e.pid === p.id) farmRows.push({ year: Number(y), e });
+        for (const e of Object.values(w.farm?.stats ?? {})) if (e.pid === p.id) farmRows.push({ year: w.year, e });
+        if (!farmRows.length) return null;
+        return (
+          <section class="card">
+            <h3>二軍成績</h3>
+            <ul class="career">{farmRows.map((r, i) => {
+              const b = r.e.bat, x = r.e.pitch;
+              return <li key={i}><span>{r.year}年</span>{p.isPitcher && x ? `${x.g}登板 ${x.w}勝${x.l}敗 ${Math.floor(x.outs / 3)}回 ${x.k}奪三振 防御率${((x.er * 27) / Math.max(1, x.outs)).toFixed(2)}` : b ? `${b.g}試合 ${b.ab}打数${b.h}安打 打率${(b.h / Math.max(1, b.ab)).toFixed(3).replace(/^0/, '')} ${b.hr}本 ${b.rbi}打点 ${b.sb}盗塁` : ''}</li>;
+            })}</ul>
+          </section>
+        );
+      })()}
       {bats.length > 0 && !p.isPitcher && (
         <section class="card">
           <h3>打撃成績</h3>

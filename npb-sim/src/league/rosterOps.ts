@@ -6,6 +6,7 @@
 import { Rng } from '../engine/rng';
 import { overall } from '../players/development';
 import { rosterOf, teamById, type PlayerRecord, type World } from './world';
+import { farmLine } from './farm';
 
 export const ACTIVE_MAX = 31;
 export const SHIHAIKA_MAX = 70;
@@ -189,7 +190,14 @@ export function weeklyAiMoves(w: World, today: number) {
     for (const pos of ['P', 'B'] as const) {
       const isP = pos === 'P';
       const worst = active.filter((p) => p.isPitcher === isP && (p.form ?? 0) < -0.4 && !w.teamState[t.id].rotation.includes(p.id)).sort((a, b) => overall(a) - overall(b))[0];
-      const best = farm.filter((p) => p.isPitcher === isP).sort((a, b) => overall(b) - overall(a))[0];
+      // 二軍で結果を出している選手を優先
+      const sc = new Map<number, number>();
+      for (const p of farm) {
+        if (p.isPitcher !== isP) continue;
+        const f = farmLine(w, p.id);
+        sc.set(p.id, overall(p) + (isP ? (f.ip >= 10 ? (3.5 - f.era) * 2 : 0) : f.pa >= 40 ? (f.ops - 0.65) * 30 : 0));
+      }
+      const best = farm.filter((p) => p.isPitcher === isP).sort((a, b) => sc.get(b.id)! - sc.get(a.id)!)[0];
       if (!worst || !best || overall(best) < overall(worst) - 2) continue;
       if (!isP && (worst.bat.positions.C ?? 0) >= 60 && (best.bat.positions.C ?? 0) < 60) continue;
       demote(w, worst, today);

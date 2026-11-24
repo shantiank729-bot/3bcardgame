@@ -4,6 +4,7 @@ import { teamById, type World } from '../../league/world';
 import { Logo } from '../components/Logo';
 import { f3 } from '../format';
 import { useWorld } from '../store';
+import { farmStandings } from '../../league/farm';
 
 const gbStr = (gb: number | null) => (gb === null ? '-' : gb === 0 ? '0' : gb.toFixed(1).replace('.0', ''));
 
@@ -55,6 +56,19 @@ export function Standings() {
         <h2>交流戦</h2>
         <p class="muted">{w.calendar.interleague.start} 〜 {w.calendar.interleague.end}</p>
         <div class="tablewrap"><StandingsTable w={w} inter /></div>
+      </section>
+      <section class="card">
+        <h2>二軍（ファーム）</h2>
+        <div class="grid2">
+          {farmStandings(w).map((d) => (
+            <div key={d.name}>
+              <h3>{d.name}</h3>
+              <table class="data standings"><thead><tr><th>順</th><th class="l">球団</th><th>勝</th><th>敗</th><th>分</th><th>勝率</th></tr></thead>
+                <tbody>{d.rows.map((r, i) => { const t = teamById(w, r.tid); return <tr key={r.tid} class={r.tid === w.userTeamId ? 'me' : ''}><td>{i + 1}</td><td class="l"><Logo team={t} size={16} /> {t.nickname}</td><td>{r.w}</td><td>{r.l}</td><td>{r.t}</td><td>{f3(r.w / Math.max(1, r.w + r.l))}</td></tr>; })}</tbody>
+              </table>
+            </div>
+          ))}
+        </div>
       </section>
       <p class="muted small">勝率は引き分けを除いて計算（勝÷(勝+敗)）。ゲーム差は首位との差。</p>
     </div>

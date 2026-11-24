@@ -5,6 +5,8 @@ import { Rng } from '../engine/rng';
 import { dayDiff, addDays, weekday } from './calendar';
 import { finalizeDraft, startDraft } from './draft';
 import { computeNorm } from './norm';
+import { playFarmDay } from './farm';
+import { closeSeasonFinance, gateRevenue } from './finance';
 import { draftClassFromAmateur, removeDrafted } from '../amateur/draftSupply';
 import { amateurTick } from '../amateur/season';
 import { scoutedOverall } from '../amateur/scout';
@@ -401,6 +403,7 @@ export function completeDraft(w: World) {
   const d = w.draft!;
   if (w.flags[`draft-${w.year}`]) return;
   finalizeDraft(w, d);
+  w.nextPlayerId++; // 名簿の索引を作り直させる目印
   removeDrafted(w, d.picks.map((p) => p.pid));
   w.flags[`draft-${w.year}`] = true;
   const byId = new Map(d.prospects.map((p) => [p.id, p]));
@@ -454,6 +457,8 @@ export function simulateDay(w: World): DayReport {
   dailyInjuries(w, rng, played.flatMap((p) => [...p.res.appeared.values()].flat()), today);
   if (w.phase === 'regular') {
     addServiceDay(w);
+    if (played.some((p) => p.kind === 'L' || p.kind === 'I')) playFarmDay(w, today, hashSeed(w.seed, w.year, today, 4040));
+    gateRevenue(w, played);
     if (weekday(date) === 1) weeklyAiMoves(w, today);
     if (date.slice(5) === '07-15') aiTrades(w, rng, 20);
   }
@@ -470,6 +475,7 @@ export function simulateDay(w: World): DayReport {
     w.phase = 'offseason';
     seasonOver = true;
     endOfSeasonEvents(w);
+    closeSeasonFinance(w);
     const a = w.awards[w.year];
     if (a) {
       const nm = (id: number | null) => (id ? `${w.players[id].name}（${teamById(w, w.players[id].teamId!).nickname}）` : '該当者なし');

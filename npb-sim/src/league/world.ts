@@ -6,9 +6,10 @@ import { buildSchedule, type SeasonCalendar } from './schedule';
 import { initContract, MIN_SALARY, SEASON_DAYS } from './contracts';
 import { rollPotential } from '../players/development';
 import { createAmateurWorld } from '../amateur/world';
+import { initFinance } from './finance';
 import { ALLSTAR_TEAMS, TEAMS, type LeagueId, type TeamInfo } from './teams';
 
-export const SAVE_VERSION = 4;
+export const SAVE_VERSION = 5;
 
 /** active=一軍 farm=二軍(支配下) ikusei=育成 fa=所属なし(自由契約) retired=引退 mlb=海外移籍 */
 export type RosterStatus = 'active' | 'farm' | 'ikusei' | 'fa' | 'retired' | 'mlb';
@@ -109,6 +110,8 @@ export interface GameSummary {
   /** 簡易ボックススコア: 打者 [pid, tid, pos(+100=途中), slot, ab, r, h, rbi, bb, k, hr] / 投手 [pid, tid, outs, h, r, er, bb, k, pitches, hr] */
   boxBat: number[][];
   boxPitch: number[][];
+  /** 観客数 */
+  attendance?: number;
   /** シリーズ内の第何戦か・会場（ポストシーズン・球宴用） */
   label?: string;
   parkName?: string;
@@ -184,6 +187,10 @@ export interface World {
   off: import('./offseason').OffseasonState | null;
   /** トレードの記録 */
   trades: import('./trade').TradeRecord[];
+  /** 二軍（今季） */
+  farm?: import('./farm').FarmState;
+  /** 財政（球団ごと） */
+  finance: Record<number, import('./finance').TeamFinance>;
   /** 高校・大学・社会人野球 */
   amateur: import('../amateur/types').AmateurWorld;
   /** リーグ基準補正（能力の平均のずれ） */
@@ -196,8 +203,13 @@ export interface World {
   flags: Record<string, true>;
   /** 過去シーズンの選手成績（年 → 一覧） */
   history: Record<number, {
-    season: PlayerSeason[];
+    /** 成績（新しい年は展開した形、古い年は packed に詰めて保存） */
+    season?: PlayerSeason[];
+    packed?: import('./pack').PackedRow[];
+    packedFarm?: import('./pack').PackedRow[];
     standings: { tid: number; w: number; l: number; t: number }[];
+    /** 二軍の個人成績 */
+    farm?: PlayerSeason[];
     /** その年のリーグ係数（セイバー指標の再計算用） */
     ctx?: Record<LeagueId, import('../stats/saber').LeagueContext>;
   }>;
@@ -337,12 +349,26 @@ export function newWorld(seed: number, userTeamId: number, year = 2027): World {
     version: SAVE_VERSION, seed, year, date: calendar.opening, phase: 'regular', userTeamId,
     teams: TEAMS.map((t) => ({ ...t, park: { ...t.park } })), teamState, players, nextPlayerId, calendar,
     results: {}, season: {}, runEnv: { C: emptyRunEnv(), P: emptyRunEnv() }, park, settings: defaultSettings(), history: {},
-    amateur: amw.am, post: null, postStats: {}, allStar: null, awards: {}, news: {}, flags: {}, inbox: [], draft: null, off: null, trades: [],
+    amateur: amw.am, finance: initFinance(TEAMS), post: null, postStats: {}, allStar: null, awards: {}, news: {}, flags: {}, inbox: [], draft: null, off: null, trades: [],
     budget: Object.fromEntries(TEAMS.map((t) => [t.id, Math.round((Object.values(players).filter((p) => p.teamId === t.id).reduce((s, p) => s + p.contract.salary, 0) * 1.08) / 1000) * 1000])),
   };
 }
 
 export const teamById = (w: World, id: number): TeamInfo =>
   w.teams.find((t) => t.id === id) ?? ALLSTAR_TEAMS.find((t) => t.id === id)!;
+/**
+ * 所属選手の候補（引退・海外移籍の選手を除いた一覧）。日付か選手数が変わったら作り直す。
+ * 実際の所属は呼び出し時に teamId / status で確かめるので、途中で移籍・引退しても正しい。
+ */
+let rosterCache: { ref: object; count: number; date: string; list: PlayerRecord[] } | null = null;
+function livePlayers(w: World): PlayerRecord[] {
+  // 新しい選手が加わると nextPlayerId が進むので、それを目印にする
+  const count = w.nextPlayerId;
+  if (!rosterCache || rosterCache.ref !== w.players || rosterCache.count !== count || rosterCache.date !== w.date) {
+    rosterCache = { ref: w.players, count, date: w.date, list: Object.values(w.players).filter((p) => p.status !== 'retired' && p.status !== 'mlb') };
+  }
+  return rosterCache.list;
+}
+
 export const rosterOf = (w: World, tid: number, status?: RosterStatus) =>
-  Object.values(w.players).filter((p) => p.teamId === tid && (!status || p.status === status));
+  livePlayers(w).filter((p) => p.teamId === tid && (!status || p.status === status));

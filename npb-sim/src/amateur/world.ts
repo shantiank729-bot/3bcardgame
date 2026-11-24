@@ -6,6 +6,7 @@ import { developPlayer, overall, rollPotential } from '../players/development';
 import { CORPS, PREFS, REGIONS, SCHOOL_COLORS, schoolNames, SPLIT_NAMES, UNI_LEAGUES } from './data';
 import type { AmStage, Amateur, AmateurWorld, School, ScoutStaff } from './types';
 import { randomName } from '../players/generate';
+import { invalidateClubs } from './games';
 
 const POS: Exclude<FieldPos, 'P'>[] = ['C', '1B', '2B', '3B', 'SS', 'LF', 'CF', 'RF', 'SS', 'CF', 'C', '2B'];
 
@@ -150,6 +151,7 @@ export function newSchoolYear(am: AmateurWorld, rng: Rng, year: number, alloc: (
       am.players[a.id] = a;
     }
   }
+  invalidateClubs();
   // 各校の伝統の強さは実績で少しずつ変わる
   for (const s of Object.values(am.schools)) s.strength = Math.max(10, Math.min(98, s.strength * 0.97 + 1.5 + rng.normal(0, 1.5)));
 }
