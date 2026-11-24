@@ -11,7 +11,7 @@ export class EngineClient {
   readonly ready: Promise<{ kind: EngineKind; error?: string }>;
 
   constructor(threads = 1, hashMb = 64) {
-    this.worker = new Worker(new URL("./engine.worker.ts", import.meta.url));
+    this.worker = new Worker(new URL("./engine.worker.ts", import.meta.url), { type: "module" });
     this.ready = new Promise((resolve) => {
       this.worker.addEventListener("message", (e: MessageEvent<WorkerOut>) => {
         const m = e.data;

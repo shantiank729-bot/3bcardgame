@@ -4,6 +4,7 @@ import { fallbackAnalyze } from "./fallback";
 import { AnalyzeRequest, AnalyzeResult, Candidate, UsiEngine } from "./usi";
 
 declare const self: DedicatedWorkerGlobalScope & { YaneuraOu_K_P?: (opts: object) => Promise<YModule> };
+declare const YaneuraOu_K_P: ((opts: object) => Promise<YModule>) | undefined;
 interface YModule { postMessage(l: string): void; addMessageListener(cb: (l: string) => void): void; terminate(): void }
 
 export type WorkerIn =
@@ -26,8 +27,12 @@ async function init(base: string, threads: number, hashMb: number) {
     return;
   }
   try {
-    self.importScripts(base + "yaneuraou.k-p.js");
-    const m = await self.YaneuraOu_K_P!({
+    // モジュール Worker では importScripts が使えないので、取得してグローバルに評価する
+    const code = await (await fetch(base + "yaneuraou.k-p.js")).text();
+    (0, eval)(code);
+    const factory = self.YaneuraOu_K_P ?? YaneuraOu_K_P;
+    if (!factory) throw new Error("エンジンを読み込めませんでした");
+    const m = await factory({
       locateFile: (f: string) => base + f,
       mainScriptUrlOrBlob: base + "yaneuraou.k-p.js",
     });

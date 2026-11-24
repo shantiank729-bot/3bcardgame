@@ -24,6 +24,6 @@ export default defineConfig({
   base: "./",
   server: { headers: isolation },
   preview: { headers: isolation },
-  worker: { format: "iife" },
+  worker: { format: "es" },
   test: { globals: true, include: ["test/**/*.test.ts"] },
 });

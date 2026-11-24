@@ -2,7 +2,7 @@ import { Game, canDeclareWin } from "../../core/game";
 import { exportKif, importKif, moveToDisplay } from "../../core/kif";
 import { Position } from "../../core/position";
 import { BLACK, Color, Move, WHITE } from "../../core/types";
-import { parseUsiPosition, toUsiPosition, usiToMove } from "../../core/usi";
+import { moveToUsi, parseUsiPosition, toUsiPosition, usiToMove } from "../../core/usi";
 import { Clock, TIME_PRESETS, fmtClock } from "../../game/clock";
 import { settings } from "../../settings";
 import { BoardView } from "../board";
@@ -10,6 +10,9 @@ import { download, el, modal, pickFile, toast } from "../dom";
 import { playEngine } from "../../engine/client";
 import { MAX_LEVEL, chooseMove, levelParams, mulberry32, shouldResign } from "../../engine/levels";
 import { playBeep, playPieceSound } from "../sound";
+import { GameMode, applyRatedGame, humanScore, isPlacement, loadProfile, saveGame, saveProfile } from "../../db/records";
+import { PLACEMENT_GAMES, chooseLevel, levelRating, rankOf, rankValue } from "../../rating/rank";
+import { celebrate } from "../celebrate";
 
 const COLOR_NAME = ["先手", "後手"];
 
@@ -22,67 +25,102 @@ export interface PlayOptions {
   names?: [string, string];
   /** AI の設定（人どうしなら省略） */
   ai?: { color: Color; level: number };
+  mode: GameMode;
 }
 
-export function mountPlay(root: HTMLElement): () => void {
+export function mountPlay(root: HTMLElement, arg?: string): () => void {
   let cleanup: (() => void) | null = null;
-  const showSetup = () => {
+  const begin = (opts: PlayOptions) => { cleanup = startGame(root, opts, showSetup); };
+  function showSetup() {
     cleanup?.();
     cleanup = null;
-    root.replaceChildren(setupView((opts) => { cleanup = startGame(root, opts, showSetup); }));
-  };
-  showSetup();
+    root.replaceChildren(setupView(begin));
+  }
+  // ホームの「すぐ対局」: 前回の設定でレーティング対局をすぐ始める
+  if (arg === "quick") void ratedOptions().then(begin);
+  else showSetup();
   return () => cleanup?.();
+}
+
+/** レーティング対局の設定（レベルは自動） */
+async function ratedOptions(): Promise<PlayOptions> {
+  const s = settings.get();
+  const profile = await loadProfile();
+  const level = chooseLevel(profile.glicko);
+  const human = (s.side === 2 ? (Math.random() < 0.5 ? 0 : 1) : s.side) as Color;
+  const names: [string, string] = human === BLACK ? ["あなた", `AI Lv${level}`] : [`AI Lv${level}`, "あなた"];
+  return { mode: "rated", humans: [human], timePreset: s.timePreset, names, ai: { color: (human ^ 1) as Color, level } };
 }
 
 function setupView(onStart: (o: PlayOptions) => void): HTMLElement {
   const s = settings.get();
-  const timeSel = el("select", { id: "time" }, ...TIME_PRESETS.map((p) => {
-    const o = el("option", { value: p.id }, p.label);
-    if (p.id === s.timePreset) o.selected = true;
-    return o;
-  }));
-  const oppSel = el("select", { id: "opponent" },
-    el("option", { value: "ai" }, "AI"), el("option", { value: "human" }, "人どうし（1台で交互に指す）"));
-  oppSel.value = s.opponent;
-  const levelSel = el("select", { id: "level" }, ...Array.from({ length: MAX_LEVEL }, (_, i) => el("option", { value: String(i + 1) }, `レベル ${i + 1}`)));
+  const timeSel = el("select", { id: "time" }, ...TIME_PRESETS.map((p) => el("option", { value: p.id }, p.label)));
+  timeSel.value = s.timePreset;
+  const modeSel = el("select", { id: "mode" },
+    el("option", { value: "rated" }, "レーティング対局（AIのレベルは自動）"),
+    el("option", { value: "practice" }, "練習対局（レベルを選ぶ・レーティングに反映しない）"),
+    el("option", { value: "human" }, "人どうし（1台で交互に指す）"));
+  modeSel.value = s.mode;
+  const levelSel = el("select", { id: "level" }, ...Array.from({ length: MAX_LEVEL }, (_, i) =>
+    el("option", { value: String(i + 1) }, `レベル ${i + 1}（目安 ${rankOf(levelRating(i + 1)).label}）`)));
   levelSel.value = String(s.aiLevel);
   const sideSel = el("select", { id: "side" }, el("option", { value: "0" }, "先手（自分が先に指す）"), el("option", { value: "1" }, "後手"), el("option", { value: "2" }, "ランダム"));
   sideSel.value = String(s.side);
-  const aiFields = el("div", {}, el("label", { class: "field" }, el("span", {}, "AIのレベル"), levelSel), el("label", { class: "field" }, el("span", {}, "手番"), sideSel));
+  const levelField = el("label", { class: "field" }, el("span", {}, "AIのレベル"), levelSel);
+  const sideField = el("label", { class: "field" }, el("span", {}, "手番"), sideSel);
+  const ratedInfo = el("div", { class: "card" }, "読み込み中…");
+  const importBtn = el("button", { class: "btn" }, "棋譜・局面を読み込んで続きから指す");
+  const sync = () => {
+    const m = modeSel.value;
+    levelField.classList.toggle("hidden", m !== "practice");
+    sideField.classList.toggle("hidden", m === "human");
+    ratedInfo.classList.toggle("hidden", m !== "rated");
+    importBtn.classList.toggle("hidden", m === "rated");
+  };
+  modeSel.onchange = sync;
+  sync();
+  loadProfile().then((p) => {
+    const lv = chooseLevel(p.glicko);
+    const r = rankOf(p.glicko.rating);
+    ratedInfo.replaceChildren(...[
+      el("div", { class: "label" }, "あなた"),
+      el("div", { class: "rank" }, r.label, el("small", {}, ` ${Math.round(p.glicko.rating)}`)),
+      isPlacement(p) ? el("p", { class: "note" }, `棋力判定中（${p.ratedGames}/${PLACEMENT_GAMES}局）: 最初の${PLACEMENT_GAMES}局はレーティングが大きく動きます。`) : null,
+      el("p", {}, `次の相手: AI レベル ${lv}（目安 ${rankOf(levelRating(lv)).label}）`),
+      el("p", { class: "note" }, "レーティング対局ではヒント・待ったは使えません。途中でやめると負けになります。"),
+    ].filter((x) => x !== null) as HTMLElement[]);
+  });
   const engineNote = el("p", { class: "note" }, "エンジンを準備中…");
-  const syncAi = () => aiFields.classList.toggle("hidden", oppSel.value !== "ai");
-  oppSel.onchange = syncAi;
-  syncAi();
   playEngine().ready.then((r) => {
     engineNote.textContent = r.kind === "yaneuraou"
       ? "エンジン: やねうら王（WebAssembly）"
       : "エンジン: 簡易エンジン（この環境ではやねうら王を動かせません。強いレベルは本来より弱くなります）";
   });
-  const start = (startSfen?: string, moves?: Move[]) => {
-    settings.set({ timePreset: timeSel.value, opponent: oppSel.value as "ai" | "human", aiLevel: Number(levelSel.value), side: Number(sideSel.value) as 0 | 1 | 2 });
-    if (oppSel.value === "human") {
-      onStart({ humans: [BLACK, WHITE], timePreset: timeSel.value, names: ["先手", "後手"], startSfen, moves });
+  const start = async (startSfen?: string, moves?: Move[]) => {
+    const mode = modeSel.value as GameMode;
+    settings.set({ timePreset: timeSel.value, mode, aiLevel: Number(levelSel.value), side: Number(sideSel.value) as 0 | 1 | 2 });
+    if (mode === "rated") { onStart(await ratedOptions()); return; }
+    if (mode === "human") {
+      onStart({ mode, humans: [BLACK, WHITE], timePreset: timeSel.value, names: ["先手", "後手"], startSfen, moves });
       return;
     }
-    const side = sideSel.value === "2" ? (Math.random() < 0.5 ? 0 : 1) : Number(sideSel.value);
-    const human = side as Color;
-    const ai = (human ^ 1) as Color;
+    const human = (sideSel.value === "2" ? (Math.random() < 0.5 ? 0 : 1) : Number(sideSel.value)) as Color;
     const level = Number(levelSel.value);
     const names: [string, string] = human === BLACK ? ["あなた", `AI Lv${level}`] : [`AI Lv${level}`, "あなた"];
-    onStart({ humans: [human], timePreset: timeSel.value, names, ai: { color: ai, level }, startSfen, moves });
+    onStart({ mode, humans: [human], timePreset: timeSel.value, names, ai: { color: (human ^ 1) as Color, level }, startSfen, moves });
   };
   const startBtn = el("button", { class: "btn primary big" }, "対局開始");
-  startBtn.onclick = () => start();
-  const importBtn = el("button", { class: "btn" }, "棋譜・局面を読み込んで続きから指す");
+  startBtn.onclick = () => void start();
   importBtn.onclick = async () => {
     const d = await importDialog();
-    if (d) start(d.sfen, d.moves);
+    if (d) void start(d.sfen, d.moves);
   };
   return el("div", { class: "screen setup" },
     el("h2", {}, "対局"),
-    el("label", { class: "field" }, el("span", {}, "相手"), oppSel),
-    aiFields,
+    el("label", { class: "field" }, el("span", {}, "対局の種類"), modeSel),
+    ratedInfo,
+    levelField,
+    sideField,
     el("label", { class: "field" }, el("span", {}, "持ち時間"), timeSel),
     startBtn,
     importBtn,
@@ -201,12 +239,43 @@ function startGame(root: HTMLElement, opts: PlayOptions, onExit: () => void): ()
     }
   }
 
-  function onEnd() {
+  let saved = false;
+  /** 対局を記録し、レーティング対局ならレーティングを更新する */
+  async function finishAndSave(): Promise<HTMLElement[]> {
+    if (saved || !game.result) return [];
+    saved = true;
+    const human = opts.mode === "human" ? null : opts.humans[0];
+    const rec = {
+      date: startedAt.getTime(), mode: opts.mode, startSfen: game.startSfen, moves: game.moves.map(moveToUsi), times,
+      humanColor: human, aiLevel: opts.ai?.level ?? null, result: game.result, names, timePreset: opts.timePreset,
+    } as Parameters<typeof saveGame>[0];
+    const lines: HTMLElement[] = [];
+    if (opts.mode === "rated" && human !== null && opts.ai) {
+      const profile = await loadProfile();
+      const upd = applyRatedGame(profile, opts.ai.level, humanScore(game.result, human));
+      rec.rating = { before: upd.before, after: upd.after, aiRating: upd.aiRating, placement: upd.placement };
+      await saveProfile(upd.profile);
+      const d = Math.round(upd.after.rating - upd.before.rating);
+      lines.push(el("p", { class: "rating-change" }, `レーティング ${Math.round(upd.before.rating)} → ${Math.round(upd.after.rating)}（${d >= 0 ? "+" : ""}${d}）`));
+      if (upd.placement) lines.push(el("p", { class: "note" }, `棋力判定 ${upd.profile.ratedGames}/${PLACEMENT_GAMES}局`));
+      const rb = rankOf(upd.before.rating), ra = rankOf(upd.after.rating);
+      if (rankValue(ra) > rankValue(rb)) celebrate(ra.label, ra.kind === "dan" && rb.kind === "kyu" ? "初段に昇段！" : ra.kind === "dan" ? "昇段しました！" : "昇級しました！");
+      else if (rankValue(ra) < rankValue(rb) && !upd.placement) lines.push(el("p", { class: "note" }, `${ra.label}に下がりました。次で取り戻しましょう。`));
+    }
+    try { await saveGame(rec); } catch (e) { toast(`記録を保存できませんでした: ${(e as Error).message}`, 4000); }
+    return lines;
+  }
+
+  async function onEnd() {
     clock?.stop(performance.now());
     render();
     const r = game.result!;
-    const msg = r.winner === null ? `${r.reason}で引き分けです。` : `${r.reason}で${COLOR_NAME[r.winner]}（${names[r.winner]}）の勝ちです。`;
-    void modal("対局終了", el("p", {}, msg), [{ label: "閉じる", primary: true }]);
+    const human = opts.mode === "human" ? null : opts.humans[0];
+    const msg = human === null
+      ? (r.winner === null ? `${r.reason}で引き分けです。` : `${r.reason}で${COLOR_NAME[r.winner]}の勝ちです。`)
+      : (r.winner === null ? `${r.reason}で引き分けです。` : r.winner === human ? `${r.reason}であなたの勝ちです！` : `${r.reason}であなたの負けです。`);
+    const lines = await finishAndSave();
+    void modal("対局終了", [el("p", {}, msg), ...lines], [{ label: "閉じる", primary: true }]);
   }
 
   const ai = opts.ai;
@@ -250,7 +319,7 @@ function startGame(root: HTMLElement, opts: PlayOptions, onExit: () => void): ()
     times.push(used);
     lastBeep = -1;
     playPieceSound(captured);
-    if (game.result) onEnd();
+    if (game.result) void onEnd();
     else { render(); void aiThink(); }
   }
   board.onMove = doMove;
@@ -269,8 +338,11 @@ function startGame(root: HTMLElement, opts: PlayOptions, onExit: () => void): ()
   recordBtn.onclick = () => recordMenu();
   exitBtn.onclick = async () => {
     if (!game.result && game.ply > 0) {
-      const i = await modal("対局を終了", el("p", {}, "対局を中断して終了しますか？"), [{ label: "続ける" }, { label: "終了する", primary: true }]);
+      const rated = opts.mode === "rated";
+      const i = await modal("対局を終了", el("p", {}, rated ? "レーティング対局を途中でやめると投了（負け）になります。終了しますか？" : "対局を中断して終了しますか？"),
+        [{ label: "続ける" }, { label: rated ? "投了して終了" : "終了する", primary: true }]);
       if (i !== 1) return;
+      if (rated) { game.resign(opts.humans[0]); clock?.stop(performance.now()); await finishAndSave(); }
     }
     onExit();
   };
@@ -300,5 +372,15 @@ function startGame(root: HTMLElement, opts: PlayOptions, onExit: () => void): ()
   const timer = clock ? window.setInterval(renderClocks, 200) : 0;
   render();
   void aiThink();
-  return () => { disposed = true; clearInterval(timer); document.body.classList.remove("in-game"); playEngine().stop(); };
+  return () => {
+    disposed = true;
+    clearInterval(timer);
+    document.body.classList.remove("in-game");
+    playEngine().stop();
+    // 対局中に別の画面へ移ったら、レーティング対局は投了扱い・それ以外は中断として記録
+    if (!game.result && game.ply > 0) {
+      if (opts.mode === "rated") game.resign(opts.humans[0]);
+      if (game.result) void finishAndSave();
+    }
+  };
 }

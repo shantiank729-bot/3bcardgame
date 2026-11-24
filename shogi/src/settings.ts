@@ -5,11 +5,11 @@ export interface Settings {
   /** 0 = 先手, 1 = 後手, 2 = ランダム */
   side: 0 | 1 | 2;
   showCoords: boolean;
-  opponent: "ai" | "human";
+  mode: "rated" | "practice" | "human";
   aiLevel: number;
 }
 
-const DEFAULTS: Settings = { sound: true, timePreset: "none", side: 2, showCoords: true, opponent: "ai", aiLevel: 5 };
+const DEFAULTS: Settings = { sound: true, timePreset: "none", side: 2, showCoords: true, mode: "rated", aiLevel: 9 };
 const KEY = "shogi-dojo:settings";
 
 let cache: Settings | null = null;

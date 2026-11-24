@@ -196,3 +196,53 @@ body.in-game #main { padding-bottom: env(safe-area-inset-bottom); }
 .pinfo .clock { color: #1a1209; }
 .pinfo .clock.low { color: #c01010; }
 .status-row { width: calc(var(--board) + 20px); display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+
+/* ---- フェーズ3: 記録・グラフ・演出 ---- */
+.card h3 { margin: 0 0 8px; font-size: 1rem; }
+.card .rank small { font-size: 0.9rem; font-weight: 400; color: var(--muted); }
+.card .rank.big { font-size: 2.4rem; }
+.screen.home .btn { width: 100%; margin: 6px 0; }
+.row-links { text-align: right; margin: 8px 0; }
+.row-links a { color: var(--accent); }
+.tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.tile { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 8px; text-align: center; }
+.tile-value { font-size: 1.35rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.tile-label { color: var(--muted); font-size: 0.8rem; margin-top: 2px; }
+.chart { position: relative; width: 100%; touch-action: pan-y; }
+.chart svg { display: block; }
+.chart .grid-line { stroke: var(--line); stroke-width: 1; }
+.chart .axis-label { fill: var(--muted); font-size: 11px; }
+.chart .series-line { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.chart .series-dot { fill: var(--accent); stroke: var(--card); stroke-width: 2; }
+.chart .crosshair { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 3; }
+.chart .hidden { display: none; }
+.chart-tip {
+  position: absolute; top: -6px; background: var(--fg); color: var(--bg); font-size: 0.8rem; padding: 4px 8px;
+  border-radius: 6px; pointer-events: none; white-space: nowrap; z-index: 2;
+}
+.rank-history { list-style: none; padding: 0; margin: 0; }
+.rank-history li { padding: 4px 0; border-bottom: 1px solid var(--line); }
+.rank-history .up { color: var(--accent); font-weight: 700; }
+.rank-history .down { color: var(--muted); }
+.game-row { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.game-row:last-child { border-bottom: none; }
+.game-main { flex: 1; min-width: 0; }
+.badge { display: inline-block; font-size: 0.72rem; padding: 1px 6px; border-radius: 6px; border: 1px solid var(--line); margin-right: 6px; color: var(--muted); }
+.badge.rated { border-color: var(--accent); color: var(--accent); }
+.result { font-weight: 700; }
+.result.win { color: var(--accent); }
+.rating-change { font-weight: 700; font-size: 1.05rem; }
+.switch-row { display: flex; align-items: center; gap: 10px; padding: 12px 0; font-size: 1rem; }
+.switch-row input { width: 22px; height: 22px; }
+.settings .card .btn { width: 100%; margin: 6px 0; }
+.celebrate { position: fixed; inset: 0; z-index: 80; background: rgba(0, 0, 0, 0.55); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.celebrate-card { background: var(--card); color: var(--fg); border-radius: 18px; padding: 28px 36px; text-align: center; animation: pop 0.5s cubic-bezier(.2, 1.6, .4, 1); }
+.celebrate-msg { font-size: 1.1rem; font-weight: 700; color: var(--accent); }
+.celebrate-rank { font-size: 3.4rem; font-weight: 800; margin: 6px 0 10px; font-family: "Hiragino Mincho ProN", "Yu Mincho", "Noto Serif JP", serif; }
+.confetti { position: absolute; top: -20px; width: 8px; height: 14px; border-radius: 2px; animation-name: fall; animation-timing-function: linear; animation-fill-mode: forwards; }
+@keyframes fall { to { top: 105%; transform: rotate(720deg); } }
+@keyframes pop { from { transform: scale(0.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .confetti { display: none; }
+  .celebrate-card { animation: none; }
+}
