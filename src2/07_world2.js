@@ -159,19 +159,19 @@ const TUNE={
   kanashimi:{hp:1.04,dmg:0.75},
   yoganryu:{hp:1.25,dmg:0.76},
   jin3:{hp:1.35,dmg:1.12},
-  bunshin:{hp:1.36,dmg:0.58},
+  bunshin:{hp:1.36,dmg:0.49},
   maryu:{hp:1.21,dmg:0.92},
   mirrorme:{hp:1.36,dmg:1.03},
   truecaptain:{hp:1.32,dmg:1.05},
-  oyakata:{hp:1.34,dmg:0.83},
+  oyakata:{hp:1.34,dmg:0.73},
   kyojin:{hp:1.49,dmg:0.82},
   gen1:{hp:1.58,dmg:1.45},
   gen2:{hp:1.43,dmg:1.46},
   gen3:{hp:1.43,dmg:1.37},
-  oblivion:{hp:1.40,dmg:0.50},
+  oblivion:{hp:1.19,dmg:0.40},
   mumei:{hp:1.85,dmg:0.64},
   phantom:{hp:1.43,dmg:0.56}};
 // むずかしさ（ボス・ざこ ぜんたいの ばいりつ）。 めやすレベルで ボスの しょうりつ 7〜8わり を ねらう
-const HARD={bossHp:1.0,bossDmg:1.2,mobHp:1.1,mobAtk:1.15};
+const HARD={bossHp:1.1,bossDmg:1.35,mobHp:1.1,mobAtk:1.15};
 function applyTune(){for(const [id,m] of Object.entries(MON)){ if(!m.boss) continue; const t=TUNE[id]||{}; m.base=m.base||{hp:m.hp,atk:m.atk};
   m.hp=Math.round(m.base.hp*(t.hp||1)*HARD.bossHp); m.atk=Math.round(m.base.atk*(t.dmg||1)*HARD.bossDmg); m.dmg=(t.dmg||1)*HARD.bossDmg;}}
