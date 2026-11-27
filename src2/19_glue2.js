@@ -28,10 +28,11 @@ const aliveP=()=>S.party.filter(m=>m.hp>0);
 const has=id=>(S.items[id]||0)>0;
 function addItem(id,n=1){S.items[id]=(S.items[id]||0)+n;}
 function delItem(id,n=1){S.items[id]=(S.items[id]||0)-n; if(S.items[id]<=0) delete S.items[id];}
-function saveGame(){S.x=P.x; S.y=P.y; S.dir=P.dir; S.at=Date.now(); return store.set(SAVE_KEY,JSON.stringify(S));}
+function saveGame(){autoOff=false; S.x=P.x; S.y=P.y; S.dir=P.dir; S.at=Date.now(); return store.set(SAVE_KEY,JSON.stringify(S));}
 // じどう セーブ：まちや ダンジョンに でいりした とき・せんとうの あと・ページを とじる とき（かこへんの さいちゅうは しない）
 const AUTO_KEY='hoshikage2-auto-v1';
-function autoSave(){if(!S||mode==='title'||mode==='ending'||S.saved) return; try{store.set(AUTO_KEY,JSON.stringify(Object.assign({},S,{x:P.x,y:P.y,dir:P.dir,at:Date.now()})));}catch(e){}}
+let autoOff=false;   // まえの データが ある とき、 はじめからの ぼうけんは さいしょに きろくするまで じどうセーブしない（まえの データを けさない）
+function autoSave(){if(!S||mode==='title'||mode==='ending'||S.saved||autoOff) return; try{store.set(AUTO_KEY,JSON.stringify(Object.assign({},S,{x:P.x,y:P.y,dir:P.dir,at:Date.now()})));}catch(e){}}
 addEventListener('pagehide',autoSave);
 document.addEventListener('visibilitychange',()=>{if(document.hidden) autoSave();});
 // てどうセーブと じどうセーブの あたらしい ほうを よむ
@@ -80,7 +81,9 @@ function makeWorldMap(){
    ・じゅもんふうじ：3ターン じゅもんが つかえない（じょうか・めざましベルで なおる） */
 function addBossTricks(){
   for(const [id,m] of Object.entries(MON)){
-    if(!m.boss||!m.phases||m.phases.length<2||(m.ml||0)<24) continue;
+    if(!m.boss||!m.phases||m.phases.length<2||(m.ml||0)<16) continue;
+    if((m.ml||0)>=16) m.phases[0].moves.push(M_('prep',1,'%sの まわりに つめたい ひかりが あつまっていく…',{next:M_('dispel',0,'%sは かきけしの ひかりを はなった！')}));
+    if((m.ml||0)<24){m.phases[m.phases.length-1].moves.push(M_('prep',1.5,'%sの まわりに つめたい ひかりが あつまっていく…',{next:M_('dispel',0,'%sは かきけしの ひかりを はなった！')})); continue;}
     m.phases[0].moves.push(M_('silence',1,'%sは ことばを うばう のろいを はなった！',{ch:.45,all:(m.ml||0)>=44}));
     m.phases[m.phases.length-1].moves.push(M_('prep',1.5,'%sの まわりに つめたい ひかりが あつまっていく…',{next:M_('dispel',0,'%sは かきけしの ひかりを はなった！')}));
   }
@@ -202,26 +205,32 @@ async function titleScreen(){
   titleUI=document.createElement('div'); titleUI.className='title';
   titleUI.innerHTML='<div class="logo">ほしかげの剣 II</div><div class="sub">― なまえを なくした せかい ―</div><div class="foot">A：けってい　B：もどる</div>';
   ui.appendChild(titleUI);
-  const sv=loadSave();
-  const m=new Menu({items:[{label:'はじめから'},{label:'つづきから',disabled:!sv}],cancel:false,start:sv?1:0,style:{left:'50%',top:'56%',transform:'translateX(-50%)',width:'40%'}});
+  // てどうセーブ（きろく）と じどうセーブは べつべつに えらべる。 どちらも かってに けさない
+  const rd=k=>{try{const t=store.get(k); return t?JSON.parse(t):null;}catch(e){return null}};
+  const man=rd(SAVE_KEY), auto=rd(AUTO_KEY);
+  const info=s=>s?`${s.party&&s.party[0]?s.party[0].name+' Lv'+s.party[0].lv:''}　${(s.ch||1)>24?'クリアご':'だい'+(s.ch||1)+'しょう'}　${MAPS[s.map]?MAPS[s.map].name:''}`:'';
+  const items=[{label:'はじめから'},{label:'きろくから つづける',disabled:!man},{label:'じどうセーブから つづける',disabled:!auto}];
+  const m=new Menu({items,cancel:false,start:man?1:auto?2:0,style:{left:'50%',top:'52%',transform:'translateX(-50%)',width:'78%'},
+    desc:i=>i===1?(man?info(man):'まだ きろくが ない'):i===2?(auto?info(auto):'まだ じどうセーブが ない'):(man||auto?'あたらしく はじめても、 いまの きろくは けされません。':'')});
   let c;
-  while(true){c=await m.pick(); if(c===1&&!sv){sfx.bump(); continue;} break;}
+  while(true){c=await m.pick(); if((c===1&&!man)||(c===2&&!auto)){sfx.bump(); continue;} break;}
   m.close();
-  if(c===1){
+  if(c>0){
     titleUI.remove(); titleUI=null;
     await fadeOut(300);
-    await resumeSave(sv); return;
+    await resumeSave(c===1?man:auto); return;
   }
   const name=await askName();
   titleUI.remove(); titleUI=null;
   await beginStory(name);
 }
 async function resumeSave(sv){
-  S=sv; if(!MAPS[S.map]) S.map='akari';
+  autoOff=false; S=sv; if(!MAPS[S.map]) S.map='akari';
   P.x=S.x; P.y=S.y; P.dir=S.dir||'down'; P.moving=false; trail=[]; mode='field'; loadNPCs(); playBgm(mapBgm());
   await fadeIn(300); toast(curMap().name||'フィールド');
 }
 async function beginStory(name){
+  autoOff=!!(store.get(SAVE_KEY)||store.get(AUTO_KEY));
   newGame(name); await fadeOut(400);
   mode='ending'; endStars=stars.length; playBgm('title'); await fadeIn(400);
   msgClear();

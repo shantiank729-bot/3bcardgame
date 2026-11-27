@@ -30,7 +30,8 @@ const LVADD=+(process.argv[2]||0), TRIALS=+(process.argv[3]||0), TUNEIN=process.
     const measure=async(key,ids,area)=>{ if(!TRIALS) return; const snap=JSON.stringify(R.S); const r={turns:0,win:0,minHp:0,n:TRIALS};
       for(let k=0;k<TRIALS;k++){R.S=JSON.parse(snap); prep(R.S.ch); const res=await R.battle(ids,{boss:1,area,noDefeat:1}); r.turns+=window.__lastTurns; if(res==='win'){r.win++; r.minHp+=Math.min(...R.S.party.map(m=>m.hp/m.mhp));}}
       r.turns/=TRIALS; r.minHp=r.win?r.minHp/r.win:0; R.S=JSON.parse(snap); R.loadNPCs(); MEAS[key]=Object.assign(r,{ch:R.S.ch}); console.log('>> M '+key+' '+JSON.stringify(MEAS[key]));};
-    const boss=async id=>{const d=D(id); await measure(d.boss,d.group||[d.boss],d.area); for(let k=0;k<4&&!S().flags['boss_'+id];k++){prep(S().ch); await dungeonBoss(d); if(!S().flags['boss_'+id]) L.push('  LOST '+id+' try '+(k+1));}};
+    const boss=async id=>{const d=D(id); await measure(d.boss,d.group||[d.boss],d.area); for(let k=0;k<4&&!S().flags['boss_'+id];k++){prep(S().ch); await dungeonBoss(d); if(!S().flags['boss_'+id]) L.push('  LOST '+id+' try '+(k+1));}
+      if(!S().flags['boss_'+id]){L.push('  SKIP '+id); S().flags['boss_'+id]=1; if(R.AFTER[id]) await R.AFTER[id]();}};
     const mid=async (id,f)=>{const d=D(id); const mids=d.mids||[d.mid]; for(const m of mids){ if(f&&m.floor!==f) continue; await measure(m.mon,[m.mon],d.area); const flag=d.mids?`mid_${id}${m.floor}`:`mid_${id}`; for(let k=0;k<4&&!S().flags[flag];k++){prep(S().ch); await dungeonMid(d,m,flag); if(!S().flags[flag]) L.push('  LOST mid '+m.mon);}}};
     try{
     await metMio({}); await rec('seacave',()=>boss('seacave')); await mayorAkari();

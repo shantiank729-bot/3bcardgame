@@ -93,6 +93,10 @@ async function battle(ids,opt={}){
       res=check();
     }
     S.party.forEach(p=>{p.defend=false; p.covering=false; p.counter=false; if(p.silence) p.silence--;});
+    if(!res){ const ends=[];
+      if(B.guard&&--B.guardT<=0){B.guard=false; ends.push('なかまたちを まもる ちからが きえた。');}
+      for(const p of S.party){ if(p.defUp&&--p.defT<=0){p.defUp=false; ends.push(`${p.name}の まもりが もとに もどった。`);} if(p.atkUp&&--p.atkT<=0){p.atkUp=false; ends.push(`${p.name}の こうげきりょくが もとに もどった。`);} }
+      for(const t of ends) await say(t,{wait:'auto',ms:420}); if(ends.length) updStatus(); }
     if(opt.limit&&B.turn>=opt.limit&&!res) res='timeout';
     if(B.turn>200&&!res) res='lose';
   }
@@ -247,7 +251,7 @@ async function memberAct(p,cmd){
       for(let h=0;h<sp.hits;h++){const e=e0&&e0.hp>0?e0:alive()[0]; if(!e) break; await hitEnemy(e,Math.max(1,Math.round(physDmg(battleAtk(p),e.def)*sp.mult)));}
       return null;
     }
-    if(sp.t==='guard'){B.guard=true; flash('#a0c8ff',260); await say(p.cls==='garm'?'まもりの じんが なかまたちを つつみこんだ！':'ひかりの かべが なかまたちを つつみこんだ！',{wait:'auto'}); return null;}
+    if(sp.t==='guard'){B.guard=true; B.guardT=4; flash('#a0c8ff',260); await say(p.cls==='garm'?'まもりの じんが なかまたちを つつみこんだ！':'ひかりの かべが なかまたちを つつみこんだ！',{wait:'auto'}); return null;}
     if(sp.t==='sleep'||sp.t==='roar'){
       flash(sp.t==='roar'?'#ffffff':'#c0a0ff',260); if(sp.t==='roar') shake();
       for(const e of alive()){
@@ -275,8 +279,8 @@ async function memberAct(p,cmd){
     if(sp.t==='healAll'){flash('#7dffb0',260); await say(healAll(sp.pow),{wait:'auto'}); updStatus(); return null;}
     if(sp.t==='buffAtk'||sp.t==='buffDef'){
       const tgt=S.party[cmd.target]; if(!tgt||tgt.hp<=0){await say('しかし こうかが なかった！',{wait:'auto'}); return null;}
-      if(sp.t==='buffAtk'){tgt.atkUp=true; flash('#ff8080',200); await say(`${tgt.name}の ちからが みなぎってきた！`,{wait:'auto'});}
-      else {tgt.defUp=true; flash('#a0c8ff',200); await say(tgt===p&&p.cls==='garm'?`${tgt.name}は たてを かまえ、 みを かためた！`:`${tgt.name}は まもりの ちからに つつまれた！`,{wait:'auto'});}
+      if(sp.t==='buffAtk'){tgt.atkUp=true; tgt.atkT=5; flash('#ff8080',200); await say(`${tgt.name}の ちからが みなぎってきた！`,{wait:'auto'});}
+      else {tgt.defUp=true; tgt.defT=5; flash('#a0c8ff',200); await say(tgt===p&&p.cls==='garm'?`${tgt.name}は たてを かまえ、 みを かためた！`:`${tgt.name}は まもりの ちからに つつまれた！`,{wait:'auto'});}
       return null;
     }
     const tgt=S.party[cmd.target]; const r=tgt&&applyTo(sp,sp.t,sp.pow,tgt);
@@ -304,7 +308,7 @@ async function memberAct(p,cmd){
 }
 async function hurtMember(p,dmg,o={}){
   if(!p) return;
-  if(!o.raw){if(B.guard) dmg=Math.ceil(dmg/2); if(p.defend) dmg=Math.ceil(dmg/2); if(p.defUp) dmg=Math.ceil(dmg*.6);}
+  if(!o.raw){let k=1; if(B.guard) k*=.75; if(p.defUp) k*=.7; k=Math.max(.6,k); if(p.defend) k*=.6; dmg=Math.ceil(dmg*k);}   // まもりの じゅもんは かさねても 4わり げんまで
   p.hp=Math.max(0,p.hp-dmg); updStatus();
   if(dmg>0){sfx.hurt(); shake(); flash('rgba(255,40,40,.5)',140);}
   await say(dmg>0?`${p.name}は ${dmg}ポイントの ダメージを うけた！`:`${p.name}は ダメージを うけなかった！`,{wait:'auto',ms:520});

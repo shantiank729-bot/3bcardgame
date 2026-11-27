@@ -1691,30 +1691,30 @@ const EXP_FIELD=.45;
 const EXPMUL={};
 // tools2/story.js で ボスごとに 5〜6かい たたかわせ、 めやすの ターンすう・しょうりつに あわせた ばいりつ
 const TUNE={
-  kobun:{hp:0.67,dmg:1.89},
-  morinushi:{hp:0.41,dmg:1.29},
-  minegolem:{hp:0.61,dmg:1.65},
-  iwakui:{hp:0.43,dmg:1.10},
+  kobun:{hp:0.70,dmg:2.17},
+  morinushi:{hp:0.43,dmg:1.48},
+  minegolem:{hp:0.46,dmg:1.90},
+  iwakui:{hp:0.36,dmg:1.03},
   jin1:{hp:0.91,dmg:1.10},
-  suimon:{hp:0.68,dmg:0.69},
-  kinko:{hp:1.01,dmg:0.86},
-  kanebourei:{hp:1.12,dmg:0.82},
-  taichou:{hp:1.23,dmg:0.70},
-  shogun:{hp:1.06,dmg:0.78},
-  majuu:{hp:1.59,dmg:0.61},
-  jin2:{hp:1.22,dmg:1.73},
-  fakeking2:{hp:1.75,dmg:1.25},
-  kinshoban:{hp:1.67,dmg:1.02},
-  dokugumo:{hp:1.49,dmg:0.81},
-  kanashimi:{hp:1.30,dmg:0.88},
-  yoganryu:{hp:1.63,dmg:0.95},
-  jin3:{hp:1.83,dmg:1.18},
-  bunshin:{hp:1.55,dmg:0.73},
-  maryu:{hp:1.69,dmg:1.22},
-  mirrorme:{hp:1.71,dmg:1.41},
-  truecaptain:{hp:1.80,dmg:1.15},
-  oyakata:{hp:1.37,dmg:0.91},
-  kyojin:{hp:1.92,dmg:1.09},
+  suimon:{hp:0.71,dmg:0.69},
+  kinko:{hp:0.81,dmg:0.86},
+  kanebourei:{hp:0.86,dmg:0.82},
+  taichou:{hp:1.08,dmg:0.70},
+  shogun:{hp:0.92,dmg:0.74},
+  majuu:{hp:1.38,dmg:0.58},
+  jin2:{hp:0.94,dmg:1.63},
+  fakeking2:{hp:1.40,dmg:1.00},
+  kinshoban:{hp:1.44,dmg:0.82},
+  dokugumo:{hp:1.22,dmg:0.65},
+  kanashimi:{hp:1.05,dmg:0.70},
+  yoganryu:{hp:1.40,dmg:0.76},
+  jin3:{hp:1.35,dmg:1.12},
+  bunshin:{hp:1.21,dmg:0.58},
+  maryu:{hp:1.40,dmg:0.98},
+  mirrorme:{hp:1.56,dmg:1.13},
+  truecaptain:{hp:1.57,dmg:0.92},
+  oyakata:{hp:1.07,dmg:0.73},
+  kyojin:{hp:1.50,dmg:0.87},
   gen1:{hp:1.74,dmg:1.45},
   gen2:{hp:1.77,dmg:1.55},
   gen3:{hp:1.79,dmg:1.54},
@@ -2561,6 +2561,10 @@ async function battle(ids,opt={}){
       res=check();
     }
     S.party.forEach(p=>{p.defend=false; p.covering=false; p.counter=false; if(p.silence) p.silence--;});
+    if(!res){ const ends=[];
+      if(B.guard&&--B.guardT<=0){B.guard=false; ends.push('なかまたちを まもる ちからが きえた。');}
+      for(const p of S.party){ if(p.defUp&&--p.defT<=0){p.defUp=false; ends.push(`${p.name}の まもりが もとに もどった。`);} if(p.atkUp&&--p.atkT<=0){p.atkUp=false; ends.push(`${p.name}の こうげきりょくが もとに もどった。`);} }
+      for(const t of ends) await say(t,{wait:'auto',ms:420}); if(ends.length) updStatus(); }
     if(opt.limit&&B.turn>=opt.limit&&!res) res='timeout';
     if(B.turn>200&&!res) res='lose';
   }
@@ -2715,7 +2719,7 @@ async function memberAct(p,cmd){
       for(let h=0;h<sp.hits;h++){const e=e0&&e0.hp>0?e0:alive()[0]; if(!e) break; await hitEnemy(e,Math.max(1,Math.round(physDmg(battleAtk(p),e.def)*sp.mult)));}
       return null;
     }
-    if(sp.t==='guard'){B.guard=true; flash('#a0c8ff',260); await say(p.cls==='garm'?'まもりの じんが なかまたちを つつみこんだ！':'ひかりの かべが なかまたちを つつみこんだ！',{wait:'auto'}); return null;}
+    if(sp.t==='guard'){B.guard=true; B.guardT=4; flash('#a0c8ff',260); await say(p.cls==='garm'?'まもりの じんが なかまたちを つつみこんだ！':'ひかりの かべが なかまたちを つつみこんだ！',{wait:'auto'}); return null;}
     if(sp.t==='sleep'||sp.t==='roar'){
       flash(sp.t==='roar'?'#ffffff':'#c0a0ff',260); if(sp.t==='roar') shake();
       for(const e of alive()){
@@ -2743,8 +2747,8 @@ async function memberAct(p,cmd){
     if(sp.t==='healAll'){flash('#7dffb0',260); await say(healAll(sp.pow),{wait:'auto'}); updStatus(); return null;}
     if(sp.t==='buffAtk'||sp.t==='buffDef'){
       const tgt=S.party[cmd.target]; if(!tgt||tgt.hp<=0){await say('しかし こうかが なかった！',{wait:'auto'}); return null;}
-      if(sp.t==='buffAtk'){tgt.atkUp=true; flash('#ff8080',200); await say(`${tgt.name}の ちからが みなぎってきた！`,{wait:'auto'});}
-      else {tgt.defUp=true; flash('#a0c8ff',200); await say(tgt===p&&p.cls==='garm'?`${tgt.name}は たてを かまえ、 みを かためた！`:`${tgt.name}は まもりの ちからに つつまれた！`,{wait:'auto'});}
+      if(sp.t==='buffAtk'){tgt.atkUp=true; tgt.atkT=5; flash('#ff8080',200); await say(`${tgt.name}の ちからが みなぎってきた！`,{wait:'auto'});}
+      else {tgt.defUp=true; tgt.defT=5; flash('#a0c8ff',200); await say(tgt===p&&p.cls==='garm'?`${tgt.name}は たてを かまえ、 みを かためた！`:`${tgt.name}は まもりの ちからに つつまれた！`,{wait:'auto'});}
       return null;
     }
     const tgt=S.party[cmd.target]; const r=tgt&&applyTo(sp,sp.t,sp.pow,tgt);
@@ -2772,7 +2776,7 @@ async function memberAct(p,cmd){
 }
 async function hurtMember(p,dmg,o={}){
   if(!p) return;
-  if(!o.raw){if(B.guard) dmg=Math.ceil(dmg/2); if(p.defend) dmg=Math.ceil(dmg/2); if(p.defUp) dmg=Math.ceil(dmg*.6);}
+  if(!o.raw){let k=1; if(B.guard) k*=.75; if(p.defUp) k*=.7; k=Math.max(.6,k); if(p.defend) k*=.6; dmg=Math.ceil(dmg*k);}   // まもりの じゅもんは かさねても 4わり げんまで
   p.hp=Math.max(0,p.hp-dmg); updStatus();
   if(dmg>0){sfx.hurt(); shake(); flash('rgba(255,40,40,.5)',140);}
   await say(dmg>0?`${p.name}は ${dmg}ポイントの ダメージを うけた！`:`${p.name}は ダメージを うけなかった！`,{wait:'auto',ms:520});
@@ -4064,10 +4068,11 @@ const aliveP=()=>S.party.filter(m=>m.hp>0);
 const has=id=>(S.items[id]||0)>0;
 function addItem(id,n=1){S.items[id]=(S.items[id]||0)+n;}
 function delItem(id,n=1){S.items[id]=(S.items[id]||0)-n; if(S.items[id]<=0) delete S.items[id];}
-function saveGame(){S.x=P.x; S.y=P.y; S.dir=P.dir; S.at=Date.now(); return store.set(SAVE_KEY,JSON.stringify(S));}
+function saveGame(){autoOff=false; S.x=P.x; S.y=P.y; S.dir=P.dir; S.at=Date.now(); return store.set(SAVE_KEY,JSON.stringify(S));}
 // じどう セーブ：まちや ダンジョンに でいりした とき・せんとうの あと・ページを とじる とき（かこへんの さいちゅうは しない）
 const AUTO_KEY='hoshikage2-auto-v1';
-function autoSave(){if(!S||mode==='title'||mode==='ending'||S.saved) return; try{store.set(AUTO_KEY,JSON.stringify(Object.assign({},S,{x:P.x,y:P.y,dir:P.dir,at:Date.now()})));}catch(e){}}
+let autoOff=false;   // まえの データが ある とき、 はじめからの ぼうけんは さいしょに きろくするまで じどうセーブしない（まえの データを けさない）
+function autoSave(){if(!S||mode==='title'||mode==='ending'||S.saved||autoOff) return; try{store.set(AUTO_KEY,JSON.stringify(Object.assign({},S,{x:P.x,y:P.y,dir:P.dir,at:Date.now()})));}catch(e){}}
 addEventListener('pagehide',autoSave);
 document.addEventListener('visibilitychange',()=>{if(document.hidden) autoSave();});
 // てどうセーブと じどうセーブの あたらしい ほうを よむ
@@ -4116,7 +4121,9 @@ function makeWorldMap(){
    ・じゅもんふうじ：3ターン じゅもんが つかえない（じょうか・めざましベルで なおる） */
 function addBossTricks(){
   for(const [id,m] of Object.entries(MON)){
-    if(!m.boss||!m.phases||m.phases.length<2||(m.ml||0)<24) continue;
+    if(!m.boss||!m.phases||m.phases.length<2||(m.ml||0)<16) continue;
+    if((m.ml||0)>=16) m.phases[0].moves.push(M_('prep',1,'%sの まわりに つめたい ひかりが あつまっていく…',{next:M_('dispel',0,'%sは かきけしの ひかりを はなった！')}));
+    if((m.ml||0)<24){m.phases[m.phases.length-1].moves.push(M_('prep',1.5,'%sの まわりに つめたい ひかりが あつまっていく…',{next:M_('dispel',0,'%sは かきけしの ひかりを はなった！')})); continue;}
     m.phases[0].moves.push(M_('silence',1,'%sは ことばを うばう のろいを はなった！',{ch:.45,all:(m.ml||0)>=44}));
     m.phases[m.phases.length-1].moves.push(M_('prep',1.5,'%sの まわりに つめたい ひかりが あつまっていく…',{next:M_('dispel',0,'%sは かきけしの ひかりを はなった！')}));
   }
@@ -4238,26 +4245,32 @@ async function titleScreen(){
   titleUI=document.createElement('div'); titleUI.className='title';
   titleUI.innerHTML='<div class="logo">ほしかげの剣 II</div><div class="sub">― なまえを なくした せかい ―</div><div class="foot">A：けってい　B：もどる</div>';
   ui.appendChild(titleUI);
-  const sv=loadSave();
-  const m=new Menu({items:[{label:'はじめから'},{label:'つづきから',disabled:!sv}],cancel:false,start:sv?1:0,style:{left:'50%',top:'56%',transform:'translateX(-50%)',width:'40%'}});
+  // てどうセーブ（きろく）と じどうセーブは べつべつに えらべる。 どちらも かってに けさない
+  const rd=k=>{try{const t=store.get(k); return t?JSON.parse(t):null;}catch(e){return null}};
+  const man=rd(SAVE_KEY), auto=rd(AUTO_KEY);
+  const info=s=>s?`${s.party&&s.party[0]?s.party[0].name+' Lv'+s.party[0].lv:''}　${(s.ch||1)>24?'クリアご':'だい'+(s.ch||1)+'しょう'}　${MAPS[s.map]?MAPS[s.map].name:''}`:'';
+  const items=[{label:'はじめから'},{label:'きろくから つづける',disabled:!man},{label:'じどうセーブから つづける',disabled:!auto}];
+  const m=new Menu({items,cancel:false,start:man?1:auto?2:0,style:{left:'50%',top:'52%',transform:'translateX(-50%)',width:'78%'},
+    desc:i=>i===1?(man?info(man):'まだ きろくが ない'):i===2?(auto?info(auto):'まだ じどうセーブが ない'):(man||auto?'あたらしく はじめても、 いまの きろくは けされません。':'')});
   let c;
-  while(true){c=await m.pick(); if(c===1&&!sv){sfx.bump(); continue;} break;}
+  while(true){c=await m.pick(); if((c===1&&!man)||(c===2&&!auto)){sfx.bump(); continue;} break;}
   m.close();
-  if(c===1){
+  if(c>0){
     titleUI.remove(); titleUI=null;
     await fadeOut(300);
-    await resumeSave(sv); return;
+    await resumeSave(c===1?man:auto); return;
   }
   const name=await askName();
   titleUI.remove(); titleUI=null;
   await beginStory(name);
 }
 async function resumeSave(sv){
-  S=sv; if(!MAPS[S.map]) S.map='akari';
+  autoOff=false; S=sv; if(!MAPS[S.map]) S.map='akari';
   P.x=S.x; P.y=S.y; P.dir=S.dir||'down'; P.moving=false; trail=[]; mode='field'; loadNPCs(); playBgm(mapBgm());
   await fadeIn(300); toast(curMap().name||'フィールド');
 }
 async function beginStory(name){
+  autoOff=!!(store.get(SAVE_KEY)||store.get(AUTO_KEY));
   newGame(name); await fadeOut(400);
   mode='ending'; endStars=stars.length; playBgm('title'); await fadeIn(400);
   msgClear();
